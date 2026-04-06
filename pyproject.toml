@@ -1,0 +1,13 @@
+[project]
+name = "nerf-ann-paper"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "lpips>=0.1.4",
+    "nerfstudio>=0.3.4",
+    "numpy>=2.2.6",
+    "scikit-image>=0.25.2",
+    "torch>=2.11.0",
+]
