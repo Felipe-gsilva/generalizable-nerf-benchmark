@@ -12,8 +12,8 @@ from src.utils.config import config
 class CLINeRFWrapper(NerfModel):
     """
     A NeRF model wrapper utilizing the Nerfstudio CLI API.
-    
-    This class implements the BaseGenerativeModel (NerfModel) contract by 
+
+    This class implements the BaseGenerativeModel (NerfModel) contract by
     translating lifecycle methods into subprocess commands (ns-train, ns-export)
     instead of relying on PyTorch optimization loops.
     """
@@ -48,7 +48,7 @@ class CLINeRFWrapper(NerfModel):
         output_path = self.get_output_path(data_path)
         load_dir_arg = []
         latest_checkpoint = self._get_latest_checkpoint(output_path)
-        
+
         if latest_checkpoint:
             config.logger.info(f"🔄 Checkpoint found: {latest_checkpoint}. Resuming.")
             load_dir_arg = ["--load-dir", str(latest_checkpoint)]
@@ -61,30 +61,41 @@ class CLINeRFWrapper(NerfModel):
         cmd = [
             "ns-train",
             self.model_name,
-            "--data", str(data_path),
-            "--output-dir", str(output_path),
-            "--vis", "tensorboard",
+            "--data",
+            str(data_path),
+            "--output-dir",
+            str(output_path),
+            "--vis",
+            "tensorboard",
         ] + load_dir_arg
 
         # Add model-specific hyperparameters
         if self.model_name == "nerfacto":
             cmd += [
-                "--pipeline.model.eval-num-rays-per-chunk", "1024",
-                "--pipeline.datamanager.train-num-rays-per-batch", "1024",
-                "--pipeline.model.log2-hashmap-size", "16",
-                "--pipeline.model.camera-optimizer.mode", "off",
-                "--pipeline.model.predict-normals", "True",
+                "--pipeline.model.eval-num-rays-per-chunk",
+                "1024",
+                "--pipeline.datamanager.train-num-rays-per-batch",
+                "1024",
+                "--pipeline.model.log2-hashmap-size",
+                "16",
+                "--pipeline.model.camera-optimizer.mode",
+                "off",
+                "--pipeline.model.predict-normals",
+                "True",
             ]
         elif self.model_name == "instant-ngp":
             cmd += [
-                "--pipeline.model.eval-num-rays-per-chunk", "1024",
-                "--pipeline.datamanager.train-num-rays-per-batch", "1024",
+                "--pipeline.model.eval-num-rays-per-chunk",
+                "1024",
+                "--pipeline.datamanager.train-num-rays-per-batch",
+                "1024",
             ]
 
         # Use generic nerfstudio-data backend
         cmd += [
             "nerfstudio-data",
-            "--downscale-factor", "1",
+            "--downscale-factor",
+            "1",
         ]
 
         # 4. Execute and log
@@ -101,13 +112,13 @@ class CLINeRFWrapper(NerfModel):
                 for line in iter(process.stdout.readline, b""):
                     sys.stdout.write(line.decode("utf-8", errors="replace"))
                     f.write(line)
-                
+
                 process.wait()
                 if process.returncode != 0:
                     raise subprocess.CalledProcessError(process.returncode, cmd)
-            
+
             config.logger.info(f"✅ Success training {self.model_name} on {data_path}")
-            
+
         except subprocess.CalledProcessError as e:
             config.logger.error(f"❌ Training failed. Exit code: {e.returncode}")
         except KeyboardInterrupt:
@@ -116,12 +127,12 @@ class CLINeRFWrapper(NerfModel):
 
     def load_checkpoint(self, path: Path) -> None:
         """
-        Loads the checkpoint metadata into memory. For CLI execution, actual 
+        Loads the checkpoint metadata into memory. For CLI execution, actual
         resumption is handled via '--load-dir' in the run() method.
         """
         config.logger.info(f"Loading NeRF model metadata from {path}...")
         c_path = self._get_latest_checkpoint(path) if path.is_dir() else path
-        
+
         if c_path and c_path.exists():
             try:
                 checkpoint = torch.load(c_path, map_location="cpu")
@@ -143,8 +154,8 @@ class CLINeRFWrapper(NerfModel):
         if self.model_state is None:
             return 0
         return sum(
-            param.numel() * param.element_size() 
-            for param in self.model_state.values() 
+            param.numel() * param.element_size()
+            for param in self.model_state.values()
             if isinstance(param, torch.Tensor)
         )
 
@@ -159,13 +170,13 @@ class CLINeRFWrapper(NerfModel):
         """
         output_path = self.get_output_path(data_path)
         latest_checkpoint = self._get_latest_checkpoint(output_path)
-        
+
         if not latest_checkpoint:
             config.logger.error(
                 f"❌ Cannot export, no checkpoint found in {output_path}"
             )
             return
-            
+
         config_path = Path(latest_checkpoint).parent / "config.yml"
         target_export_path = (
             Path("assets/data/nerf_exports")
@@ -180,11 +191,16 @@ class CLINeRFWrapper(NerfModel):
         cmd = [
             "ns-export",
             export_type,
-            "--load-config", str(config_path),
-            "--output-dir", str(target_export_path),
-            "--num-points", "1000000",
-            "--remove-outliers", "False",
-            "--normal-method", "open3d",
+            "--load-config",
+            str(config_path),
+            "--output-dir",
+            str(target_export_path),
+            "--num-points",
+            "1000000",
+            "--remove-outliers",
+            "False",
+            "--normal-method",
+            "open3d",
         ]
 
         try:

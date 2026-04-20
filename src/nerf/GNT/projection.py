@@ -22,7 +22,9 @@ class Projector:
         )
 
     def normalize(self, pixel_locations, h, w):
-        resize_factor = torch.tensor([w - 1.0, h - 1.0]).to(pixel_locations.device)[None, None, :]
+        resize_factor = torch.tensor([w - 1.0, h - 1.0]).to(pixel_locations.device)[
+            None, None, :
+        ]
         normalized_pixel_locations = (
             2 * pixel_locations / resize_factor - 1.0
         )  # [n_views, n_points, 2]
@@ -50,9 +52,9 @@ class Projector:
         )  # [n_views, n_points, 2]
         pixel_locations = torch.clamp(pixel_locations, min=-1e6, max=1e6)
         mask = projections[..., 2] > 0  # a point is invalid if behind the camera
-        return pixel_locations.reshape((num_views,) + original_shape + (2,)), mask.reshape(
-            (num_views,) + original_shape
-        )
+        return pixel_locations.reshape(
+            (num_views,) + original_shape + (2,)
+        ), mask.reshape((num_views,) + original_shape)
 
     def compute_angle(self, xyz, query_camera, train_cameras):
         """
@@ -113,12 +115,20 @@ class Projector:
         )  # [n_views, n_rays, n_samples, 2]
 
         # rgb sampling
-        rgbs_sampled = F.grid_sample(train_imgs, normalized_pixel_locations, align_corners=True)
-        rgb_sampled = rgbs_sampled.permute(2, 3, 0, 1)  # [n_rays, n_samples, n_views, 3]
+        rgbs_sampled = F.grid_sample(
+            train_imgs, normalized_pixel_locations, align_corners=True
+        )
+        rgb_sampled = rgbs_sampled.permute(
+            2, 3, 0, 1
+        )  # [n_rays, n_samples, n_views, 3]
 
         # deep feature sampling
-        feat_sampled = F.grid_sample(featmaps, normalized_pixel_locations, align_corners=True)
-        feat_sampled = feat_sampled.permute(2, 3, 0, 1)  # [n_rays, n_samples, n_views, d]
+        feat_sampled = F.grid_sample(
+            featmaps, normalized_pixel_locations, align_corners=True
+        )
+        feat_sampled = feat_sampled.permute(
+            2, 3, 0, 1
+        )  # [n_rays, n_samples, n_views, d]
         rgb_feat_sampled = torch.cat(
             [rgb_sampled, feat_sampled], dim=-1
         )  # [n_rays, n_samples, n_views, d+3]

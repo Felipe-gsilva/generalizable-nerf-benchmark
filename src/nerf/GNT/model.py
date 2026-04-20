@@ -22,7 +22,7 @@ class GNTModel(TorchNeRFWrapper):
 
     def __init__(self, args, model_name: str, dataset_name: str, **kwargs):
         super().__init__(model_name=model_name, dataset_name=dataset_name, **kwargs)
-        
+
         self.args = args
         if hasattr(self.args, "local_rank"):
             self.device = torch.device(f"cuda:{self.args.local_rank}")
@@ -48,7 +48,7 @@ class GNTModel(TorchNeRFWrapper):
     # ---------------------------------------------------------
     # Architecture Setup
     # ---------------------------------------------------------
-    def build_models(self) -> dict[str, torch.nn.Module]: 
+    def build_models(self) -> dict[str, torch.nn.Module]:
         models = {
             "net_coarse": GNT(
                 self.args,
@@ -57,12 +57,11 @@ class GNTModel(TorchNeRFWrapper):
                 viewenc_dim=3 + 3 * 2 * 10,
                 ret_alpha=self.args.N_importance > 0,
             ).to(self.device),
-            
             "feature_net": ResUNet(
                 coarse_out_ch=self.args.coarse_feat_dim,
                 fine_out_ch=self.args.fine_feat_dim,
                 single_net=self.args.single_net,
-            ).to(self.device)
+            ).to(self.device),
         }
 
         if not self.args.single_net:
@@ -84,12 +83,12 @@ class GNTModel(TorchNeRFWrapper):
 
         return models
 
-    def build_optimizers(self) -> dict[str, torch.optim.Optimizer]: 
+    def build_optimizers(self) -> dict[str, torch.optim.Optimizer]:
         param_groups = [
             {"params": self.net_coarse.parameters()},
             {"params": self.feature_net.parameters(), "lr": self.args.lrate_feature},
         ]
-        
+
         if self.net_fine is not None:
             param_groups.append({"params": self.net_fine.parameters()})
 
@@ -106,18 +105,24 @@ class GNTModel(TorchNeRFWrapper):
     # ---------------------------------------------------------
     # Training & Evaluation Loops
     # ---------------------------------------------------------
-    def train_epoch(self, data_loader) -> Dict[str, float]: 
+    def train_epoch(self, data_loader) -> Dict[str, float]:
         """Executes a single epoch of ray sampling and network optimization."""
         # Ensure networks are in training mode
-        for mod in self.models.values(): mod.train()
-        
+        for mod in self.models.values():
+            mod.train()
+
         optimizer = self.optimizers["gnt_optimizer"]
         epoch_loss = 0.0
 
         for train_data in data_loader:
             # 1. Ray Sampling
             ray_sampler = RaySamplerSingleImage(train_data, self.device)
-            N_rand = int(1.0 * self.args.N_rand * self.args.num_source_views / train_data["src_rgbs"][0].shape[0])
+            N_rand = int(
+                1.0
+                * self.args.N_rand
+                * self.args.num_source_views
+                / train_data["src_rgbs"][0].shape[0]
+            )
             ray_batch = ray_sampler.random_sample(
                 N_rand,
                 sample_mode=self.args.sample_mode,
@@ -125,8 +130,10 @@ class GNTModel(TorchNeRFWrapper):
             )
 
             # 2. Feature Extraction & Rendering
-            featmaps = self.feature_net(ray_batch["src_rgbs"].squeeze(0).permute(0, 3, 1, 2))
-            
+            featmaps = self.feature_net(
+                ray_batch["src_rgbs"].squeeze(0).permute(0, 3, 1, 2)
+            )
+
             ret = render_rays(
                 ray_batch=ray_batch,
                 model=self,
@@ -144,7 +151,7 @@ class GNTModel(TorchNeRFWrapper):
             # 3. Optimization
             optimizer.zero_grad()
             loss, _ = self.criterion(ret["outputs_coarse"], ray_batch, {})
-            
+
             if ret["outputs_fine"] is not None:
                 fine_loss, _ = self.criterion(ret["outputs_fine"], ray_batch, {})
                 loss += fine_loss
@@ -164,17 +171,22 @@ class GNTModel(TorchNeRFWrapper):
         Samples validation views and forwards them through the network.
         These outputs feed directly into the base class's FID/PSNR evaluators.
         """
-        for mod in self.models.values(): mod.eval()
-        
+        for mod in self.models.values():
+            mod.eval()
+
         rendered_images = []
         gt_images = []
 
         for val_data in val_loader:
-            ray_sampler = RaySamplerSingleImage(val_data, self.device, render_stride=self.args.render_stride)
+            ray_sampler = RaySamplerSingleImage(
+                val_data, self.device, render_stride=self.args.render_stride
+            )
             ray_batch = ray_sampler.get_all()
-            
+
             if self.feature_net is not None:
-                featmaps = self.feature_net(ray_batch["src_rgbs"].squeeze(0).permute(0, 3, 1, 2))
+                featmaps = self.feature_net(
+                    ray_batch["src_rgbs"].squeeze(0).permute(0, 3, 1, 2)
+                )
             else:
                 featmaps = [None, None]
 
@@ -196,21 +208,25 @@ class GNTModel(TorchNeRFWrapper):
             )
 
             # Extract the final RGB prediction (fine if available, else coarse)
-            pred_rgb = ret["outputs_fine"]["rgb"] if ret["outputs_fine"] is not None else ret["outputs_coarse"]["rgb"]
+            pred_rgb = (
+                ret["outputs_fine"]["rgb"]
+                if ret["outputs_fine"] is not None
+                else ret["outputs_coarse"]["rgb"]
+            )
             pred_rgb = torch.clip(pred_rgb, 0.0, 1.0)
-            
+
             # Reconstruct GT Image
             H, W = ray_sampler.H, ray_sampler.W
             gt_img = ray_sampler.rgb.reshape(H, W, 3)
             if self.args.render_stride != 1:
-                gt_img = gt_img[::self.args.render_stride, ::self.args.render_stride]
+                gt_img = gt_img[:: self.args.render_stride, :: self.args.render_stride]
 
             # Send back to CPU for metrics processing in the base class
             rendered_images.append(pred_rgb.detach().cpu())
             gt_images.append(gt_img.detach().cpu())
-            
+
             # Break early if you only want to validate on 1 image per epoch to save time
-            # break 
+            # break
 
         return rendered_images, gt_images
 
@@ -219,7 +235,7 @@ class GNTModel(TorchNeRFWrapper):
         Implements the GNT-specific training and validation datasets.
         """
         train_dataset, train_sampler = create_training_dataset(self.args)
-        
+
         train_loader = DataLoader(
             train_dataset,
             batch_size=1,

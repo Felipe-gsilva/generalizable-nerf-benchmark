@@ -138,74 +138,38 @@ def train(dataset_name_list, model_name_list, image_priority: str = "highest"):
                     return
 
 
-def export(dataset_name_list, export_formats, model_name_list):
-    base_root = Path("assets/data/baseline")
-
-    for dataset_name in dataset_name_list:
-        targets = resolve_data_targets(base_root, dataset_name)
-
-        for target_dir in targets:
-            for model_name in model_name_list:
-                target_id = _resolve_target_id(base_root / dataset_name, target_dir)
-                dataset_path = base_root / dataset_name
-                step = "train"
-
-                dataset = ImageDataset(
-                    name=dataset_name,
-                    dataset_path=dataset_path,
-                    step=step,
-                )
-                # Need to use the NerfModel class
-                nerf_wrapper = NerfModel(model_name=model_name, images=dataset)
-                nerf_wrapper.target_id = target_id
-                for export_type in export_formats:
-                    nerf_wrapper.export(export_type=export_type, data_path=target_dir)
-
-
-def generate(dataset_name_list, slice_methods):
+def generate(dataset_name_list, model_name_list):
     print("🔍 Starting NeRF slicing process...")
     base_path = Path("assets/data/nerf_exports")
     for dataset_name in dataset_name_list:
-        print(f"\n=============================================")
-        dataset_path = base_path / dataset_name
-        if not dataset_path.exists():
-            print(f"❌ No exports found for {dataset_name}")
-            continue
-
-        model_name_list = os.listdir(dataset_path)
-
-        for model_name in model_name_list:
-            model_path = dataset_path / model_name
-
+        for model in model_name_list:
+            model_path = base_path / dataset_name / model
             if not model_path.exists():
-                print(f"❌ No exports found for model '{model_name}' in {dataset_path}")
+                config.logger.error(f"❌ Model path not found: {model_path}")
                 continue
 
-            target_paths = _discover_export_targets(model_path, slice_methods)
-            if not target_paths:
-                target_paths = [model_path]
+            export_targets = _discover_export_targets(model_path, model_name_list)
+            if not export_targets:
+                config.logger.warning(f"⚠️ No export targets found for {model_path}")
+                continue
 
-            for class_path in target_paths:
-                rel_target = (
-                    class_path.relative_to(model_path).as_posix()
-                    if class_path != model_path
-                    else None
+            for target in export_targets:
+                target_id = _resolve_target_id(model_path, target)
+                config.logger.info(
+                    f"\n--- Generating from: {dataset_name}/{model}/{target_id} ---"
                 )
-                label = (
-                    f"{dataset_name}/{model_name}/{rel_target}"
-                    if rel_target
-                    else f"{dataset_name}/{model_name}"
-                )
-                print(f"\n--- Processing {label} ---")
-                for method in slice_methods:
-                    method_path = class_path / method
-                    print(f"🔍 Checking for {method} exports in {method_path}...")
-                    if method_path.exists():
-                        slice_nerf_model(method_path, method)
-                    else:
-                        print(
-                            f"⚠️ No exports found for method '{method}' in {method_path}"
-                        )
+
+                try:
+                    nerf_wrapper = CLINeRFWrapper(
+                        model_name=model,
+                        dataset_name=dataset_name,
+                        image_priority="highest",
+                    )
+                    nerf_wrapper.target_id = target_id
+                    nerf_wrapper.export("pointcloud", data_path=target)
+                except KeyboardInterrupt:
+                    config.logger.info("\n🛑 User interruption in generation loop.")
+                    return
 
 
 if __name__ == "__main__":
@@ -234,33 +198,8 @@ if __name__ == "__main__":
         help="List of NeRF models to process",
         choices=config.nerf_models_to_run,
     )
-    parser.add_argument(
-        "--methods",
-        nargs="+",
-        default=config.nerf_slice_methods,
-        help="List of slicing methods to apply",
-        choices=config.nerf_slice_methods,
-    )
-    parser.add_argument(
-        "--formats",
-        nargs="+",
-        default=config.nerf_export_formats,
-        help="List of export formats to apply",
-    )
-    parser.add_argument(
-        "--image-priority",
-        choices=["highest", "lowest"],
-        default="highest",
-        help="Priority for selecting images/images_N folders during data processing.",
-    )
-    parser.add_argument(
-        "--render-pointcloud",
-        action="store_true",
-        help="Whether to render point clouds during NeRF slicing (if supported by the method).",
-    )
-
+    
     args = parser.parse_args()
-    config.render_pointcloud = args.render_pointcloud
 
     if args.train:
         train(

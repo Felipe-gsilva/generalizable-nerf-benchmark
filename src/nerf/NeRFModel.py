@@ -12,17 +12,18 @@ from src.utils.config import config
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
 MAX_IMAGE_SEARCH_DEPTH = 3
 
+
 class NerfModel(ABC):
     """
     The universal Base Class for all Generative and NeRF models in the pipeline.
-    
-    It strictly handles paths, data preprocessing, shared evaluation metrics, 
-    and enforces the core lifecycle contract (run, load, evaluate) without 
+
+    It strictly handles paths, data preprocessing, shared evaluation metrics,
+    and enforces the core lifecycle contract (run, load, evaluate) without
     dictating HOW the underlying model is optimized.
     """
 
     def __init__(
-        self, 
+        self,
         model_name: str,
         dataset_name: str,
         image_priority: str = "highest",
@@ -31,7 +32,7 @@ class NerfModel(ABC):
         self.model_name = model_name
         self.dataset_name = dataset_name
         self.image_priority = image_priority
-        
+
         # Shared state for tracking
         self._best_metric_value: float = float("inf")
         self.output_dir: Path = output_dir or Path("assets/data/nerf_checkpoints")
@@ -43,7 +44,7 @@ class NerfModel(ABC):
     @abstractmethod
     def run(self, data_path: Path) -> None:
         """
-        The main entry point for training. 
+        The main entry point for training.
         - PyTorch wrappers will implement an epoch loop (for GANs).
         - CLI wrappers will trigger a subprocess (ns-train).
         """
@@ -57,8 +58,8 @@ class NerfModel(ABC):
     @abstractmethod
     def evaluate(self, rendered_images, ground_truth_images) -> Dict[str, float]:
         """
-        Evaluate the model. Subclasses must decide how to generate the 
-        rendered images, but they can use the base class's `compare_images_quality` 
+        Evaluate the model. Subclasses must decide how to generate the
+        rendered images, but they can use the base class's `compare_images_quality`
         to calculate the actual metrics.
         """
         pass
@@ -72,8 +73,9 @@ class NerfModel(ABC):
     # 2. SHARED CONCRETE UTILITIES (Inherited by all subclasses)
     # ------------------------------------------------------------------
 
-    
-    def compare_images_quality(self, rendered_images, ground_truth_images) -> Dict[str, float]:
+    def compare_images_quality(
+        self, rendered_images, ground_truth_images
+    ) -> Dict[str, float]:
         """
         Shared evaluation logic. Subclasses call this inside their `evaluate()` methods.
         """
@@ -255,4 +257,3 @@ class NerfModel(ABC):
 
         output_path.mkdir(parents=True, exist_ok=True)
         return output_path
-
