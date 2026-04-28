@@ -58,6 +58,9 @@ Campos de Radiância Neural podem ser definidos por 2 componentes principais: (i
 
 \teorical{NeRFs Few-Shot} blablablabla
 
+\section{Metodologia} 
+\label{sec:metodology}
+
 % The first page must display the paper title, the name and address of the
 % authors, the abstract in English and ``resumo'' in Portuguese (``resumos'' are
 % required only for papers written in Portuguese). The title must be centered
@@ -73,16 +76,9 @@ Campos de Radiância Neural podem ser definidos por 2 componentes principais: (i
 % indented 0.8cm on both sides. The word \textbf{Abstract} and \textbf{Resumo},
 % should be written in boldface and must precede the text.
 
+Esta seção contempla a metodologia adotada para a realização dos experimentos, incluindo a descrição dos conjuntos de dados utilizados, os modelos de NeRF selecionados para comparação, as métricas de avaliação escolhidas e o ambiente computacional onde os testes foram conduzidos. A seguir, detalhamos cada um desses aspectos. 
 
-
-\section{Metodologia} 
-\label{sec:metodology}
-
-
-\subsubsection{Nerfstudio}
-
-Para viabilizar o treinamento dos modelos supracitados, utilizou-se o agregador de modelos e invólucro de \textit{tooling} cunhado como NeRFStudio. Este instrumento ferramental 
-
+Para viabilizar a comparação entre os modelos, foi-se criado 2 Wrappers em pythons, os quais encapsulam duas das mais populares formas de se implementar uma NeRF: (i) usando NerfStudio, a qual é uma ferramenta consolidada, com uma implementação otimizada em cuda e que já conta com diversos modelos pré-treinados; e (ii) usando a biblioteca PyTorch, a qual é mais flexível, mas exige uma implementação mais manual. A efeito de comparação, o NerfStudio também é implementado utilizando PyTorch.
 
 \section{Experimentos e Resultados}
 
@@ -92,6 +88,8 @@ Para viabilizar o treinamento dos modelos supracitados, utilizou-se o agregador 
 % published on the CD and the other, containing only the first page, with
 % abstract and ``resumo'' (for papers in Portuguese).
 
+% TODO
+
 \section{Conclusões}
 
 % Section titles must be in boldface, 13pt, flush left. There should be an extra
@@ -99,6 +97,7 @@ Para viabilizar o treinamento dos modelos supracitados, utilizou-se o agregador 
 % paragraph of each section should not be indented, while the first lines of
 % subsequent paragraphs should be indented by 1.27 cm.
 
+% TODO
 
 
 \bibliographystyle{sbc}
