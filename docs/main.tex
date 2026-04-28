@@ -11,7 +11,7 @@
      
 \sloppy
 
-\title{Uma Análise de NeRFs baseadas em CNN e ViT em Conjunto de Dados de Vistas Esparsas}
+\title{Uma Análise de NeRFs Few-Shot baseadas em CNN e ViT aplicadas em Conjunto de Dados de Vistas Esparsas}
 % { NeRFs Few-Shot }
 
 \author{Felipe G. da Silva\inst{1}}
@@ -28,26 +28,35 @@
 \maketitle
 
 \begin{abstract}
- This work compares hybrid NeRFs based on ViT and CNN applied to sparse-view datasets, evaluating the impact of these feature extraction architectures on novel view synthesis performance. Through a quantitative analysis using visual fidelity (PSNR, SSIM, LPIPS) and computational efficiency metrics (convergence time, VRAM footprint, FPS), this study highlights the trade-offs between the global generalization of Transformers and the local processing efficiency of convolutions. Ultimately, it aims to guide the selection of 3D rendering models for practical scenarios often constrained by hardware limitations and data scarcity.
+ This work compares hybrid NeRFs based on ViT and CNN applied to sparse-view datasets, evaluating the impact of these feature extraction architectures on novel view synthesis performance. Through a quantitative analysis using visual fidelity (PSNR, SSIM, LPIPS) and computational efficiency metrics (convergence time, VRAM footprint, inference time), this study highlights the trade-offs between the global generalization of Transformers and the local processing efficiency of convolutions. Ultimately, it aims to guide the selection of 3D rendering models for practical scenarios often constrained by hardware limitations and data scarcity.
 \end{abstract}
 
 \begin{resumo}
-  Esse trabalho apresenta uma comparação entre NeRFs híbridas baseadas em ViT e CNN aplicadas em conjuntos de dados com vistas esparsas e avalia o impacto dessas arquiteturas de extração de características no desempenho em síntese de novas vistas. Por meio de uma análise quantitativa baseada em métricas de fidelidade visual (PSNR, SSIM e LPIPS) e de eficiência computacional (tempo de convergência, consumo de VRAM e FPS), o estudo busca evidenciar os trade-offs entre a capacidade de generalização global dos Transformers e a eficiência de processamento local das convoluções,  visando auxiliar na seleção de modelos de renderização 3D em cenários práticos, os quais são frequentemente marcados por restrições de hardware e escassez de dados.
+  Esse trabalho apresenta uma comparação entre NeRFs híbridas baseadas em ViT e CNN aplicadas em conjuntos de dados com vistas esparsas e avalia o impacto dessas arquiteturas de extração de características no desempenho em síntese de novas vistas. Por meio de uma análise quantitativa baseada em métricas de fidelidade visual (PSNR, SSIM e LPIPS) e de eficiência computacional (tempo de convergência, consumo de VRAM e tempo de inferência), o estudo busca evidenciar os trade-offs entre a capacidade de generalização global dos Transformers e a eficiência de processamento local das convoluções,  visando auxiliar na seleção de modelos de renderização 3D em cenários práticos, os quais são frequentemente marcados por restrições de hardware e escassez de dados.
 \end{resumo}
 
 \section{Introdução}
+\label{sec:intro}
 
 Modelos de campos de radiância neural (NeRF) conquistaram, nos anos recentes, um papel muito importante, tanto na indústria, quanto na academia, com resultados hiper-realistas sobre geração de novas vistas \cite{kerbl3Dgaussians, Tancik2023, substance3dviewer}. Entretanto, as mais avançadas técnicas de renderização neural exigem uma grande quantidade de (i) poder computacional; (ii) múltiplas vistas no conjunto de dados. Ambos os desafios supracitados tendem a impedir que aplicações mais simples, como escaneamento \textit{mobile} de objetos, provador virtual, geração de assets 3D e síntese em datasets pequenos, sejam aproveitados. É com tal problemática que projetos como Instant-NGP (\textit{Instant Neural Graphics Primitives}), MeRF (\textit{Memory-Efficient Neural Radiance Field}), Pixel-Nerf, Gnt (\textit{Generalizable Nerf Transformer}) \cite{muller2022, reiser2023merf, yu2021pixelnerfneuralradiancefields, t2023attentionnerfneeds}, entre outros, tentam expandir o estado da arte e, consequentemente, abordam temas partilhados, como: (i) \textit{encoding} espacial de parâmetros \cite{muller2022, reiser2023merf}; (ii) uso de arquiteturas híbridas entre Convolutional Neural Networks (CNN) e Vision Transformers (ViT) \cite{schwarz2021grafgenerativeradiancefields, wu2021cvt, t2023attentionnerfneeds}; e (iii) pré-computação (\textit{baking}) dos modelos em estruturas de menor pegada de memória \cite{reiser2023merf, hedman2021bakingneuralradiancefields}.
 
-Este trabalho tem, portanto, o objetivo de explorar o uso dos diferentes modelos de campos de radiância neural e suas respectivas técnicas de otimização, ao aplicá-las em alguns conjuntos de dados com vistas esparsas, promovendo uma análise exploratória entre desempenho computacional e qualidade dos volumes gerados. Para avaliar a fidelidade das reconstruções, serão utilizadas métricas de qualidade visual amplamente consagradas na literatura, como PSNR (\textit{Peak Signal-to-Noise Ratio}), SSIM (\textit{Structural Similarity Index Measure}) \cite{wang2004image} e LPIPS (\textit{Learned Perceptual Image Patch Similarity}) \cite{zhang2018unreasonable}. Paralelamente, a quantificação do custo operacional basear-se-á em métricas de desempenho sistêmico, incluindo o tempo de convergência no treinamento, a velocidade de inferência (medida em \textit{Frames Per Second} - FPS) e a pegada de memória (\textit{memory footprint}), sobretudo o consumo de VRAM (\textit{Video Random Access Memory}).
+Este trabalho tem, portanto, o objetivo de explorar o uso dos diferentes modelos de campos de radiância neural e suas respectivas técnicas de otimização, ao aplicá-las em alguns conjuntos de dados com vistas esparsas, promovendo uma análise exploratória entre desempenho computacional e qualidade dos volumes gerados. Para avaliar a fidelidade das reconstruções, serão utilizadas métricas de qualidade visual amplamente consagradas na literatura, como PSNR (\textit{Peak Signal-to-Noise Ratio}), SSIM (\textit{Structural Similarity Index Measure}) \cite{wang2004image} e LPIPS (\textit{Learned Perceptual Image Patch Similarity}) \cite{zhang2018unreasonable}. Paralelamente, a quantificação do custo operacional basear-se-á em métricas de desempenho sistêmico, incluindo o tempo de convergência no treinamento, a velocidade de inferência e a pegada de memória (\textit{memory footprint}), sobretudo o consumo de VRAM (\textit{Video Random Access Memory}).
 
 Para que tais resultados possam ser atingidos, usar-se-á a ferramenta escrita em \textit{python, Nerfstudio} \cite{Tancik2023}, a qual exporta utilitários importantes, como (i) visualização em tempo real; (ii) implementação em cuda (ou seja, otimizada para gpu) já consolidada; e (iii) modelos prontos, com pré-computação e otimizações como as citadas previamente. Em suma, espera-se que esta investigação forneça um panorama consolidado sobre os \textit{trade-offs} entre eficiência computacional e fidelidade visual, estabelecendo diretrizes claras para a viabilização e aplicação prática de modelos de síntese de novas vistas em cenários com restrições das mais diversas, especialmente de dados e de hardware.
 
 % Full papers must respect the page limits defined by the conference.
 % Conferences that publish just abstracts ask for \textbf{one}-page texts.
 
-\section{Metodologia} 
-\label{sec:metodology}
+\section{Fundamentação Teórica}
+\label{sec:fund}
+
+Campos de Radiância Neural podem ser definidos por 2 componentes principais: (i) uma rede neural que aproxima os valores de densidade pela função ; (ii) \cite{t2023attentionnerfneeds}
+
+\teorical{Rede Neural NeRF} Em contraste com métodos tradicionais de aprendizado de máquina aplicados a síntese de imagens, os \textit{campos de radiação neural} (\textit{Neural Radiance Fields}, NeRF) empregam técnicas clássicas de renderização volumétrica, associadas a redes neurais artificiais do tipo MLP (\textit{Multilayer Perceptron}), para processar coordenadas 5D de entrada $(x, y, z, \theta, \phi)$. Cada posição espacial é representada por um vetor tridimensional $(x, y, z)$, combinado com os ângulos e a direção de câmera correspondentes $(\theta, \phi)$, a fim de gerar pontos de densidade volumétrica $\sigma(x)$ e, posteriormente, a cor difusa $c = (r, g, b)$. Esses pontos podem então ser integrados para formar volumes tridimensionais convencionais \cite{mildenhall2020nerfrepresentingscenesneural}.
+
+\teorical{Renderizador NeRF} Esta etapa de renderização complementa a saída do modelo treinado NeRF com características chamadas de dependetes de vistas (\textit{view-dependent}). Diversas técnicas foram empregadas 
+
+\teorical{NeRFs Few-Shot} blablablabla
 
 % The first page must display the paper title, the name and address of the
 % authors, the abstract in English and ``resumo'' in Portuguese (``resumos'' are
@@ -64,6 +73,17 @@ Para que tais resultados possam ser atingidos, usar-se-á a ferramenta escrita e
 % indented 0.8cm on both sides. The word \textbf{Abstract} and \textbf{Resumo},
 % should be written in boldface and must precede the text.
 
+
+
+\section{Metodologia} 
+\label{sec:metodology}
+
+
+\subsubsection{Nerfstudio}
+
+Para viabilizar o treinamento dos modelos supracitados, utilizou-se o agregador de modelos e invólucro de \textit{tooling} cunhado como NeRFStudio. Este instrumento ferramental 
+
+
 \section{Experimentos e Resultados}
 
 % In some conferences, the papers are published on CD-ROM while only the
@@ -78,6 +98,7 @@ Para que tais resultados possam ser atingidos, usar-se-á a ferramenta escrita e
 % 12 pt of space before each title. Section numbering is optional. The first
 % paragraph of each section should not be indented, while the first lines of
 % subsequent paragraphs should be indented by 1.27 cm.
+
 
 
 \bibliographystyle{sbc}
