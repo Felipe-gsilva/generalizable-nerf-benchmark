@@ -1,13 +1,14 @@
 import time
 import torch
+import numpy as np
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List
 from tqdm import tqdm
 from abc import ABC, abstractmethod
 from nerf.NeRFModel import NerfModel
 from src.utils.config import config
-from utils.metrics import MetricsLogger
-from utils.types import Hyperparams
+from src.utils.metrics import MetricsLogger
+from src.utils.types import Hyperparams, Plans
 
 
 class TorchNeRFWrapper(NerfModel, ABC):
@@ -90,6 +91,33 @@ class TorchNeRFWrapper(NerfModel, ABC):
         """
         Helper function. Forward pass the current self.models to generate
         images for the evaluate() method. Returns (rendered, ground_truth).
+        """
+        ...
+
+    @abstractmethod
+    def render_orthographic_slice(
+        self,
+        plan: Plans,
+        position: float,
+        width: int = 512,
+        height: int = 512,
+        extent_x: float = 2.0,
+        extent_y: float = 2.0,
+    ) -> Optional[Dict[str, torch.Tensor]]:
+        """
+        Render a single orthographic slice. Concrete subclasses must implement this
+        by generating an orthographic ray grid mapping to their specific volumetric
+        space and forwarding it through self.models.
+        """
+        ...
+
+    @abstractmethod
+    def render_orthographic_slices(
+        self, save: bool = False, num_slices: int = 10, plan: Plans = Plans.AXIAL
+    ) -> Optional[List[np.ndarray]]:
+        """
+        Render a series of orthographic slices. Concrete subclasses must implement this
+        iterating over the volume depth using render_orthographic_slice.
         """
         ...
 

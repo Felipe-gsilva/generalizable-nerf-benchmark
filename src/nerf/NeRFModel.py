@@ -3,8 +3,10 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from abc import ABC, abstractmethod
+
+from src.utils.types import Plans
 
 from src.validation.eval_images import calculate_fid, calculate_psnr_ssim_lpips
 from src.utils.config import config
@@ -69,7 +71,28 @@ class NerfModel(ABC):
         """Returns memory footprint in bytes."""
         pass
 
+    @abstractmethod
+    def render_orthographic_slice(
+        self,
+        plan: Plans,
+        position: float,
+        width: int = 512,
+        height: int = 512,
+        extent_x: float = 2.0,
+        extent_y: float = 2.0,
+    ) -> Optional[Dict[str, "torch.Tensor"]]:
+        """Renders a single orthographic slice."""
+        pass
+
+    @abstractmethod
+    def render_orthographic_slices(
+        self, save: bool = False, num_slices: int = 10, plan: Plans = Plans.AXIAL
+    ) -> Optional[List["np.ndarray"]]:
+        """Renders a series of orthographic slices along a given axis."""
+        pass
+
     # ------------------------------------------------------------------
+
     # 2. SHARED CONCRETE UTILITIES (Inherited by all subclasses)
     # ------------------------------------------------------------------
 

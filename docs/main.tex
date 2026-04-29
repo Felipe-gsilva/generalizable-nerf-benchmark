@@ -12,8 +12,6 @@
 \sloppy
 
 \title{Uma Análise de NeRFs Few-Shot baseadas em CNN e ViT aplicadas em Conjunto de Dados de Vistas Esparsas}
-% { NeRFs Few-Shot }
-
 \author{Felipe G. da Silva\inst{1}}
 
 
@@ -28,11 +26,11 @@
 \maketitle
 
 \begin{abstract}
- This work compares hybrid NeRFs based on ViT and CNN applied to sparse-view datasets, evaluating the impact of these feature extraction architectures on novel view synthesis performance. Through a quantitative analysis using visual fidelity (PSNR, SSIM, LPIPS) and computational efficiency metrics (convergence time, VRAM footprint, inference time), this study highlights the trade-offs between the global generalization of Transformers and the local processing efficiency of convolutions. Ultimately, it aims to guide the selection of 3D rendering models for practical scenarios often constrained by hardware limitations and data scarcity.
+This work compares hybrid NeRFs based on ViT and CNN applied to sparse-view datasets, evaluating the impact of these feature extraction architectures on novel view synthesis performance. Through a quantitative analysis using visual fidelity (PSNR, SSIM, LPIPS) and computational efficiency metrics (convergence time, VRAM footprint, inference time), this study highlights the trade-offs between the global generalization of Transformers and the local processing efficiency of convolutions. Ultimately, it aims to guide the selection of 3D rendering models for practical scenarios often constrained by hardware limitations and data scarcity.
 \end{abstract}
 
 \begin{resumo}
-  Esse trabalho apresenta uma comparação entre NeRFs híbridas baseadas em ViT e CNN aplicadas em conjuntos de dados com vistas esparsas e avalia o impacto dessas arquiteturas de extração de características no desempenho em síntese de novas vistas. Por meio de uma análise quantitativa baseada em métricas de fidelidade visual (PSNR, SSIM e LPIPS) e de eficiência computacional (tempo de convergência, consumo de VRAM e tempo de inferência), o estudo busca evidenciar os trade-offs entre a capacidade de generalização global dos Transformers e a eficiência de processamento local das convoluções,  visando auxiliar na seleção de modelos de renderização 3D em cenários práticos, os quais são frequentemente marcados por restrições de hardware e escassez de dados.
+Esse trabalho apresenta uma comparação entre NeRFs híbridas baseadas em ViT e CNN aplicadas em conjuntos de dados com vistas esparsas e avalia o impacto dessas arquiteturas de extração de características no desempenho em síntese de novas vistas. Por meio de uma análise quantitativa baseada em métricas de fidelidade visual (PSNR, SSIM e LPIPS) e de eficiência computacional (tempo de convergência, consumo de VRAM e tempo de inferência), o estudo busca evidenciar os trade-offs entre a capacidade de generalização global dos Transformers e a eficiência de processamento local das convoluções,  visando auxiliar na seleção de modelos de renderização 3D em cenários práticos, os quais são frequentemente marcados por restrições de hardware e escassez de dados.
 \end{resumo}
 
 \section{Introdução}
@@ -56,7 +54,8 @@ Campos de Radiância Neural podem ser definidos por 2 componentes principais: (i
 
 \teorical{Renderizador NeRF} Esta etapa de renderização complementa a saída do modelo treinado NeRF com características chamadas de dependetes de vistas (\textit{view-dependent}). Diversas técnicas foram empregadas 
 
-\teorical{NeRFs Few-Shot} blablablabla
+\teorical{NeRFs Few-Shot} Para mitigar o problema de vistas esparsas, surgiram, ao decorrer dos ultimos 5 anos, uma série de modelos que buscam utilizar conhecimentos já consolidados no deep learning. Por isso, este trabalho se utilizará da alcunha de NeRFs Few-Shot para se referir a modelos que necessitam de poucas entradas ou que são capazes de convergir em um renderizador de qualidade com menos features. Esse tipo de NeRF primeiramente aperece na literatura com surgimento do PixelNerf \cite{yu2021pixelnerfneuralradiancefields}), com o uso de CNNs (em especial, uma ResNet para extração de características visuais). Essa abordagem, expande-se, ao surgimento das arquiteturas GNT (Generalizable NeRF Transformer \cite{t2023attentionnerfneeds})
+
 
 \section{Metodologia} 
 \label{sec:metodology}
@@ -78,7 +77,18 @@ Campos de Radiância Neural podem ser definidos por 2 componentes principais: (i
 
 Esta seção contempla a metodologia adotada para a realização dos experimentos, incluindo a descrição dos conjuntos de dados utilizados, os modelos de NeRF selecionados para comparação, as métricas de avaliação escolhidas e o ambiente computacional onde os testes foram conduzidos. A seguir, detalhamos cada um desses aspectos. 
 
-Para viabilizar a comparação entre os modelos, foi-se criado 2 Wrappers em pythons, os quais encapsulam duas das mais populares formas de se implementar uma NeRF: (i) usando NerfStudio, a qual é uma ferramenta consolidada, com uma implementação otimizada em cuda e que já conta com diversos modelos pré-treinados; e (ii) usando a biblioteca PyTorch, a qual é mais flexível, mas exige uma implementação mais manual. A efeito de comparação, o NerfStudio também é implementado utilizando PyTorch.
+Para viabilizar a comparação entre os modelos, foi-se criado 2 Wrappers em pythons, os quais encapsulam duas das mais populares formas de se implementar uma NeRF: (i) usando NerfStudio, a qual é uma ferramenta consolidada, com uma implementação otimizada em cuda e que já conta com diversos modelos pré-treinados; e (ii) usando a biblioteca PyTorch, a qual é mais flexível, mas exige uma implementação mais manual. A efeito de comparação, o NerfStudio também é implementado utilizando PyTorch, no entanto, este utiliza otimizações avançadas com, por exemplo, \textit{tiny-cuda-nn}, o que torna injusto a comparação direta entre os modelos. Portanto, tais otimizações serão desativadas, deixando o modelo em si o mais fiél a implementação original proposta, garantindo que as diferenças observadas nas métricas de desempenho sejam atribuíveis exclusivamente às divergências arquiteturais entre os extratores baseados em atenção (ViT) e convolução (CNN).
+
+\subsection{Padronização da Entrada}
+
+Buscando a 
+
+\subsection{Wrapper NeRFStudio}
+
+\subsection{Wrapper Pytorch}
+
+\subsection{Renderizando as imagens}
+
 
 \section{Experimentos e Resultados}
 

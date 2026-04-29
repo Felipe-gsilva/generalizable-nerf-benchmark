@@ -2,11 +2,16 @@ import subprocess
 import sys
 import time
 import torch
+import numpy as np
+from PIL import Image
 
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from nerf.NeRFModel import NerfModel
 from src.utils.config import config
+from src.utils.types import Plans
+from nerfstudio.cameras.cameras import Cameras, CameraType
+from nerfstudio.utils.eval_utils import eval_setup
 
 
 class CLINeRFWrapper(NerfModel):
@@ -27,6 +32,8 @@ class CLINeRFWrapper(NerfModel):
     ) -> None:
         super().__init__(model_name, dataset_name, image_priority, output_dir)
         self.model_state = None
+        self.pipeline = None
+        self.model = None
 
     # ------------------------------------------------------------------
     # Contract Implementations
@@ -127,19 +134,141 @@ class CLINeRFWrapper(NerfModel):
 
     def load_checkpoint(self, path: Path) -> None:
         """
-        Loads the checkpoint metadata into memory. For CLI execution, actual
-        resumption is handled via '--load-dir' in the run() method.
+        Loads the checkpoint metadata into memory. Also loads the full
+        nerfstudio pipeline for rendering.
         """
-        config.logger.info(f"Loading NeRF model metadata from {path}...")
+        config.logger.info(f"Loading NeRF model metadata and pipeline from {path}...")
         c_path = self._get_latest_checkpoint(path) if path.is_dir() else path
+        c_path_obj = Path(c_path) if c_path else None
 
-        if c_path and c_path.exists():
+        if c_path_obj and c_path_obj.exists():
             try:
-                checkpoint = torch.load(c_path, map_location="cpu")
+                checkpoint = torch.load(c_path_obj, map_location="cpu")
                 self.model_state = checkpoint.get("model_state", None)
-                config.logger.info(f"✅ Model metadata loaded successfully from {path}")
+
+                # Load nerfstudio pipeline
+                config_path = c_path_obj.parent / "config.yml"
+                if config_path.exists():
+                    _, pipeline, _, _ = eval_setup(config_path)
+                    self.pipeline = pipeline
+                    self.model = pipeline.model
+                    self.model.eval()
+                    config.logger.info(f"✅ Model metadata and pipeline loaded successfully from {path}")
+                else:
+                    config.logger.warning(f"⚠️ config.yml not found at {config_path}. Pipeline not loaded.")
+
             except Exception as e:
                 config.logger.error(f"❌ Failed to load model from {path}: {e}")
+
+    def render_orthographic_slice(
+        self,
+        plan: Plans,
+        position: float,
+        width: int = 512,
+        height: int = 512,
+        extent_x: float = 2.0,
+        extent_y: float = 2.0,
+    ) -> Optional[Dict[str, torch.Tensor]]:
+        if not hasattr(self, "pipeline") or self.pipeline is None:
+            config.logger.error("❌ Pipeline not loaded. Ensure load_checkpoint is called.")
+            return None
+
+        c2w = torch.eye(4)[:3, :4].float()
+
+        if plan == Plans.AXIAL:
+            c2w[2, 3] = position
+        elif plan == Plans.SAGITAL:
+            c2w = torch.tensor(
+                [[1.0, 0.0, 0.0, 0.0], [0.0, 0.0, -1.0, position], [0.0, 1.0, 0.0, 0.0]]
+            ).float()
+        elif plan == Plans.CORONAL:
+            c2w = torch.tensor(
+                [[0.0, 0.0, 1.0, position], [0.0, 1.0, 0.0, 0.0], [-1.0, 0.0, 0.0, 0.0]]
+            ).float()
+
+        fx = width / extent_x
+        fy = height / extent_y
+        cx = width / 2.0
+        cy = height / 2.0
+
+        camera = Cameras(
+            camera_to_worlds=c2w.unsqueeze(0),
+            fx=torch.Tensor([fx]),
+            fy=torch.Tensor([fy]),
+            cx=torch.Tensor([cx]),
+            cy=torch.Tensor([cy]),
+            width=torch.Tensor([width]),
+            height=torch.Tensor([height]),
+            camera_type=CameraType.ORTHOPHOTO,
+        ).to(self.pipeline.device)
+
+        ray_bundle = camera.generate_rays(camera_indices=0, aabb_box=None)
+
+        THICKNESS = 0.005
+        if ray_bundle.nears is None and ray_bundle.fars is None:
+            raise RuntimeError("Expected ray_bundle.nears and fars to be not None.")
+
+        ray_bundle.nears = torch.zeros_like(ray_bundle.nears)
+        ray_bundle.fars = torch.zeros_like(ray_bundle.fars) + THICKNESS
+
+        with torch.no_grad():
+            outputs = self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
+
+        return outputs
+
+    def render_orthographic_slices(
+        self, save: bool = False, num_slices: int = 10, plan: Plans = Plans.AXIAL
+    ) -> Optional[List[np.ndarray]]:
+        if not hasattr(self, "pipeline") or self.pipeline is None:
+            config.logger.error("❌ No pipeline available for rendering.")
+            return None
+
+        # Just use output_dir as a base
+        output_dir = self.output_dir / "slices_nerf"
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        aabb = self.pipeline.model.scene_box.aabb.cpu().numpy()
+        min_bound, max_bound = aabb[0], aabb[1]
+
+        if plan == Plans.AXIAL:
+            min_val, max_val = min_bound[2], max_bound[2]
+        elif plan == Plans.SAGITAL:
+            min_val, max_val = min_bound[0], max_bound[0]
+        elif plan == Plans.CORONAL:
+            min_val, max_val = min_bound[1], max_bound[1]
+
+        slab_size = (max_val - min_val) / num_slices
+        output = []
+
+        for i in range(num_slices):
+            slice_center = min_val + (i + 0.5) * slab_size
+            render_dict = self.render_orthographic_slice(
+                plan=plan,
+                position=slice_center,
+                width=config.img_size if hasattr(config, "img_size") else 512,
+                height=config.img_size if hasattr(config, "img_size") else 512,
+                extent_x=max_bound[0] - min_bound[0],
+                extent_y=max_bound[1] - min_bound[1],
+            )
+
+            if render_dict and "rgb" in render_dict:
+                rgb_img = render_dict["rgb"].cpu().numpy()
+                if rgb_img.ndim == 2:
+                    dim = config.img_size if hasattr(config, "img_size") else 512
+                    rgb_img = rgb_img.reshape(dim, dim, 3)
+                elif rgb_img.ndim == 4:
+                    rgb_img = rgb_img.squeeze(0)
+                
+                rgb_img = np.clip(rgb_img, 0.0, 1.0)
+                rgb_uint8 = (rgb_img * 255.0).astype(np.uint8)
+
+                if save:
+                    png_out = output_dir / f"slice_nerf_{i:03d}.png"
+                    Image.fromarray(rgb_uint8).save(png_out)
+                    config.logger.info(f"✅ Saved NeRF slice {i} at z={slice_center:.3f} → {png_out}")
+
+                output.append(rgb_uint8)
+        return output
 
     def evaluate(self, rendered_images, ground_truth_images) -> Dict[str, float]:
         """
