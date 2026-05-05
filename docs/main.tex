@@ -77,18 +77,13 @@ Campos de Radiância Neural podem ser definidos por 2 componentes principais: (i
 
 Esta seção contempla a metodologia adotada para a realização dos experimentos, incluindo a descrição dos conjuntos de dados utilizados, os modelos de NeRF selecionados para comparação, as métricas de avaliação escolhidas e o ambiente computacional onde os testes foram conduzidos. A seguir, detalhamos cada um desses aspectos. 
 
-Para viabilizar a comparação entre os modelos, foi-se criado 2 Wrappers em pythons, os quais encapsulam duas das mais populares formas de se implementar uma NeRF: (i) usando NerfStudio, a qual é uma ferramenta consolidada, com uma implementação otimizada em cuda e que já conta com diversos modelos pré-treinados; e (ii) usando a biblioteca PyTorch, a qual é mais flexível, mas exige uma implementação mais manual. A efeito de comparação, o NerfStudio também é implementado utilizando PyTorch, no entanto, este utiliza otimizações avançadas com, por exemplo, \textit{tiny-cuda-nn}, o que torna injusto a comparação direta entre os modelos. Portanto, tais otimizações serão desativadas, deixando o modelo em si o mais fiél a implementação original proposta, garantindo que as diferenças observadas nas métricas de desempenho sejam atribuíveis exclusivamente às divergências arquiteturais entre os extratores baseados em atenção (ViT) e convolução (CNN).
-
-\subsection{Padronização da Entrada}
-
-Buscando a 
+Para viabilizar a comparação entre os modelos, implementou-se, individualmente, (caso não houvesse presença prévia) a integração do modelo proposto com a ferramenta NeRFStudio. 
 
 \subsection{Wrapper NeRFStudio}
 
-\subsection{Wrapper Pytorch}
+\subsection{Padronização da Entrada}
 
 \subsection{Renderizando as imagens}
-
 
 \section{Experimentos e Resultados}
 

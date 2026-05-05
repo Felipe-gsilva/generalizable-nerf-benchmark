@@ -15,12 +15,10 @@ class SliceConfig:
     num_slices: int = 10
     overlap: float = 0.0
 
-
 class AvailableMetrics(enum.Enum):
     PSNR = "psnr"
     SSIM = "ssim"
     LPIPS = "lpips"
     FID = "fid"
-
 
 Metrics = Dict[str, AvailableMetrics]

@@ -4,3 +4,5 @@ docs/build
 # Added by cargo
 
 /target
+assets/baseline
+__pycache__
