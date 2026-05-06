@@ -14,6 +14,7 @@ dependencies = [
     "torch>=2.11.0",
     "torchmetrics>=1.9.0",
     "tqdm>=4.67.3",
-    "nerfstudio-gnt",
     "pillow>=12.2.0",
+    "nerfstudio-gnt",
+    #"nerfstudio-pixel-nerf"
 ]

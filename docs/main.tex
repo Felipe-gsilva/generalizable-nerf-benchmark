@@ -48,13 +48,29 @@ Para que tais resultados possam ser atingidos, usar-se-á a ferramenta escrita e
 \section{Fundamentação Teórica}
 \label{sec:fund}
 
-Campos de Radiância Neural podem ser definidos por 2 componentes principais: (i) uma rede neural que aproxima os valores de densidade pela função ; (ii) \cite{t2023attentionnerfneeds}
+Campos de Radiância Neural (\textit{Neural Radiance Fields}, NeRF) podem ser definidos por dois componentes principais: 
+(i) uma função contínua parametrizada por uma rede neural $f_\theta$, responsável por mapear coordenadas espaciais e direções de visualização em propriedades volumétricas; 
+(ii) um processo de renderização volumétrica que integra essas propriedades ao longo de raios para formar imagens 2D \cite{mildenhall2020nerfrepresentingscenesneural}.
 
-\teorical{Rede Neural NeRF} Em contraste com métodos tradicionais de aprendizado de máquina aplicados a síntese de imagens, os \textit{campos de radiação neural} (\textit{Neural Radiance Fields}, NeRF) empregam técnicas clássicas de renderização volumétrica, associadas a redes neurais artificiais do tipo MLP (\textit{Multilayer Perceptron}), para processar coordenadas 5D de entrada $(x, y, z, \theta, \phi)$. Cada posição espacial é representada por um vetor tridimensional $(x, y, z)$, combinado com os ângulos e a direção de câmera correspondentes $(\theta, \phi)$, a fim de gerar pontos de densidade volumétrica $\sigma(x)$ e, posteriormente, a cor difusa $c = (r, g, b)$. Esses pontos podem então ser integrados para formar volumes tridimensionais convencionais \cite{mildenhall2020nerfrepresentingscenesneural}.
+\teorical{Rede Neural NeRF} 
+Diferentemente de métodos tradicionais de síntese de imagens, os NeRFs utilizam redes neurais do tipo MLP (\textit{Multilayer Perceptron}) para aproximar uma função contínua no espaço 5D. 
+Essa função recebe como entrada uma posição espacial $x = (x, y, z)$ e uma direção de visualização $d = (\theta, \phi)$, retornando a densidade volumétrica $\sigma(x)$ e a cor associada $c = (r, g, b)$:
 
-\teorical{Renderizador NeRF} Esta etapa de renderização complementa a saída do modelo treinado NeRF com características chamadas de dependetes de vistas (\textit{view-dependent}). Diversas técnicas foram empregadas 
+\[
+f_\theta(x, d) \rightarrow (\sigma, c)
+\]
 
-\teorical{NeRFs Few-Shot} Para mitigar o problema de vistas esparsas, surgiram, ao decorrer dos ultimos 5 anos, uma série de modelos que buscam utilizar conhecimentos já consolidados no deep learning. Por isso, este trabalho se utilizará da alcunha de NeRFs Few-Shot para se referir a modelos que necessitam de poucas entradas ou que são capazes de convergir em um renderizador de qualidade com menos features. Esse tipo de NeRF primeiramente aperece na literatura com surgimento do PixelNerf \cite{yu2021pixelnerfneuralradiancefields}), com o uso de CNNs (em especial, uma ResNet para extração de características visuais). Essa abordagem, expande-se, ao surgimento das arquiteturas GNT (Generalizable NeRF Transformer \cite{t2023attentionnerfneeds})
+Essa representação permite modelar cenas tridimensionais de forma contínua, possibilitando a renderização de novas vistas a partir de diferentes pontos de observação.
+
+\teorical{Renderização NeRF} 
+A etapa de renderização consiste na integração das contribuições de cor e densidade ao longo de um raio projetado da câmera para a cena. Esse processo é baseado na equação de renderização volumétrica, na qual múltiplas amostras são coletadas ao longo do raio e combinadas para produzir a cor final de cada pixel. 
+Além disso, a dependência da cor em relação à direção de visualização permite capturar efeitos como reflexos especulares e transparências (\textit{view-dependent effects}).
+
+\teorical{NeRFs Few-Shot} 
+Com o objetivo de reduzir a necessidade de múltiplas vistas durante o treinamento, surgiram abordagens conhecidas como NeRFs \textit{few-shot} ou generalizáveis. Esses métodos exploram conhecimento prévio aprendido a partir de múltiplas cenas para permitir a reconstrução a partir de um número limitado de imagens.
+
+Um dos primeiros trabalhos nessa linha é o PixelNeRF \cite{yu2021pixelnerfneuralradiancefields}, que incorpora redes convolucionais (CNNs), como a ResNet, para extrair características visuais das imagens de entrada. 
+Posteriormente, arquiteturas baseadas em transformadores, como o GNT (\textit{Generalizable NeRF Transformer}) \cite{t2023attentionnerfneeds}, ampliaram essa capacidade ao modelar relações de atenção entre múltiplas vistas.
 
 
 \section{Metodologia} 
@@ -77,9 +93,22 @@ Campos de Radiância Neural podem ser definidos por 2 componentes principais: (i
 
 Esta seção contempla a metodologia adotada para a realização dos experimentos, incluindo a descrição dos conjuntos de dados utilizados, os modelos de NeRF selecionados para comparação, as métricas de avaliação escolhidas e o ambiente computacional onde os testes foram conduzidos. A seguir, detalhamos cada um desses aspectos. 
 
-Para viabilizar a comparação entre os modelos, implementou-se, individualmente, (caso não houvesse presença prévia) a integração do modelo proposto com a ferramenta NeRFStudio. 
+Para viabilizar a comparação entre os modelos, implementou-se, individualmente, (caso não houvesse presença prévia) a integração do modelo proposto com a ferramenta NeRFStudio, os quais estão dispostos a seguir.
 
-\subsection{Wrapper NeRFStudio}
+\subsection{Modelos Selecionados}
+
+Neste trabalho, são avaliados modelos representativos para reconstrução de campos de radiância neural em cenários de poucas vistas (\textit{few-shot}) e generalizáveis, contemplando diferentes paradigmas arquiteturais e estratégias de aprendizado.
+
+Especificamente, consideram-se: (i) o PixelNeRF \cite{yu2021pixelnerfneuralradiancefields}, que utiliza redes neurais convolucionais para condicionar o campo de radiância a partir de características extraídas das imagens de entrada; (ii) o Generalizable NeRF Transformer (GNT) \cite{t2023attentionnerfneeds}, que emprega mecanismos de atenção para modelar relações entre múltiplas vistas; (iii) o VolRecon, que enfatiza a reconstrução volumétrica com incorporação explícita de informações geométricas; e (iv) o Zero-1-to-3, uma abordagem baseada em modelos de difusão capaz de sintetizar novas vistas a partir de uma única imagem.
+
+A seleção desses modelos visa proporcionar uma análise abrangente entre diferentes abordagens, incluindo métodos baseados em CNNs, transformadores, modelagem geométrica explícita e modelos generativos. Essa diversidade permite uma avaliação mais robusta do impacto de estratégias de aumento de dados em cenários com vistas limitadas.
+
+
+\subsection{implementação NeRFStudio}
+
+Os modelos foram implementados no framework \textit{Nerfstudio}, seguindo sua arquitetura modular. Para cada abordagem, foram definidos componentes específicos de \textit{DataManager}, \textit{Model}, \textit{Pipeline}, \textit{Trainer} e configurações associadas, garantindo a correta integração ao fluxo de treinamento e renderização.
+
+As implementações foram guiadas pelas descrições metodológicas dos trabalhos originais, mantendo equivalência funcional sempre que possível e realizando adaptações pontuais para compatibilidade com o framework.
 
 \subsection{Padronização da Entrada}
 
