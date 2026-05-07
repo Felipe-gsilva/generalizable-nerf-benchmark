@@ -101,12 +101,21 @@ Neste trabalho, são avaliados modelos representativos para reconstrução de ca
 
 Especificamente, consideram-se: (i) o PixelNeRF \cite{yu2021pixelnerfneuralradiancefields}, que utiliza redes neurais convolucionais para condicionar o campo de radiância a partir de características extraídas das imagens de entrada; (ii) o Generalizable NeRF Transformer (GNT) \cite{t2023attentionnerfneeds}, que emprega mecanismos de atenção para modelar relações entre múltiplas vistas; (iii) o VolRecon, que enfatiza a reconstrução volumétrica com incorporação explícita de informações geométricas; e (iv) o Zero-1-to-3, uma abordagem baseada em modelos de difusão capaz de sintetizar novas vistas a partir de uma única imagem.
 
-A seleção desses modelos visa proporcionar uma análise abrangente entre diferentes abordagens, incluindo métodos baseados em CNNs, transformadores, modelagem geométrica explícita e modelos generativos. Essa diversidade permite uma avaliação mais robusta do impacto de estratégias de aumento de dados em cenários com vistas limitadas.
+A seleção desses modelos visa proporcionar uma análise abrangente entre diferentes abordagens, incluindo métodos baseados em CNNs, transformadores, modelagem geométrica explícita e modelos generativos, respectivamente. Essa diversidade permite uma avaliação mais robusta do impacto de estratégias de aumento de dados em cenários com vistas limitadas.
 
 
 \subsection{implementação NeRFStudio}
 
-Os modelos foram implementados no framework \textit{Nerfstudio}, seguindo sua arquitetura modular. Para cada abordagem, foram definidos componentes específicos de \textit{DataManager}, \textit{Model}, \textit{Pipeline}, \textit{Trainer} e configurações associadas, garantindo a correta integração ao fluxo de treinamento e renderização.
+Os modelos foram implementados no framework \textit{Nerfstudio}, seguindo sua arquitetura modular. Para cada abordagem, foram definidos componentes específicos de \textit{DataManager}, \textit{Model}, \textit{Pipeline}, \textit{Trainer} e configurações associadas. Ressalta-se que tentou-se utilizar ao máximo as implementações pré-existentes no \textit{Nerfstudio}, adaptando-as quando necessário para garantir a compatibilidade com os modelos selecionados.
+A implementação completa pode ser encontrada no repositório do projeto, disponível em \url{https://github.com/felipe-gsilva/few-shot-nerfs}.
+
+O NeRFStudio exporta, entre outros, utilitários importantes para a implementação, como
+
+(i) visualização em tempo real, através de uma interface gráfica que permite monitorar o processo de treinamento e renderização, facilitando a análise qualitativa dos resultados;
+
+(ii) implementação otimizada para GPU utilizando CUDA, em associação com a biblioteca otimizada tinycudann, que oferece implementações (já integradas no nerfstudio) de redes neurais MLP e convolucionais, além de otimizadores (como Adam) com um \textit{speedup} se comparado ao cuda cerca de 5x até 30x superior, dependendo do modelo e do cenário \cite{tinycudann}, entretanto, no ambiente python, \citeauthor{tinycudann} impera que o \textit{speedup} tende a decair para cerca de 2x em relação ao ambiente C++; 
+
+(iii) modelos pré-treinados, com pré-computação e otimizações como as citadas previamente.
 
 As implementações foram guiadas pelas descrições metodológicas dos trabalhos originais, mantendo equivalência funcional sempre que possível e realizando adaptações pontuais para compatibilidade com o framework.
 
