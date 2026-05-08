@@ -16,5 +16,5 @@ dependencies = [
     "tqdm>=4.67.3",
     "pillow>=12.2.0",
     "nerfstudio-gnt",
-    #"nerfstudio-pixel-nerf"
+    "nerfstudio-pixelnerf"
 ]

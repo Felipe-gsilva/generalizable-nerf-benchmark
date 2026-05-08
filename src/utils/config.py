@@ -32,14 +32,8 @@ class Config:
         )
         self.logger = logging.getLogger()
         self.root_dir = ROOT_DIR
-        self.stages = [
-            "baseline",
-            "gan_aug",
-            "nerf_aug",
-            "gan_nerf_aug",
-        ]
         self.datasets_name_list = [
-            "3D_virtual_HE_staining",
+            # "3D_virtual_HE_staining",
             "nerf_llff_data",
             # "UT-EndoMRI",
             # "ucsb"
@@ -48,10 +42,9 @@ class Config:
         self.img_size = img_size
         self.nerf_models_to_run = [
             "gnt",
-            "VolRecon",
-            "pixelNeRF",
-            "IBRNet",
-            "Zero-1-to-3",
+            "volrecon",
+            "pixel-nerf",
+            "zero123",
         ]
 
 

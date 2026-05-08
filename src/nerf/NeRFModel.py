@@ -50,7 +50,14 @@ class NerfModel:
     image_priority: str
     images: Optional[ImageDataset]
 
-    def __init__(self, model_name: str, images: Optional[ImageDataset] = None) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        images: Optional[ImageDataset] = None,
+        num_views: int = 0,  # 0 = Usa o dataset todo. >0 = Few-shot.
+        split: List[float] = [0.7, 0.15, 0.15],
+        split_strategy: str = "uniform",  # "uniform" ou "random"
+    ) -> None:
         self.model_name = model_name
         self.pipeline = None
         self.model = None
@@ -58,10 +65,103 @@ class NerfModel:
         self.training_history = []
         self.target_id = None
         self.image_priority = "highest"
-        # Dynamically set dataset name inferred from image path
+
         self.dataset_name = images.name if images else "unknown"
         self.images = images
         self.dataset_path = images.dataset_path if images else None
+
+        # Parâmetros do Paper
+        self.num_views = num_views
+        if sum(split) != 1.0:
+            raise ValueError("Split ratios must sum to 1.0")
+        self.val_split = split[1]
+        self.test_split = split[2]
+        self.split_strategy = split_strategy
+
+    def _apply_dataset_splits(self, data_path: Path) -> Path:
+        """
+        Calcula os splits de train/val/test baseados nos parâmetros da classe
+        e salva um novo arquivo JSON para o Nerfstudio ler.
+        """
+        json_path = data_path / "transforms.json"
+
+        if self.num_views > 0:
+            out_json_path = (
+                data_path
+                / f"transforms_{self.num_views}views_{self.split_strategy}.json"
+            )
+        else:
+            out_json_path = data_path / "transforms_standard_split.json"
+
+        with open(json_path, "r") as f:
+            data = json.load(f)
+
+        frames = data.get("frames", [])
+        total_images = len(frames)
+
+        if total_images == 0:
+            return json_path
+
+        # 1. Definindo as quantidades absolutas de cada split
+        if self.num_views > 0 and self.num_views < total_images:
+            train_count = self.num_views
+            remaining = total_images - train_count
+
+            # Divide o restante proporcionalmente entre val e test
+            pool_ratio = self.val_split + self.test_split
+            if pool_ratio > 0:
+                val_count = int(remaining * (self.val_split / pool_ratio))
+            else:
+                val_count = remaining // 2
+            test_count = remaining - val_count
+        else:
+            # Split padrão percentual (caso num_views = 0)
+            train_count = int(total_images * (1.0 - self.val_split - self.test_split))
+            val_count = int(total_images * self.val_split)
+            test_count = total_images - train_count - val_count
+
+        # 2. Selecionando os Índices de Treino (Estratégia Few-Shot)
+        all_indices = np.arange(total_images)
+        if self.split_strategy == "uniform":
+            train_indices = np.linspace(
+                0, total_images - 1, train_count, dtype=int
+            ).tolist()
+        elif self.split_strategy == "random":
+            np.random.seed(42)
+            train_indices = np.random.choice(
+                total_images, train_count, replace=False
+            ).tolist()
+        else:
+            raise ValueError(f"Strategy {self.split_strategy} not supported.")
+
+        # 3. Selecionando Val e Test aleatoriamente do que sobrou
+        remaining_indices = [idx for idx in all_indices if idx not in train_indices]
+        np.random.seed(
+            42
+        )  # Seed fixa garante que testes diferentes avaliem nas mesmas imagens
+        np.random.shuffle(remaining_indices)
+
+        val_set = set(remaining_indices[:val_count])
+        test_set = set(remaining_indices[val_count:])
+        train_set = set(train_indices)
+
+        # 4. Marcando o arquivo
+        for i, frame in enumerate(frames):
+            if i in train_set:
+                frame["split"] = "train"
+            elif i in val_set:
+                frame["split"] = "val"
+            else:
+                frame["split"] = "test"
+
+        # 5. Salvando o arquivo de experimento
+        with open(out_json_path, "w") as f:
+            json.dump(data, f, indent=4)
+
+        config.logger.info(
+            f"📊 Dataset Split [{out_json_path.name}]: {len(train_set)} Train | {len(val_set)} Val | {len(test_set)} Test"
+        )
+        return out_json_path
 
     def _get_latest_checkpoint(self, output_path: Path):
         """Finds the most recent checkpoint recursively in the output directory."""
@@ -511,6 +611,8 @@ class NerfModel:
             f"🚀 Training {self.model_name} on {data_path} (Downscale: {downscale_factor}x)..."
         )
 
+        split_json_path = self._apply_dataset_splits(data_path)
+
         cmd = (
             [
                 "python",
@@ -524,13 +626,13 @@ class NerfModel:
                 experiment_name,
                 "--vis",
                 "tensorboard",
-                "--data", 
-                str(data_path)
+                "--data",
+                str(split_json_path),
             ]
             + load_dir_arg
             + checkpoint_overrides
         )
-        
+
         if self.model_name == "gnt":
             cmd += [
                 "--pipeline.model.N-samples",
@@ -559,15 +661,24 @@ class NerfModel:
                 "0.0",
             ]
         cmd += [
-            "--pipeline.datamanager.cache-images-type", "uint8",
+            "--pipeline.datamanager.cache-images-type",
+            "uint8",
             "--pipeline.datamanager.train-num-images-to-sample-from",
             "500",
-            "--pipeline.model.eval-num-rays-per-chunk", "1024",
-            "--pipeline.datamanager.train-num-rays-per-batch", "1024",
-            #"--auto-scale-poses", "False",
+            "--pipeline.model.eval-num-rays-per-chunk",
+            "1024",
+            "--pipeline.datamanager.train-num-rays-per-batch",
+            "1024",
+            # "--auto-scale-poses", "False",
         ]
 
-        cmd += ["nerfstudio-data", "--downscale-factor", str(downscale_factor)]
+        cmd += [
+            "nerfstudio-data",
+            "--downscale-factor",
+            str(downscale_factor),
+            "--eval-mode",
+            "filename",
+        ]
 
         process_env = os.environ.copy()
         process_env["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
