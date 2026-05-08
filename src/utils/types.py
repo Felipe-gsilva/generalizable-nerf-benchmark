@@ -4,10 +4,12 @@ from dataclasses import dataclass
 
 Hyperparams = Dict[str, Any]
 
+
 class Plans(enum.Enum):
     AXIAL = "axial"
     CORONAL = "coronal"
     SAGITAL = "sagital"
+
 
 @dataclass
 class SliceConfig:

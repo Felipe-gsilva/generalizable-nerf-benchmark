@@ -198,7 +198,7 @@ if __name__ == "__main__":
         help="List of NeRF models to process",
         choices=config.nerf_models_to_run,
     )
-    
+
     args = parser.parse_args()
 
     if args.train:
