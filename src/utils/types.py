@@ -22,6 +22,11 @@ class Plans(enum.Enum):
     CORONAL = "coronal"
 
 
+class RenderMode(enum.Enum):
+    ORTHOGRAPHIC = "orthographic"
+    PERSPECTIVE = "perspective"
+
+
 @dataclass
 class GenerateCameraConfig:
     """
@@ -37,3 +42,4 @@ class GenerateCameraConfig:
     # Espessura do plano de corte (nears/fars).
     # Mantido em 0.5 para garantir acúmulo suficiente das cores HE.
     thickness: float = 0.5
+

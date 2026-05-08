@@ -2,9 +2,9 @@ from typing import Dict, List, Literal, Optional
 from PIL import Image
 from nerfstudio.pipelines.base_pipeline import Pipeline
 from src.validation.eval_images import calculate_fid, calculate_psnr_ssim_lpips
-from dataset.ImageDataset import ImageDataset
-from utils.config import config
-from utils.types import AvailableMetrics, Plans, GenerateCameraConfig
+from src.dataset.ImageDataset import ImageDataset
+from src.utils.config import config
+from src.utils.types import AvailableMetrics, Plans, GenerateCameraConfig, RenderMode
 from nerfstudio.cameras.cameras import Cameras, CameraType
 from nerfstudio.utils.eval_utils import eval_setup
 from nerfstudio.utils import profiler
@@ -102,7 +102,7 @@ class NerfModel:
         if total_images == 0:
             return json_path
 
-        # 1. Definindo as quantidades absolutas de cada split
+        # Definindo as quantidades absolutas de cada split
         if self.num_views > 0 and self.num_views < total_images:
             train_count = self.num_views
             remaining = total_images - train_count
@@ -113,14 +113,12 @@ class NerfModel:
                 val_count = int(remaining * (self.val_split / pool_ratio))
             else:
                 val_count = remaining // 2
-            test_count = remaining - val_count
+
         else:
             # Split padrão percentual (caso num_views = 0)
             train_count = int(total_images * (1.0 - self.val_split - self.test_split))
             val_count = int(total_images * self.val_split)
-            test_count = total_images - train_count - val_count
 
-        # 2. Selecionando os Índices de Treino (Estratégia Few-Shot)
         all_indices = np.arange(total_images)
         if self.split_strategy == "uniform":
             train_indices = np.linspace(
@@ -134,7 +132,7 @@ class NerfModel:
         else:
             raise ValueError(f"Strategy {self.split_strategy} not supported.")
 
-        # 3. Selecionando Val e Test aleatoriamente do que sobrou
+        # Selecionando Val e Test aleatoriamente do que sobrou
         remaining_indices = [idx for idx in all_indices if idx not in train_indices]
         np.random.seed(
             42
@@ -154,7 +152,6 @@ class NerfModel:
             else:
                 frame["split"] = "test"
 
-        # 5. Salvando o arquivo de experimento
         with open(out_json_path, "w") as f:
             json.dump(data, f, indent=4)
 
@@ -319,7 +316,7 @@ class NerfModel:
 
     def _find_images_dir(
         self, data_path: Path, max_depth: int = MAX_IMAGE_SEARCH_DEPTH
-    ) -> Path:
+    ) -> Optional[Path]:
         """Finds the base image directory without downscale sorting."""
         images_dir = data_path / "images"
         if images_dir.exists() and self._dir_has_images(images_dir):
@@ -485,6 +482,12 @@ class NerfModel:
             images_dir = self._find_images_dir(data_path)
         except FileNotFoundError as e:
             config.logger.error(f"❌ {e}")
+            return False
+
+        if not images_dir:
+            config.logger.error(
+                f"❌ No valid images directory found in {data_path} for nerfstudio processing."
+            )
             return False
 
         return self._run_colmap_transforms_generation(data_path, images_dir)
@@ -790,6 +793,115 @@ class NerfModel:
             return None
         return torch.stack(image_tensors, dim=0)
 
+    def measure_inference_fps(self, mode: RenderMode, num_warmup: int = 3, num_test: int = 10) -> float:
+        """
+        Mede o FPS (Frames Per Second) de inferência do modelo com alta precisão na GPU.
+        """
+        if self.pipeline is None or self.model is None:
+            return 0.0
+
+        self.model.eval()
+        
+        if mode == RenderMode.ORTHOGRAPHIC:
+            # Reutiliza o método recém-criado com um config padrão
+            cam = GenerateCameraConfig(
+                center=(0.0, 0.0), 
+                extent=(1.0, 1.0), 
+                resolution=(config.img_size, config.img_size), 
+                thickness=0.1
+            )
+            ray_bundle = self._generate_orthographic_rays(Plans.AXIAL, 0.0, cam)
+        else:
+            # Pega a primeira câmera real do conjunto de validação/teste (Perspectiva)
+            try:
+                camera = self.pipeline.datamanager.eval_dataloader.cameras[0]
+            except AttributeError:
+                camera = self.pipeline.datamanager.eval_dataset.cameras[0]
+                
+            camera = camera.to(self.pipeline.device)
+            ray_bundle = camera.generate_rays(camera_indices=0)
+
+        # Usando eventos CUDA para precisão real de hardware
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+
+        with torch.no_grad():
+            for _ in range(num_warmup):
+                self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
+
+            torch.cuda.synchronize()
+            start_event.record()
+            
+            for _ in range(num_test):
+                self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
+                
+            end_event.record()
+            torch.cuda.synchronize()
+
+        total_time_ms = start_event.elapsed_time(end_event)
+        time_per_frame_s = (total_time_ms / 1000.0) / num_test
+        fps = 1.0 / time_per_frame_s
+        
+        config.logger.info(f"⚡ Inferência ({mode.value}): {fps:.2f} FPS ({time_per_frame_s*1000:.2f} ms/frame)")
+        return fps
+
+    def get_perspective_test_metrics(self, metrics: List[AvailableMetrics]) -> Dict[str, float]:
+        """
+        Avalia a qualidade (PSNR, SSIM, etc) para o projeto de Perspectiva.
+        Usa o split 'test' gerado no JSON para garantir que não há data leakage.
+        """
+        assert self.pipeline is not None and self.model is not None, "Pipeline and model must be loaded for evaluation."
+
+        self.model.eval()
+        rendered_images = []
+        gt_images = []
+
+        eval_dataloader = self.pipeline.datamanager.fixed_indices_eval_dataloader
+        
+        config.logger.info("🔍 Avaliando qualidade nas vistas de Teste (Perspectiva)...")
+        with torch.no_grad():
+            for camera, batch, _ in eval_dataloader:
+                camera = camera.to(self.pipeline.device)
+                outputs = self.pipeline.model.get_outputs_for_camera(camera)
+                # Extrai o RGB renderizado e o RGB real do dataset
+                rendered_rgb = outputs["rgb"].cpu()
+                gt_rgb = batch["image"].cpu()
+                rendered_images.append(rendered_rgb)
+                gt_images.append(gt_rgb)
+        # Empilha os tensores e ajusta para o formato [B, C, H, W] em uint8 que o seu comparador espera
+        rendered_tensor = (torch.stack(rendered_images).permute(0, 3, 1, 2) * 255).to(torch.uint8)
+        gt_tensor = (torch.stack(gt_images).permute(0, 3, 1, 2) * 255).to(torch.uint8)
+
+        return self.compare_images_quality(rendered_tensor, gt_tensor, metrics)
+
+    def evaluate_all_metrics(self, mode: RenderMode, metrics: List[AvailableMetrics]) -> Dict[str, float]:
+        """
+        O Orquestrador Unificado de Métricas.
+        Retorna um dicionário com TUDO o que o seu paper precisa para uma tabela de resultados.
+        """
+        results = {}
+        # Pegada de Memória (Universal)
+        results["memory_footprint_bytes"] = self.get_memory_footprint()
+        # Desempenho Computacional (Universal)
+        results["inference_fps"] = self.measure_inference_fps(mode)
+        # Qualidade Visual (Específico por Domínio)
+        if mode == RenderMode.ORTHOGRAPHIC:
+            # Fluxo do Projeto A: Gera fatias ortográficas
+            rendered_slices = self.render(num_slices=10, plan=Plans.AXIAL) 
+            if not rendered_slices:
+                logger.warning("⚠️ No rendered slices available for quality evaluation.")
+                return results
+            # Chama o método que você já tinha construído que puxa o GT do self.images
+            quality_metrics = self.evaluate_rendered_images_quality(rendered_slices, metrics)
+        else:
+            # Fluxo do Projeto B: Avalia nas câmeras originais de teste
+            quality_metrics = self.get_perspective_test_metrics(metrics)
+
+        if quality_metrics:
+            results.update(quality_metrics)
+
+        return results
+
     def evaluate_rendered_images_quality(
         self,
         rendered_images: List[np.ndarray],
@@ -869,43 +981,23 @@ class NerfModel:
         tamanho = aabb[1] - aabb[0]
         print(f"Tamanho do Objeto em X, Y, Z: {tamanho.tolist()}")
 
-    def render_image(
+    def _generate_orthographic_rays(
         self,
         plan: Plans,
         position: float,
-        cam_config: GenerateCameraConfig = GenerateCameraConfig(),
-    ) -> Optional[Dict[str, torch.Tensor]]:
+        cam_config: GenerateCameraConfig
+    ):
         """
-        Extracts a single orthographic slice from the trained NeRF model.
-        Uses a squashed ray bundle to sample a thin plane in the 3D volume.
-
-        Args:
-            plan: slicing plane (axial, sagital, coronal)
-            position: coordinate along the chosen axis where the slice is taken
-            width, height: output resolution
-            center_x, center_y: center of the camera view in NeRF coordinates (default 0,0)
-            extent_x, extent_y: Physical coverage of the camera view in NeRF coordinates.
+        Monta a matriz extrínseca e intrínseca ortográfica e gera o RayBundle.
         """
-
-        if not hasattr(self, "pipeline") or self.pipeline is None:
-            config.logger.error("❌ Pipeline not loaded. Call load_from_disk first.")
-            return None
-
-        self.print_scene_bounds()
-
-        if not hasattr(self, "pipeline") or self.pipeline is None:
-            config.logger.error("❌ Pipeline not loaded. Call load_from_disk first.")
-            return None
-
         position = float(position)
-        c2w = torch.eye(4)[:3, :4].float()
 
         # 1. Extraindo os parâmetros do Dataclass
         cx, cy = cam_config.center
         ext_x, ext_y = cam_config.extent
         width, height = cam_config.resolution
 
-        # 2. Configurando a Translação da Câmera (Pan)
+        # 2. Configurando a Translação da Câmera (Pan) dependendo do plano
         if plan == Plans.AXIAL:
             c2w = torch.tensor(
                 [[1.0, 0.0, 0.0, cx], [0.0, 1.0, 0.0, cy], [0.0, 0.0, 1.0, position]]
@@ -918,8 +1010,10 @@ class NerfModel:
             c2w = torch.tensor(
                 [[1.0, 0.0, 0.0, cx], [0.0, 0.0, -1.0, position], [0.0, 1.0, 0.0, cy]]
             ).float()
+        else:
+            c2w = torch.eye(4)[:3, :4].float() # Fallback seguro
 
-        # 3. Configurando a Escala (Zoom)
+        # 3. Configurando a Escala (Zoom / Intrínsecas)
         fx = width / ext_x
         fy = height / ext_y
         center_x_pixel = width / 2.0
@@ -936,12 +1030,29 @@ class NerfModel:
             camera_type=CameraType.ORTHOPHOTO,
         ).to(self.pipeline.device)
 
+        # 4. Gera os raios e aplica a espessura dinâmica (Slab)
         ray_bundle = camera.generate_rays(camera_indices=0, aabb_box=None)
-
-        # 4. Aplicando a Espessura Dinâmica
+        
         base = ray_bundle.origins[..., :1]
         ray_bundle.nears = torch.zeros_like(base)
         ray_bundle.fars = torch.zeros_like(base) + cam_config.thickness
+
+        return ray_bundle
+
+    def render_image(
+        self,
+        plan: Plans,
+        position: float,
+        cam_config: GenerateCameraConfig = GenerateCameraConfig(),
+    ) -> Optional[Dict[str, torch.Tensor]]:
+        """
+        Extracts a single orthographic slice from the trained NeRF model.
+        """
+        if not hasattr(self, "pipeline") or self.pipeline is None:
+            config.logger.error("❌ Pipeline not loaded. Call load_from_disk first.")
+            return None
+
+        ray_bundle = self._generate_orthographic_rays(plan, position, cam_config)
 
         with torch.no_grad():
             outputs = self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
