@@ -96,15 +96,17 @@ Para viabilizar a comparação entre os modelos, implementou-se, individualmente
 \subsection{Modelos Selecionados}
 Neste trabalho, são avaliados modelos representativos para reconstrução de campos de radiância neural em cenários de poucas vistas (\textit{few-shot}) e generalizáveis, contemplando diferentes paradigmas arquiteturais e estratégias de aprendizado. Especificamente, consideram-se: 
 
-(i) o PixelNeRF \cite{yu2021pixelnerfneuralradiancefields}, que utiliza redes neurais convolucionais para extrair características espaciais das imagens e inseri-las no renderizador através de interpolação e projeção; 
+\begin{enumerate}
+\item o PixelNeRF \cite{yu2021pixelnerfneuralradiancefields}, que utiliza redes neurais convolucionais para extrair características espaciais das imagens e inseri-las no renderizador através de interpolação e projeção; 
 
-(ii) o Generalizable NeRF Transformer (GNT) \cite{t2023attentionnerfneeds}, que emprega mecanismos de atenção (\textit{Transformers}) em ambos os componentes NeRF, substituindo tanto o extrator de características quanto o renderizador diferenciável por módulos baseados em atenção cruzada; 
+\item o Generalizable NeRF Transformer (GNT) \cite{t2023attentionnerfneeds}, que emprega mecanismos de atenção (\textit{Transformers}) em ambos os componentes NeRF, substituindo tanto o extrator de características quanto o renderizador diferenciável por módulos baseados em atenção cruzada; 
 
-(iii) o VolRecon \cite{ren2023volreconvolumerenderingsigned}, que adota uma abordagem de reconstrução volumétrica com incorporação explícita de informações geométricas, construindo volumes de custo a partir das vistas de entrada e extraindo características por meio de atenção para guiar a estimativa de profundidade e cor; 
+\item o VolRecon \cite{ren2023volreconvolumerenderingsigned}, que adota uma abordagem de reconstrução volumétrica com incorporação explícita de informações geométricas, construindo volumes de custo a partir das vistas de entrada e extraindo características por meio de atenção para guiar a estimativa de profundidade e cor; 
 
-(iv) o Instant-NGP \cite{muller2022}, que substitui a MLP tradicional por uma codificação em tabela de hash multiescala, permitindo otimização por cena em tempo significativamente reduzido, sendo avaliado aqui como representante dos métodos \textit{per-scene} sob regime de dados limitados; e 
+\item o Instant-NGP \cite{muller2022}, que substitui a MLP tradicional por uma codificação em tabela de hash multiescala, permitindo otimização por cena em tempo significativamente reduzido, sendo avaliado aqui como representante dos métodos \textit{per-scene} sob regime de dados limitados; e 
 
-(v) o MERF \cite{reiser2023merf}, que estende representações baseadas em hash com estruturas esparsas orientadas à renderização em tempo real, também operando no paradigma \textit{per-scene}.
+\item o MERF \cite{reiser2023merf}, que estende representações baseadas em hash com estruturas esparsas orientadas à renderização em tempo real, também operando no paradigma \textit{per-scene}.
+\end{enumerate}
 
 A seleção desses modelos visa proporcionar uma análise abrangente entre diferentes abordagens, cobrindo métodos baseados em CNNs, transformadores, reconstrução volumétrica explícita, modelos generativos baseados em representações por hash \textit{per-scene}. Essa diversidade permite avaliar não apenas a qualidade de reconstrução em cenários com vistas limitadas, mas também o compromisso entre generalização entre cenas e custo de otimização, bem como o impacto de estratégias distintas de extração de características nos três regimes de avaliação considerados, como pode ser visto na seção \ref{sec:stdin}.
 
@@ -138,9 +140,7 @@ As imagens restantes foram divididas proporcionalmente entre conjuntos de valida
 
 A avaliação dos modelos contempla três dimensões complementares: qualidade visual, eficiência computacional e pegada de memória.
 
-Para a qualidade visual, são empregadas três métricas amplamente adotadas na literatura de síntese de novas vistas: (i) PSNR (\textit{Peak Signal-to-Noise Ratio}), que mede a fidelidade pixel a pixel entre a imagem renderizada e a imagem de referência em escala logarítmica, sendo sensível a erros de brilho e cor; (ii) SSIM (\textit{Structural Similarity Index Measure}) \cite{wang2004image}, que avalia a similaridade estrutural entre imagens considerando luminância, contraste e estrutura, sendo mais correlacionado com a percepção humana do que o PSNR; e (iii) LPIPS (\textit{Learned Perceptual Image Patch Similarity}) \cite{zhang2018unreasonable}, que utiliza características extraídas por redes neurais profundas para quantificar a distância perceptual entre imagens (valores menores indicam maior similaridade perceptual).
-
-Para a eficiência computacional, é medida a taxa de renderização em quadros por segundo (\textit{fps}), avaliada durante a inferência sobre as câmeras do conjunto de teste. Para a pegada de memória, é reportado o footprint de parâmetros do modelo, calculado como a soma do produto entre o número de parâmetros e o tamanho de cada elemento em bytes.
+Para a qualidade visual, são empregadas três métricas amplamente adotadas na literatura de síntese de novas vistas: (i) PSNR (\textit{Peak Signal-to-Noise Ratio}), que mede a fidelidade pixel a pixel entre a imagem renderizada e a imagem de referência em escala logarítmica, sendo sensível a erros de brilho e cor; (ii) SSIM (\textit{Structural Similarity Index Measure}) \cite{wang2004image}, que avalia a similaridade estrutural entre imagens considerando luminância, contraste e estrutura, sendo mais correlacionado com a percepção humana do que o PSNR; e (iii) LPIPS (\textit{Learned Perceptual Image Patch Similarity}) \cite{zhang2018unreasonable}, que utiliza características extraídas por redes neurais profundas para quantificar a distância perceptual entre imagens (valores menores indicam maior similaridade perceptual). Para a eficiência computacional, é medida a taxa de renderização em quadros por segundo (\textit{fps}), avaliada durante a inferência sobre as câmeras do conjunto de teste. Para a pegada de memória, é reportado o footprint de parâmetros do modelo, calculado como a soma do produto entre o número de parâmetros e o tamanho de cada elemento em bytes.
 
 As avaliações de qualidade visual são realizadas sobre o conjunto de teste gerado pelo protocolo de split descrito na Seção \ref{sec:stdin}, utilizando o \textit{dataloader} de avaliação do \textit{Nerfstudio} (\texttt{fixed\_indices\_eval\_dataloader}), que itera sobre câmeras fixas e compara as imagens renderizadas (\texttt{outputs["rgb"]}) com as imagens de referência (\texttt{batch["image"]}) sem amostras das vistas de treino.
 
