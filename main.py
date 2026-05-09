@@ -12,7 +12,13 @@ def main():
     datasets = config.datasets_name_list
     sampling_strategies = ["uniform", "random"]
     num_views_options = [3, 6, 10]
-    models = config.nerf_models_to_run
+    models =  [
+            "instant-ngp"
+            "merf-ns"
+            "pixel-nerf",
+            "gnt",
+            "volrecon",
+    ]
 
     for ds, strategy, model_name, num_views in product(
         datasets, sampling_strategies, models, num_views_options

@@ -40,12 +40,7 @@ class Config:
         ]
         self.epochs = epochs
         self.img_size = img_size
-        self.nerf_models_to_run = [
-            "gnt",
-            "volrecon",
-            "pixel-nerf",
-            "zero123",
-        ]
+        
 
 
 config = Config()
