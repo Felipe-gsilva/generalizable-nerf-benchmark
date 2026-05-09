@@ -17,7 +17,6 @@ def main():
             "merf-ns"
             "pixel-nerf",
             "gnt",
-            "volrecon",
     ]
 
     for ds, strategy, model_name, num_views in product(
