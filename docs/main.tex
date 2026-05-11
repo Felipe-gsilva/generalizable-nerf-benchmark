@@ -40,6 +40,8 @@ Este trabalho tem, portanto, o objetivo de explorar o uso dos diferentes modelos
 \section{Fundamentação Teórica}
 \label{sec:fund}
 
+\teorical{Conjuntos de Dados de Vistas Esparsas} Essa nomenclatura refere-se, neste trabalho, aos conjuntos de dados imagéticos que possuem pouca (ou nenhuma) redundância e/ou variabilidade de diferentes poses de câmera referentes ao(s) mesmo(s) objeto(s) tridimenseional(is). Áreas como histologia, holotomografia e microscopia confocal de fluorescência ilustram bem esse problema: a aquisição de imagens multi-vista é fisicamente limitada, biologicamente invasiva e estruturalmente esparsa por natureza \cite{XUE2021101816}.
+
 
 \teorical{Campos de Radiância Neural} 
 Diferentemente de métodos tradicionais de síntese de imagens, os Campos de Radiância Neural (\textit{Neural Radiance Fields}, NeRF) utilizam-se de redes neurais do tipo MLP (\textit{Multilayer Perceptron}) para aproximar uma função contínua no espaço 5D. 
@@ -54,13 +56,11 @@ Essa representação permite modelar cenas tridimensionais de forma contínua, p
 (ii) um processo de renderização volumétrica diferenciável que integra essas propriedades ao longo de raios para formar imagens 2D \cite{mildenhall2020nerfrepresentingscenesneural}.
 Neste trabalho, o principal objeto de estudo se dá no primeiro segmento, no entanto, modelos distintos empregam continuamente 
 
-\teorical{Representações de Cena} Enquanto a formulação original do NeRF parametriza a função $f_\theta$ exclusivamente por meio de MLPs, trabalhos subsequentes introduziram representações híbridas que desacoplam a estrutura espacial da rede neural. O Instant-NGP \cite{muller2022} propõe uma codificação por tabela de hash multiescala, que mapeia coordenadas espaciais em vetores de características de forma eficiente, reduzindo drasticamente o tempo de otimização por cena. O MERF \cite{reiser2023merf} estende essa ideia com representações esparsas orientadas à renderização em tempo real. Nesses modelos, o componente (i) é substituído por uma estrutura de dados explícita otimizável, sem capacidade de generalização entre cenas distintas.
+\teorical{Representações de Cena} Enquanto a formulação original do NeRF parametriza a função $f_\theta$ exclusivamente por meio de MLPs, trabalhos subsequentes introduziram representações híbridas que desacoplam a estrutura espacial da rede neural. O Instant-NGP \cite{muller2022} propõe uma codificação por tabela de hash multiescala, que mapeia coordenadas espaciais em vetores de características de forma eficiente, reduzindo drasticamente o tempo de otimização por cena. O MERF \cite{reiser2023merf} estende essa ideia com representações tridimenseionais esparsas orientadas à renderização em tempo real. Nesses modelos, o componente (i) é substituído por uma estrutura de dados explícita otimizável, sem capacidade de generalização entre cenas distintas.
 
-\teorical{Extrator de Características} A capacidade de generalizar para novas cenas a partir de poucas vistas depende criticamente do extrator de características, responsável por codificar as imagens de entrada em representações que a rede neural possa condicionar. O PixelNeRF \cite{yu2021pixelnerfneuralradiancefields} utiliza uma ResNet pré-treinada para extrair mapas de características por imagem; dado um ponto 3D, sua projeção nas vistas de entrada recupera os vetores de características correspondentes, que são agregados e passados à MLP de radiância. Essa abordagem é local e opera por pixel, sem modelar explicitamente relações entre vistas. O GNT \cite{t2023attentionnerfneeds} substitui a MLP de radiância por um transformador que processa amostras ao longo do raio e agrega informação entre vistas por meio de atenção cruzada, eliminando a dependência de uma função de volume explícita.
+\teorical{Extrator de Características} A capacidade de generalizar para novas cenas a partir de poucas vistas depende criticamente do extrator de características, responsável por codificar as imagens de entrada em representações que a rede neural possa condicionar. O PixelNeRF \cite{yu2021pixelnerfneuralradiancefields} utiliza uma ResNet pré-treinada para extrair mapas de características por imagem; dado um ponto 3D, sua projeção nas vistas de entrada recupera os vetores de características espaciais correspondentes, que são agregados e passados à MLP de radiância. Essa abordagem é local e opera por pixel, sem modelar explicitamente relações entre vistas. O GNT \cite{t2023attentionnerfneeds} substitui a MLP de radiância por um transformador que processa amostras ao longo do raio e agrega informação entre vistas por meio de atenção cruzada, eliminando a dependência de uma função de volume explícita.
 
-\teorical{NeRFs Few-Shot vs. Per-Scene} Com o objetivo de reduzir a necessidade de múltiplas vistas durante o treinamento, surgiram abordagens conhecidas como NeRFs \textit{few-shot}, que são capazes de generalizar a cena proposta em novas vistas de maneira distinta, utilizando-se de diversos conceitos aplicados em ambos os componentes NeRF supracitados. Um dos primeiros trabalhos nessa linha é o PixelNeRF \cite{yu2021pixelnerfneuralradiancefields}, que incorpora redes convolucionais (CNNs), como a ResNet, para extrair características visuais das imagens de entrada. Posteriormente, arquiteturas baseadas em transformadores, como o GNT (\textit{Generalizable NeRF Transformer}) \cite{t2023attentionnerfneeds}, ampliaram essa capacidade ao modelar relações de atenção entre múltiplas vistas.
-
-É importante distinguir dois regimes de operação presentes nos métodos avaliados. Modelos generalizáveis — como PixelNeRF e GNT — são treinados em grandes conjuntos de cenas e, na inferência, condicionam a reconstrução nas vistas de entrada sem otimização adicional. Modelos por cena — como Instant-NGP e MERF — otimizam uma representação específica para cada cena individualmente, a partir das vistas disponíveis. Embora esses últimos não sejam few-shot no sentido de generalização, sua inclusão no comparativo permite avaliar o compromisso entre qualidade de reconstrução e custo de otimização sob dados limitados.
+\teorical{NeRFs Few-Shot vs. Per-Scene} Com o objetivo de reduzir a necessidade de múltiplas vistas durante o treinamento, surgiram abordagens conhecidas como NeRFs \textit{few-shot}, que são capazes de generalizar a cena proposta e produzir novas vistas a partir de poucas imagens, cada uma à sua maneira, utilizando-se de diversos conceitos distintos aplicados aos componentes NeRF supracitados. Entre eles destacam-se: arquiteturas com extratores de características convolucionais (como o PixelNeRF, previamente citado) e, também, baseados em transformadores, como o GNT (\textit{Generalizable NeRF Transformer}) \cite{t2023attentionnerfneeds}. É importante, no entanto, estabelecer a distinção entre dois regimes de operação presentes nos métodos avaliados. Modelos generalizáveis — como PixelNeRF e GNT — são, de fato, \textit{few-shots} e capazes de reconstruir cenas complexas a partir de poucas imagens (quando em inferência, ainda precisando extrair características da cena durante o treino). Modelos por cena — como Instant-NGP e MERF — otimizam uma representação específica para cada cena individualmente, a partir das vistas disponíveis. Embora esses últimos não sejam few-shot objetivamente, sua inclusão no comparativo permite avaliar o compromisso entre qualidade de reconstrução e custo de otimização sob dados limitados.
 
 
 \section{Metodologia} 
@@ -81,24 +81,28 @@ Neste trabalho, o principal objeto de estudo se dá no primeiro segmento, no ent
 % indented 0.8cm on both sides. The word \textbf{Abstract} and \textbf{Resumo},
 % should be written in boldface and must precede the text.
 
-Esta seção contempla a metodologia adotada para a realização dos experimentos, incluindo a descrição dos conjuntos de dados utilizados, os modelos de NeRF selecionados para comparação, as métricas de avaliação escolhidas e o ambiente computacional onde os testes foram conduzidos. A seguir, detalhamos cada um desses aspectos. 
+Esta seção contempla a metodologia adotada para a realização dos experimentos, incluindo a descrição dos conjuntos de dados utilizados, os modelos de NeRF selecionados para o estudo comparativo, as métricas de avaliação aplicadas e o ambiente computacional onde os testes foram conduzidos. 
 
-Para viabilizar a comparação entre os modelos, implementou-se, individualmente, (caso não houvesse presença prévia) a integração do modelo proposto com a ferramenta NeRFStudio, os quais estão dispostos a seguir.
+Para viabilizar a comparação entre os modelos, implementou-se, individualmente, (caso não houvesse presença prévia) a integração do modelo proposto com a ferramenta NeRFStudio. A seguir, apresentam-se os modelos selecionados.
 
 \subsection{Modelos Selecionados}
 Neste trabalho, são avaliados modelos representativos para reconstrução de campos de radiância neural em cenários de poucas vistas (\textit{few-shot}) e generalizáveis, contemplando diferentes paradigmas arquiteturais e estratégias de aprendizado. Especificamente, consideram-se: 
 
 \begin{enumerate}
-\item o PixelNeRF \cite{yu2021pixelnerfneuralradiancefields}, que utiliza redes neurais convolucionais para extrair características espaciais das imagens e inseri-las no renderizador através de interpolação e projeção; 
+\item PixelNeRF \cite{yu2021pixelnerfneuralradiancefields}, que utiliza redes neurais convolucionais para extrair características espaciais das imagens e inseri-las no renderizador através de interpolação e projeção; 
 
-\item o Generalizable NeRF Transformer (GNT) \cite{t2023attentionnerfneeds}, que emprega mecanismos de atenção (\textit{Transformers}) em ambos os componentes NeRF, substituindo tanto o extrator de características quanto o renderizador diferenciável por módulos baseados em atenção cruzada; 
-
-\item o Instant-NGP \cite{muller2022}, que substitui a MLP tradicional por uma codificação em tabela de hash multiescala, permitindo otimização por cena em tempo significativamente reduzido, sendo avaliado aqui como representante dos métodos \textit{per-scene} sob regime de dados limitados; e 
-
-\item o MERF \cite{reiser2023merf}, que estende representações baseadas em hash com estruturas esparsas orientadas à renderização em tempo real, também operando no paradigma \textit{per-scene}.
+\item Generalizable NeRF Transformer (GNT) \cite{t2023attentionnerfneeds}, que emprega mecanismos de atenção (\textit{Transformers}) em ambos os componentes NeRF, substituindo tanto o extrator de características quanto o renderizador diferenciável por módulos baseados em atenção cruzada; 
 \end{enumerate}
 
-A seleção desses modelos visa proporcionar uma análise abrangente entre diferentes abordagens, cobrindo métodos baseados em CNNs, transformadores, reconstrução volumétrica explícita, modelos generativos baseados em representações por hash \textit{per-scene}. Essa diversidade permite avaliar não apenas a qualidade de reconstrução em cenários com vistas limitadas, mas também o compromisso entre generalização entre cenas e custo de otimização, bem como o impacto de estratégias distintas de extração de características nos três regimes de avaliação considerados, como pode ser visto na seção \ref{sec:stdin}.
+A efeito comparativo, também, serão avaliados aqui métodos \textit{per-scene} sob regime de dados limitados: 
+
+\begin{enumerate}
+\item Instant-NGP \cite{muller2022}, que substitui a MLP tradicional por uma codificação em tabela de hash multiescala, permitindo otimização por cena em tempo significativamente reduzido; e
+
+\item MERF \cite{reiser2023merf}, que estende representações baseadas em hash com estruturas esparsas orientadas à renderização em tempo real.
+\end{enumerate}
+
+A seleção desses modelos visa proporcionar uma análise abrangente entre diferentes abordagens, cobrindo métodos baseados em CNNs, transformadores, reconstrução volumétrica explícita e modelos generativos baseados em representações por hash \textit{per-scene}. Essa diversidade permite avaliar não apenas a qualidade de reconstrução em cenários com vistas limitadas, mas também o compromisso entre generalização entre cenas e custo de otimização, bem como o impacto de estratégias distintas de extração de características nos três regimes de avaliação considerados, como pode ser visto na seção \ref{sec:stdin}.
 
 
 \subsection{Implementação no Nerfstudio}
@@ -115,6 +119,8 @@ Os modelos foram implementados no framework \textit{Nerfstudio} \cite{Tancik2023
 Dentre os modelos avaliados, o Instant-NGP e o MERF encontram-se nativamente integrados ao \textit{Nerfstudio}, dispensando adaptações de implementação. Os demais modelos --- PixelNeRF e GNT  --- foram portados para o framework a partir de suas implementações originais, com adaptações nos componentes de \textit{DataManager} e \textit{Pipeline} para conformidade com a interface do \textit{Nerfstudio}. No caso do MERF, adicionalmente, foi utilizada a extensão \textit{MERFStudio} \cite{song2024cityonwebrealtimeneuralrendering}, disponível em \url{https://github.com/USTC3DV/MERFStudio}.
 
 As implementações foram guiadas pelas descrições metodológicas dos trabalhos originais, mantendo equivalência funcional sempre que possível. A implementação completa encontra-se disponível em \url{https://github.com/felipe-gsilva/few-shot-nerfs}.
+
+% TODO talvez explicitar mais o código
 
 \subsection{Protocolo Experimental}
 \label{sec:stdin}
