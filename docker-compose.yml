@@ -1,0 +1,25 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GPU_ARCH: ${GPU_ARCH:-86}
+    image: gan-nerf-project:latest
+    container_name: gan-nerf-container
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+    volumes:
+      - ./assets/data:/workspace/assets/data
+      - ./assets/logs:/workspace/assets/logs
+    environment:
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+      - IS_DOCKER=1
+    stdin_open: true
+    tty: true
+    command: python main.py
