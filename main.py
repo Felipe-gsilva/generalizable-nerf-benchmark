@@ -1,5 +1,7 @@
 from pathlib import Path
 from itertools import product
+import time
+import torch
 
 from src.dataset.ImageDataset import ImageDataset
 from src.nerf.NeRFModel import NerfModel
@@ -12,54 +14,80 @@ def main():
     datasets = config.datasets_name_list
     sampling_strategies = ["uniform", "random"]
     num_views_options = [3, 6, 10]
-    models =  [
-            "instant-ngp"
-            "merf-ns"
-            "pixel-nerf",
-            "gnt",
+
+    experiments_config = [
+        {"model": "instant-ngp", "regime": "per-scene"},
+        {"model": "merf-ns", "regime": "per-scene"},
+        {"model": "pixel-nerf", "regime": "zero-shot"},
+        {"model": "pixel-nerf", "regime": "tta"},
+        {"model": "gnt-transfer", "regime": "zero-shot"},
+        {"model": "gnt-transfer", "regime": "tta"},
     ]
 
-    for ds, strategy, model_name, num_views in product(
-        datasets, sampling_strategies, models, num_views_options
+    device_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
+
+    for ds, strategy, exp, num_views in product(
+        datasets, sampling_strategies, experiments_config, num_views_options
     ):
+        model_name = exp["model"]
+        regime = exp["regime"]
+
+        print("\n" + "=" * 80)
+        print(
+            f"🚀 Iniciando: {model_name} | Dataset: {ds} | Visões: {num_views} | Estratégia: {strategy}"
+        )
+        print("=" * 80)
+
         dataset_obj = ImageDataset(
             name=ds, step="train", dataset_path=Path("assets/data/baseline") / ds
         )
 
         metrics_logger = MetricsLogger(
-            model_name=model_name,
+            model_name=f"{model_name}_{regime}",
             hyperparams={
                 "sampling_strategy": strategy,
                 "num_views": num_views,
                 "dataset": ds,
+                "regime": regime,
+                "device": device_name,
             },
         )
 
-        print(
-            f"🚀 Running {model_name} with {strategy} sampling strategy and {num_views} views."
-        )
+        try:
+            nerf_model = NerfModel(
+                model_name=model_name,
+                images=dataset_obj,
+                split_strategy=strategy,
+                num_views=num_views,
+                regime=regime,
+                tta_steps=500,
+            )
 
-        nerf_model = NerfModel(
-            model_name=model_name,
-            images=dataset_obj,
-            split_strategy=strategy,
-            num_views=num_views,
-        )
+            # Medição rigorosa de tempo de convergência / preparação
+            start_time = time.time()
+            nerf_model.train(Path(dataset_obj.dataset_path), downscale_factor=1)
+            training_time = time.time() - start_time
 
-        nerf_model.train(Path(dataset_obj.dataset_path), downscale_factor=1)
+            # Avaliação de Métricas de Qualidade Visual e Perceptual (PSNR, SSIM, LPIPS)
+            metrics = nerf_model.evaluate_all_metrics(
+                mode=RenderMode.PERSPECTIVE, metrics=list(AvailableMetrics)
+            )
 
-        metrics = nerf_model.evaluate_all_metrics(
-            mode=RenderMode.PERSPECTIVE,
-            metrics=list(AvailableMetrics) 
-        )
+            if metrics:
+                # Injeta métricas de eficiência computacional calculadas no script
+                metrics["convergence_time_seconds"] = training_time
+                metrics_logger.log(**metrics)
+                print(f"✅ Sucesso: Métricas registradas para {model_name}.")
+            else:
+                print(f"⚠️ Falha: O modelo {model_name} retornou métricas vazias.")
 
+        except Exception as e:
+            print(f"❌ Erro crítico ao executar {model_name} no dataset {ds}: {str(e)}")
+            continue
 
-        if metrics:
-            metrics_logger.log(**metrics)
-        else:
-            print(f"⚠️ Failed to evaluate metrics for {model_name} ({num_views} views).")
-
-        metrics_logger.close()
+        finally:
+            metrics_logger.close()
+            torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":

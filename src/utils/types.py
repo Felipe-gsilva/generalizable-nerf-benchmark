@@ -42,4 +42,3 @@ class GenerateCameraConfig:
     # Espessura do plano de corte (nears/fars).
     # Mantido em 0.5 para garantir acúmulo suficiente das cores HE.
     thickness: float = 0.5
-

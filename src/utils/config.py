@@ -40,7 +40,6 @@ class Config:
         ]
         self.epochs = epochs
         self.img_size = img_size
-        
 
 
 config = Config()

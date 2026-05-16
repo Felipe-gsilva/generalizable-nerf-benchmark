@@ -1,19 +1,7 @@
-from typing import Dict, List, Literal, Optional
-from PIL import Image
-from nerfstudio.pipelines.base_pipeline import Pipeline
-from src.validation.eval_images import calculate_fid, calculate_psnr_ssim_lpips
-from src.dataset.ImageDataset import ImageDataset
-from src.utils.config import config
-from src.utils.types import AvailableMetrics, Plans, GenerateCameraConfig, RenderMode
-from nerfstudio.cameras.cameras import Cameras, CameraType
-from nerfstudio.utils.eval_utils import eval_setup
-from nerfstudio.utils import profiler
-from pathlib import Path
-
 import yaml
 import torch
 import subprocess
-import glob
+import multiprocessing
 import os
 import json
 import time
@@ -24,12 +12,23 @@ import matplotlib
 import tempfile
 import re
 
+from typing import Dict, List, Literal, Optional
+from PIL import Image
+from nerfstudio.pipelines.base_pipeline import Pipeline
+from validation.eval_images import calculate_fid, calculate_psnr_ssim_lpips
+from dataset.ImageDataset import ImageDataset
+from utils.config import config
+from utils.types import AvailableMetrics, Plans, GenerateCameraConfig, RenderMode
+from nerfstudio.cameras.cameras import Cameras, CameraType
+from nerfstudio.utils.eval_utils import eval_setup
+from nerfstudio.utils import profiler
+from pathlib import Path
+
 matplotlib.use("Agg")
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
 MAX_IMAGE_SEARCH_DEPTH = 3
 CUSTOM_TRANSFORMS_DATASETS = {"3D_virtual_HE_staining"}
-plan_map = {Plans.AXIAL: 1, Plans.CORONAL: 0, Plans.SAGITAL: 2}
 logger = config.logger
 
 
@@ -57,6 +56,8 @@ class NerfModel:
         num_views: int = 0,  # 0 = Usa o dataset todo. >0 = Few-shot.
         split: List[float] = [0.7, 0.15, 0.15],
         split_strategy: str = "uniform",  # "uniform" ou "random"
+        regime: Literal["per-scene", "zero-shot", "tta"] = "per-scene",
+        tta_steps: int = 500,
     ) -> None:
         self.model_name = model_name
         self.pipeline = None
@@ -69,8 +70,9 @@ class NerfModel:
         self.dataset_name = images.name if images else "unknown"
         self.images = images
         self.dataset_path = images.dataset_path if images else None
+        self.regime = regime
+        self.tta_steps = tta_steps
 
-        # Parâmetros do Paper
         self.num_views = num_views
         if sum(split) != 1.0:
             raise ValueError("Split ratios must sum to 1.0")
@@ -80,8 +82,7 @@ class NerfModel:
 
     def _apply_dataset_splits(self, data_path: Path) -> Path:
         """
-        Calcula os splits de train/val/test baseados nos parâmetros da classe
-        e salva um novo arquivo JSON para o Nerfstudio ler.
+        Split train/val/test based on the class parameters and save a new JSON file for Nerfstudio to read.
         """
         json_path = data_path / "transforms.json"
 
@@ -102,12 +103,11 @@ class NerfModel:
         if total_images == 0:
             return json_path
 
-        # Definindo as quantidades absolutas de cada split
+        # if num_views is set to be less than total images, we take that many for training and split the rest for val/test
         if self.num_views > 0 and self.num_views < total_images:
             train_count = self.num_views
             remaining = total_images - train_count
 
-            # Divide o restante proporcionalmente entre val e test
             pool_ratio = self.val_split + self.test_split
             if pool_ratio > 0:
                 val_count = int(remaining * (self.val_split / pool_ratio))
@@ -115,7 +115,7 @@ class NerfModel:
                 val_count = remaining // 2
 
         else:
-            # Split padrão percentual (caso num_views = 0)
+            # default split
             train_count = int(total_images * (1.0 - self.val_split - self.test_split))
             val_count = int(total_images * self.val_split)
 
@@ -132,18 +132,16 @@ class NerfModel:
         else:
             raise ValueError(f"Strategy {self.split_strategy} not supported.")
 
-        # Selecionando Val e Test aleatoriamente do que sobrou
+        # randomly shuffle the remaining indices for val/test split
         remaining_indices = [idx for idx in all_indices if idx not in train_indices]
-        np.random.seed(
-            42
-        )  # Seed fixa garante que testes diferentes avaliem nas mesmas imagens
+        np.random.seed(42)  # fixed seed
         np.random.shuffle(remaining_indices)
 
         val_set = set(remaining_indices[:val_count])
         test_set = set(remaining_indices[val_count:])
         train_set = set(train_indices)
 
-        # 4. Marcando o arquivo
+        # Updates the frames in the JSON with the new split information
         for i, frame in enumerate(frames):
             if i in train_set:
                 frame["split"] = "train"
@@ -160,62 +158,58 @@ class NerfModel:
         )
         return out_json_path
 
-    def _get_latest_checkpoint(self, output_path: Path):
+    def _get_latest_checkpoint(self, output_path: Path) -> Optional[Path]:
         """Finds the most recent checkpoint recursively in the output directory."""
-        patterns = [
-            str(output_path / self.model_name / "**" / "nerfstudio_models"),
-            str(output_path / "**" / self.model_name / "**" / "nerfstudio_models"),
-        ]
-        candidates = []
-        for pattern in patterns:
-            candidates.extend(glob.glob(pattern, recursive=True))
+        candidates = list(output_path.rglob("nerfstudio_models"))
+        valid_candidates = [c for c in candidates if self.model_name in c.parts]
 
-        if not candidates:
+        if not valid_candidates:
             return None
+
         try:
-            latest = max(candidates, key=lambda p: Path(p).parent.name)
+            latest = max(valid_candidates, key=lambda p: p.parent.name)
             return latest
         except Exception:
             return None
 
     def _patch_config_yaml(self, config_path: Path, checkpoint_dir: Path) -> Path:
         """
-        Nerfstudio's config.yml contains 'output_dir' and 'experiment_name' which it uses
-        to find checkpoints. If these mismatch the current location, loading fails.
-        This method patches the config to set an explicit 'load_dir', which bypasses
-        the folder crawling logic and makes loading robust.
+        Patches the config to set an explicit 'load_dir', bypassing folder crawling logic.
         """
         try:
             with config_path.open("r") as f:
                 content = f.read()
 
-            # Set load_dir to the absolute path of the checkpoint_dir
-            load_dir_parts = checkpoint_dir.resolve().parts
+            if checkpoint_dir.name == "nerfstudio_models":
+                load_target = checkpoint_dir.parent
+            else:
+                load_target = checkpoint_dir
+
+            load_dir_parts = load_target.resolve().parts
             replacement_parts = "\n".join([f"- {p}" for p in load_dir_parts])
             load_dir_yaml = f"load_dir: !!python/object/apply:pathlib.PosixPath\n{replacement_parts}"
-
-            # Replace load_dir: null with the actual path
-            content = re.sub(r"load_dir: null", load_dir_yaml, content)
-
-            # Also update experiment_name and output_dir to match current structure
+            load_dir_pattern = r"load_dir:\s*(?:null|!!python/object/apply:pathlib\.PosixPath\n(?:\s*- [^\n]+\n?)*)"
+            content = re.sub(load_dir_pattern, load_dir_yaml + "\n", content)
             parts = checkpoint_dir.parts
             try:
-                idx = parts.index("nerf_checkpoints")
-                new_output_dir_parts = parts[: idx + 2]
-                new_experiment_name = parts[idx + 2]
+                if "nerf_checkpoints" in parts:
+                    idx = parts.index("nerf_checkpoints")
+                    new_output_dir_parts = parts[: idx + 2]
+                    new_experiment_name = parts[idx + 2]
 
-                content = re.sub(
-                    r"experiment_name: .*",
-                    f"experiment_name: {new_experiment_name}",
-                    content,
-                )
-                output_dir_pattern = r"(output_dir: !!python/object/apply:pathlib\.PosixPath\n)(?:\s*- .*\n?)*"
-                out_parts = "\n".join([f"- {p}" for p in new_output_dir_parts])
-                content = re.sub(output_dir_pattern, r"\1" + out_parts + "\n", content)
+                    content = re.sub(
+                        r"experiment_name: .*",
+                        f"experiment_name: {new_experiment_name}",
+                        content,
+                    )
+                    output_dir_pattern = r"(output_dir: !!python/object/apply:pathlib\.PosixPath\n)(?:\s*- .*\n?)*"
+                    out_parts = "\n".join([f"- {p}" for p in new_output_dir_parts])
+                    content = re.sub(
+                        output_dir_pattern, r"\1" + out_parts + "\n", content
+                    )
             except Exception:
                 pass
 
-            # Save to a temporary file
             temp_config = tempfile.NamedTemporaryFile(
                 mode="w", suffix=".yml", delete=False
             )
@@ -231,7 +225,6 @@ class NerfModel:
         self,
         path: Path,
         mode: Literal["test", "val", "inference"] = "test",
-        eval_num_rays_per_chunk: Optional[int] = None,
     ) -> bool:
         """Loads a NeRF model from disk using eval_setup."""
         config.logger.info(f"Loading NeRF model from {path}...")
@@ -242,6 +235,7 @@ class NerfModel:
 
         temp_config_path = None
         try:
+            multiprocessing.set_start_method("spawn", force=True)
             config_path = Path(c_path).parent / "config.yml"
             if not config_path.exists():
                 raise FileNotFoundError(f"config.yml not found at {config_path}")
@@ -252,17 +246,19 @@ class NerfModel:
             _, pipeline, _, _ = eval_setup(
                 config_path=temp_config_path,
                 test_mode=mode,
-                eval_num_rays_per_chunk=eval_num_rays_per_chunk,
             )
+
             self.pipeline = pipeline
             self.model = pipeline._model
             self.model.eval()
             config.logger.info(f"✅ Pipeline loaded successfully from {path}")
             return True
+
         except Exception as e:
+            import traceback  # Adicione o import aqui se não estiver no topo do arquivo
+
             config.logger.error(
-                f"❌ Failed to load model pipeline from {path} "
-                f"(mode={mode}, eval_num_rays_per_chunk={eval_num_rays_per_chunk}): {e}"
+                f"❌ Failed to load model pipeline from {path} (mode={mode}):\n{traceback.format_exc()} | {e}"
             )
             return False
         finally:
@@ -272,7 +268,7 @@ class NerfModel:
                 and temp_config_path.exists()
             ):
                 try:
-                    os.unlink(temp_config_path)
+                    temp_config_path.unlink(missing_ok=True)
                 except Exception:
                     pass
 
@@ -307,11 +303,6 @@ class NerfModel:
         if not has_ext:
             return False
 
-        if self._uses_custom_transforms():
-            return any(
-                "registered_" in f.name for f in directory.iterdir() if f.is_file()
-            )
-
         return True
 
     def _find_images_dir(
@@ -338,13 +329,6 @@ class NerfModel:
         if self.target_id:
             return self.target_id
         return data_path.name
-
-    def _uses_custom_transforms(self) -> bool:
-        return any(
-            self.dataset_name == dataset_name
-            or self.dataset_name.startswith(f"{dataset_name}_")
-            for dataset_name in CUSTOM_TRANSFORMS_DATASETS
-        )
 
     def _load_transforms_json(self, transforms_path: Path) -> Optional[dict]:
         try:
@@ -437,13 +421,32 @@ class NerfModel:
             config.logger.error(f"❌ ns-process-data failed with code: {e.returncode}")
             return False
 
+    def _run_custom_transforms_generation(
+        self, data_path: Path, images_dir: Path, num_imgs: int = 0
+    ) -> bool:
+        config.logger.info(
+            f"🧭 Using custom grid-based transforms generation for {self.dataset_name}."
+        )
+        output_path = data_path / "transforms.json"
+        result = generate_transforms(images_dir, output_path, num_imgs=num_imgs)
+        if result is True:
+            config.logger.info("✅ Custom transforms generated successfully.")
+            return True
+        config.logger.error("❌ Custom transforms generation failed.")
+        return False
+
     @profiler.time_function
     def process_data(self, data_path: Path, num_imgs: int = 0) -> bool:
         """
         Prepares nerfstudio transforms:
+
+        Args:
+        data_path:
         - 3D_virtual_HE_staining: custom grid transforms.
         - Other datasets: COLMAP via ns-process-data.
-        num_imgs: if > 0, limits the number of images in transforms.json (for quick validation).
+
+        num_imgs:
+        - if > 0, limits the number of images in transforms.json (for quick validation).
         """
         transforms_path = data_path / "transforms.json"
         if transforms_path.exists() and num_imgs == 0:
@@ -453,18 +456,10 @@ class NerfModel:
                     data_path, transforms_data
                 )
                 if not missing_files:
-                    if (
-                        self._uses_custom_transforms()
-                        and not self._is_custom_transforms_format_valid(transforms_data)
-                    ):
-                        config.logger.warning(
-                            f"⚠️ transforms.json in {data_path} does not match custom grid format. Regenerating."
-                        )
-                    else:
-                        config.logger.info(
-                            f"transforms.json already exists in {data_path}. Skipping regeneration."
-                        )
-                        return True
+                    config.logger.info(
+                        f"transforms.json already exists in {data_path}. Skipping regeneration."
+                    )
+                    return True
                 else:
                     missing_preview = ", ".join(str(path) for path in missing_files[:3])
                     config.logger.warning(
@@ -569,14 +564,29 @@ class NerfModel:
 
     @profiler.time_function
     def train(self, data_path: Path, downscale_factor: int = 1, num_imgs: int = 0):
-        """Train the NeRF model using the provided data and configuration via CLI subprocess."""
+        """Prepares data and handles training/loading according to the selected regime."""
         if not self.process_data(data_path, num_imgs=num_imgs):
             config.logger.error(
                 f"❌ Aborting training for {data_path}: data preparation failed."
             )
             return
 
-        # 1. Setup clean names for Nerfstudio args
+        split_json_path = self._apply_dataset_splits(data_path)
+        output_path = self.get_output_path(data_path)
+
+        if self.regime == "zero-shot":
+            config.logger.info(
+                f"❄️ Zero-shot regime enabled for {self.model_name}. Skipping local optimization."
+            )
+            global_weights_dir = Path("assets/data/pretrained") / self.model_name
+            success = self.load_from_disk(global_weights_dir, mode="inference")
+            if not success:
+                raise RuntimeError(
+                    "Failed to load pretrained weights for zero-shot from: "
+                    f"{global_weights_dir}"
+                )
+            return
+
         clean_dataset = (
             self.dataset_name.split("_images")[0] if self.dataset_name else "unknown"
         )
@@ -587,61 +597,85 @@ class NerfModel:
         base_output_dir = Path("assets/data/nerf_checkpoints")
         experiment_name = f"{clean_dataset}/{clean_target}"
 
-        # 2. Check for resumes
-        output_path = self.get_output_path(data_path)
-        load_dir_arg = []
-        checkpoint_overrides = []
-        latest_checkpoint = self._get_latest_checkpoint(output_path)
+        cmd = [
+            "python",
+            "-c",
+            "import torch; torch.backends.cudnn.enabled=False; torch.backends.cudnn.benchmark=False; import sys; sys.argv.pop(0); from nerfstudio.scripts.train import entrypoint; entrypoint()",
+            "ns-train",
+            self.model_name,
+            "--output-dir",
+            str(base_output_dir),
+            "--experiment-name",
+            experiment_name,
+            "--vis",
+            "tensorboard",
+            "--data",
+            str(split_json_path),
+        ]
 
-        if latest_checkpoint:
-            config.logger.info(f"🔄 Checkpoint found: {latest_checkpoint}. Resuming.")
-            load_dir_arg = ["--load-dir", str(latest_checkpoint)]
-            checkpoint_overrides, saved_downscale = (
-                self._get_checkpoint_config_overrides(latest_checkpoint)
+        if self.regime == "tta":
+            config.logger.info(
+                f"🔧 TTA regime enabled. Limiting adaptation to {self.tta_steps} steps."
+            )
+            cmd += [
+                "--max-num-iterations",
+                str(self.tta_steps),
+                "--steps-per-save",
+                str(self.tta_steps),
+                "--steps-per-eval-all-images",
+                str(self.tta_steps),
+            ]
+            global_weights_dir = Path("assets/data/pretrained") / self.model_name
+            cmd += ["--load-dir", str(global_weights_dir)]
+        elif self.regime == "per-scene":
+            config.logger.info(
+                "🆕 Per-scene regime enabled. Running full optimization for the target scene."
+            )
+            latest_checkpoint = self._get_latest_checkpoint(output_path)
+            if latest_checkpoint:
+                cmd += ["--load-dir", str(latest_checkpoint)]
+                checkpoint_overrides, saved_downscale = (
+                    self._get_checkpoint_config_overrides(latest_checkpoint)
+                )
+                cmd += checkpoint_overrides
+                if saved_downscale is not None and saved_downscale != downscale_factor:
+                    config.logger.warning(
+                        f"⚠️ Checkpoint trained with downscale_factor={saved_downscale}. "
+                        f"Overriding requested {downscale_factor} to prevent IndexError."
+                    )
+                    downscale_factor = saved_downscale
+        else:
+            raise ValueError(
+                f"Unsupported regime '{self.regime}'. Expected one of: per-scene, zero-shot, tta."
             )
 
-            # 🔥 Safely override the downscale factor if resuming an older run
-            if saved_downscale is not None and saved_downscale != downscale_factor:
-                config.logger.warning(
-                    f"⚠️ Checkpoint trained with downscale_factor={saved_downscale}. "
-                    f"Overriding requested {downscale_factor} to prevent IndexError."
-                )
-                downscale_factor = saved_downscale
-        else:
-            config.logger.info("🆕 No checkpoint found. Starting fresh training.")
-
-        config.logger.info(
-            f"🚀 Training {self.model_name} on {data_path} (Downscale: {downscale_factor}x)..."
-        )
-
-        split_json_path = self._apply_dataset_splits(data_path)
-
-        cmd = (
-            [
-                "python",
-                "-c",
-                "import torch; torch.backends.cudnn.enabled=False; torch.backends.cudnn.benchmark=False; import sys; sys.argv.pop(0); from nerfstudio.scripts.train import entrypoint; entrypoint()",
-                "ns-train",
-                self.model_name,
-                "--output-dir",
-                str(base_output_dir),
-                "--experiment-name",
-                experiment_name,
-                "--vis",
-                "tensorboard",
-                "--data",
-                str(split_json_path),
+        if self.model_name == "pixel-nerf":
+            cmd += [
+                "--pipeline.model.N-samples",
+                "32",
+                "--pipeline.model.N-importance",
+                "32",
+                "--mixed-precision",
+                "True",
             ]
-            + load_dir_arg
-            + checkpoint_overrides
-        )
-
-        if self.model_name == "gnt":
+        if self.model_name in ["gnt", "gnt-transfer"]:
             cmd += [
                 "--pipeline.model.N-samples",
                 "48",
                 "--pipeline.model.N-importance",
                 "48",
+                "--mixed-precision",
+                "True",
+                # "--pipeline.model.transdepth",
+                # "2",
+                "--pipeline.model.netwidth",
+                "128",
+                "--pipeline.model.eval-num-rays-per-chunk",
+                "512",
+                "--pipeline.datamanager.train-num-rays-per-batch",
+                "512",
+                "--pipeline.datamanager.cache-images-type",
+                "uint8",
             ]
         elif self.model_name == "nerfacto":
             cmd += [
@@ -653,34 +687,42 @@ class NerfModel:
                 "16",
                 "--pipeline.model.camera-optimizer.mode",
                 "off",
+                "--pipeline.model.background-color",
+                "white",
             ]
         elif self.model_name == "splatfacto":
             cmd += []
         elif self.model_name == "merf-ns":
             cmd += [
-                "--pipeline.model.eval-num-rays-per-chunk",
-                "1024",
                 "--pipeline.model.s3im-loss-mult",
                 "0.0",
+                # "--pipeline.datamanager.train-num-images-to-sample-from",
+                # "500",
+                # "--pipeline.model.eval-num-rays-per-chunk",
+                # "256",
+                # "--pipeline.datamanager.train-num-rays-per-batch",
+                # "256",
+                # "--auto-scale-poses", "False",
             ]
-        cmd += [
-            "--pipeline.datamanager.cache-images-type",
-            "uint8",
-            "--pipeline.datamanager.train-num-images-to-sample-from",
-            "500",
-            "--pipeline.model.eval-num-rays-per-chunk",
-            "1024",
-            "--pipeline.datamanager.train-num-rays-per-batch",
-            "1024",
-            # "--auto-scale-poses", "False",
-        ]
+        if not self.model_name == "splatfacto":
+            cmd += [
+                # "--pipeline.datamanager.cache-images-type",
+                # "uint8",
+                # "--pipeline.datamanager.train-num-images-to-sample-from",
+                # "500",
+                # "--pipeline.model.eval-num-rays-per-chunk",
+                # "256",
+                # "--pipeline.datamanager.train-num-rays-per-batch",
+                # "256",
+                # "--auto-scale-poses", "False",
+            ]
 
         cmd += [
             "nerfstudio-data",
             "--downscale-factor",
             str(downscale_factor),
             "--eval-mode",
-            "filename",
+            "fraction",
         ]
 
         process_env = os.environ.copy()
@@ -689,7 +731,9 @@ class NerfModel:
         log_dir = Path("assets/logs") / self.model_name
         log_dir.mkdir(parents=True, exist_ok=True)
         timestamp = time.strftime("%Y%m%d_%H%M%S")
-        log_file = log_dir / f"{clean_dataset}_{clean_target}_{timestamp}.log"
+        log_file = (
+            log_dir / f"{clean_dataset}_{clean_target}_{self.regime}_{timestamp}.log"
+        )
 
         try:
             with open(log_file, "wb") as f:
@@ -708,9 +752,16 @@ class NerfModel:
                 process.wait()
                 if process.returncode != 0:
                     raise subprocess.CalledProcessError(process.returncode, cmd)
-            config.logger.info(f"✅ Success training {self.model_name} on {data_path}")
+            config.logger.info(
+                f"✅ Success training/adapting {self.model_name} on {data_path} via {self.regime}"
+            )
+            if self.regime == "tta":
+                if not self.load_from_disk(output_path, mode="test"):
+                    raise RuntimeError(
+                        f"Failed to load adapted TTA weights from: {output_path}"
+                    )
         except subprocess.CalledProcessError as e:
-            config.logger.error(f"❌ Training failed. Exit code: {e.returncode}")
+            config.logger.error(f"❌ Subprocess failed. Exit code: {e.returncode}")
         except KeyboardInterrupt:
             config.logger.info("\n🛑 User Interruption.")
             raise KeyboardInterrupt
@@ -793,35 +844,42 @@ class NerfModel:
             return None
         return torch.stack(image_tensors, dim=0)
 
-    def measure_inference_fps(self, mode: RenderMode, num_warmup: int = 3, num_test: int = 10) -> float:
+    def measure_inference_fps(
+        self, mode: RenderMode, num_warmup: int = 3, num_test: int = 10
+    ) -> float:
         """
-        Mede o FPS (Frames Per Second) de inferência do modelo com alta precisão na GPU.
+        Measures the inference speed (FPS) of the NeRF model in either Orthographic or Perspective mode.
+         - Orthographic: Uses a synthetic ray bundle for a fixed view.
+         - Perspective: Uses the first camera from the validation/test set for a realistic scenario.
         """
         if self.pipeline is None or self.model is None:
             return 0.0
 
         self.model.eval()
-        
+
         if mode == RenderMode.ORTHOGRAPHIC:
             # Reutiliza o método recém-criado com um config padrão
             cam = GenerateCameraConfig(
-                center=(0.0, 0.0), 
-                extent=(1.0, 1.0), 
-                resolution=(config.img_size, config.img_size), 
-                thickness=0.1
+                center=(0.0, 0.0),
+                extent=(1.0, 1.0),
+                resolution=(config.img_size, config.img_size),
+                thickness=0.1,
             )
             ray_bundle = self._generate_orthographic_rays(Plans.AXIAL, 0.0, cam)
         else:
             # Pega a primeira câmera real do conjunto de validação/teste (Perspectiva)
             try:
                 camera = self.pipeline.datamanager.eval_dataloader.cameras[0]
+                if camera is None:
+                    raise AttributeError("No cameras found in eval_dataloader.")
+
             except AttributeError:
                 camera = self.pipeline.datamanager.eval_dataset.cameras[0]
-                
+
             camera = camera.to(self.pipeline.device)
             ray_bundle = camera.generate_rays(camera_indices=0)
 
-        # Usando eventos CUDA para precisão real de hardware
+        # Using CUDA for precise timing. TODO fallback to CPU timing if no GPU available.
         start_event = torch.cuda.Event(enable_timing=True)
         end_event = torch.cuda.Event(enable_timing=True)
 
@@ -831,70 +889,98 @@ class NerfModel:
 
             torch.cuda.synchronize()
             start_event.record()
-            
+
             for _ in range(num_test):
                 self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
-                
+
             end_event.record()
             torch.cuda.synchronize()
 
         total_time_ms = start_event.elapsed_time(end_event)
         time_per_frame_s = (total_time_ms / 1000.0) / num_test
         fps = 1.0 / time_per_frame_s
-        
-        config.logger.info(f"⚡ Inferência ({mode.value}): {fps:.2f} FPS ({time_per_frame_s*1000:.2f} ms/frame)")
+
+        config.logger.info(
+            f"⚡ Inferência ({mode.value}): {fps:.2f} FPS ({time_per_frame_s * 1000:.2f} ms/frame)"
+        )
         return fps
 
-    def get_perspective_test_metrics(self, metrics: List[AvailableMetrics]) -> Dict[str, float]:
+    def get_perspective_test_metrics(
+        self, metrics: List[AvailableMetrics]
+    ) -> Dict[str, float]:
         """
-        Avalia a qualidade (PSNR, SSIM, etc) para o projeto de Perspectiva.
-        Usa o split 'test' gerado no JSON para garantir que não há data leakage.
+        Review rendered images from the perspective test set and compute quality metrics against ground truth.
+        The Metrics are PSNR, SSIM, LPIPS, and FID, which are standard for image quality assessment in NeRF papers.
         """
-        assert self.pipeline is not None and self.model is not None, "Pipeline and model must be loaded for evaluation."
+        assert self.pipeline is not None and self.model is not None, (
+            "Pipeline and model must be loaded for evaluation."
+        )
 
         self.model.eval()
         rendered_images = []
         gt_images = []
 
         eval_dataloader = self.pipeline.datamanager.fixed_indices_eval_dataloader
-        
-        config.logger.info("🔍 Avaliando qualidade nas vistas de Teste (Perspectiva)...")
+
+        config.logger.info(
+            "🔍 Evaluating perspective test metrics against ground truth views... (This may take a while depending on the number of test views and image resolution.)"
+        )
         with torch.no_grad():
             for camera, batch, _ in eval_dataloader:
                 camera = camera.to(self.pipeline.device)
                 outputs = self.pipeline.model.get_outputs_for_camera(camera)
-                # Extrai o RGB renderizado e o RGB real do dataset
+                # Extract RGB and GT images, move to CPU for metric calculations
                 rendered_rgb = outputs["rgb"].cpu()
                 gt_rgb = batch["image"].cpu()
                 rendered_images.append(rendered_rgb)
                 gt_images.append(gt_rgb)
-        # Empilha os tensores e ajusta para o formato [B, C, H, W] em uint8 que o seu comparador espera
-        rendered_tensor = (torch.stack(rendered_images).permute(0, 3, 1, 2) * 255).to(torch.uint8)
-        gt_tensor = (torch.stack(gt_images).permute(0, 3, 1, 2) * 255).to(torch.uint8)
 
+        rendered_tensor = (torch.stack(rendered_images).permute(0, 3, 1, 2) * 255).to(
+            torch.uint8
+        )
+        gt_tensor = (torch.stack(gt_images).permute(0, 3, 1, 2) * 255).to(torch.uint8)
         return self.compare_images_quality(rendered_tensor, gt_tensor, metrics)
 
-    def evaluate_all_metrics(self, mode: RenderMode, metrics: List[AvailableMetrics]) -> Dict[str, float]:
+    def evaluate_all_metrics(
+        self,
+        mode: RenderMode,
+        metrics: List[AvailableMetrics],
+        already_rendered_slices: Optional[List[np.ndarray]] = None,
+    ) -> Dict[str, float]:
         """
-        O Orquestrador Unificado de Métricas.
-        Retorna um dicionário com TUDO o que o seu paper precisa para uma tabela de resultados.
+        Returns a comprehensive dictionary of evaluation results, including:
+            - Timestamp of evaluation
+            - Memory footprint of the model in bytes
+            - Inference FPS in the specified rendering mode
+            - Visual quality metrics (FID, PSNR, SSIM, LPIPS) if applicable
+        The method adapts to the rendering mode:
+            - Orthographic: Evaluates quality against ground truth slices if available, otherwise renders new slices for evaluation.
+            - Perspective: Evaluates quality against the test set views using the pipeline's dataloader
         """
         results = {}
-        # Pegada de Memória (Universal)
+        results["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
         results["memory_footprint_bytes"] = self.get_memory_footprint()
-        # Desempenho Computacional (Universal)
         results["inference_fps"] = self.measure_inference_fps(mode)
-        # Qualidade Visual (Específico por Domínio)
+
+        # visual quality metrics depends on the rendering mode and available data
         if mode == RenderMode.ORTHOGRAPHIC:
-            # Fluxo do Projeto A: Gera fatias ortográficas
-            rendered_slices = self.render(num_slices=10, plan=Plans.AXIAL) 
-            if not rendered_slices:
-                logger.warning("⚠️ No rendered slices available for quality evaluation.")
-                return results
-            # Chama o método que você já tinha construído que puxa o GT do self.images
-            quality_metrics = self.evaluate_rendered_images_quality(rendered_slices, metrics)
+            if already_rendered_slices is not None:
+                rendered_slices = already_rendered_slices
+                logger.info(
+                    "✅ Using pre-rendered orthographic slices for quality evaluation."
+                )
+            else:
+                rendered_slices = self.render(num_slices=10, plan=Plans.AXIAL)
+                if not rendered_slices:
+                    logger.warning(
+                        "⚠️ No rendered slices available for quality evaluation."
+                    )
+                    return results
+            quality_metrics = self.evaluate_rendered_images_quality(
+                rendered_slices, metrics
+            )
+
         else:
-            # Fluxo do Projeto B: Avalia nas câmeras originais de teste
             quality_metrics = self.get_perspective_test_metrics(metrics)
 
         if quality_metrics:
@@ -962,33 +1048,11 @@ class NerfModel:
             param.numel() * param.element_size() for param in self.model.parameters()
         )
 
-    def print_scene_bounds(self):
-        """Imprime os limites do modelo para ajudar no alinhamento da câmera."""
-        if not hasattr(self, "pipeline") or self.pipeline is None:
-            print("Pipeline não carregado.")
-            return
-
-        # O AABB (Axis-Aligned Bounding Box) dita os limites de renderização
-        aabb = self.pipeline.model.scene_box.aabb
-        print(f"Limites da Cena (Min X,Y,Z): {aabb[0].tolist()}")
-        print(f"Limites da Cena (Max X,Y,Z): {aabb[1].tolist()}")
-
-        # O centro ideal para posicionar a câmera
-        centro = (aabb[0] + aabb[1]) / 2.0
-        print(f"Centro Geométrico Estimado: {centro.tolist()}")
-
-        # O extent (tamanho) recomendado
-        tamanho = aabb[1] - aabb[0]
-        print(f"Tamanho do Objeto em X, Y, Z: {tamanho.tolist()}")
-
     def _generate_orthographic_rays(
-        self,
-        plan: Plans,
-        position: float,
-        cam_config: GenerateCameraConfig
+        self, plan: Plans, position: float, cam_config: GenerateCameraConfig
     ):
         """
-        Monta a matriz extrínseca e intrínseca ortográfica e gera o RayBundle.
+        Mounts the extrinsic and intrinsic parameters for an orthographic camera based on the specified plane and position.
         """
         position = float(position)
 
@@ -1011,9 +1075,8 @@ class NerfModel:
                 [[1.0, 0.0, 0.0, cx], [0.0, 0.0, -1.0, position], [0.0, 1.0, 0.0, cy]]
             ).float()
         else:
-            c2w = torch.eye(4)[:3, :4].float() # Fallback seguro
+            c2w = torch.eye(4)[:3, :4].float()
 
-        # 3. Configurando a Escala (Zoom / Intrínsecas)
         fx = width / ext_x
         fy = height / ext_y
         center_x_pixel = width / 2.0
@@ -1030,9 +1093,7 @@ class NerfModel:
             camera_type=CameraType.ORTHOPHOTO,
         ).to(self.pipeline.device)
 
-        # 4. Gera os raios e aplica a espessura dinâmica (Slab)
         ray_bundle = camera.generate_rays(camera_indices=0, aabb_box=None)
-        
         base = ray_bundle.origins[..., :1]
         ray_bundle.nears = torch.zeros_like(base)
         ray_bundle.fars = torch.zeros_like(base) + cam_config.thickness
@@ -1070,9 +1131,7 @@ class NerfModel:
             return
         path = self.get_output_path(self.images.dataset_path)
         if self.pipeline is None:
-            loaded = self.load_from_disk(
-                path, mode="inference", eval_num_rays_per_chunk=1024
-            )
+            loaded = self.load_from_disk(path, mode="inference")
             if not loaded:
                 logger.error(f"❌ Failed to load pipeline for NeRF slicing at {path}")
                 return
@@ -1088,25 +1147,50 @@ class NerfModel:
         aabb = self.pipeline.model.scene_box.aabb.cpu().numpy()
         min_bound = aabb[0]
         max_bound = aabb[1]
-        if plan == Plans.AXIAL:
-            min, max = min_bound[2], max_bound[2]
-        elif plan == Plans.SAGITAL:
-            min, max = min_bound[0], max_bound[0]
-        elif plan == Plans.CORONAL:
-            min, max = min_bound[1], max_bound[1]
 
-        slab_size = (max - min) / num_slices
+        SAFE_MARGIN = 0.0
+        if plan == Plans.AXIAL:
+            slice_axis = 0
+            img_axis_1, img_axis_2 = 1, 2
+        elif plan == Plans.SAGITAL:
+            slice_axis = 1
+            img_axis_1, img_axis_2 = 0, 2
+        elif plan == Plans.CORONAL:
+            slice_axis = 2
+            img_axis_1, img_axis_2 = 0, 1
+
+        min_val = min_bound[slice_axis] - SAFE_MARGIN
+        max_val = max_bound[slice_axis] - SAFE_MARGIN
+        slab_size = (max_val - min_val) / num_slices
         output = []
 
+        # Centro dinâmico baseado no plano da imagem
+        center_1 = (min_bound[img_axis_1] + max_bound[img_axis_1]) / 2.0
+        center_2 = (min_bound[img_axis_2] + max_bound[img_axis_2]) / 2.0
+        CAMERA_POS = (center_1, center_2)
+
+        SAFE_EXTENT_CONSTANT = 0.0
+        THICKNESS_MULTIPLIER = 1.25
+
+        logger.info(
+            f"Calculated camera center: {CAMERA_POS}, slab size: {slab_size:.3f}"
+        )
+        logger.info(f"Raw AABB: min={min_bound}, max={max_bound}")
+        logger.info(
+            f"Extent calculated: x={max_bound[0] - min_bound[0] - SAFE_EXTENT_CONSTANT}, y={max_bound[1] - min_bound[1] - SAFE_EXTENT_CONSTANT}"
+        )
         cam = GenerateCameraConfig(
-            center=(0.0, 0.0),
-            extent=(max_bound[0] - min_bound[0], max_bound[1] - min_bound[1]),
+            center=(CAMERA_POS),
+            extent=(
+                max_bound[0] - min_bound[0] - SAFE_EXTENT_CONSTANT,
+                max_bound[1] - min_bound[1] - SAFE_EXTENT_CONSTANT,
+            ),
             resolution=(config.img_size, config.img_size),
-            thickness=slab_size * 1.25,
+            thickness=slab_size * THICKNESS_MULTIPLIER,
         )
 
         for i in range(num_slices):
-            slice_center = min + (i + 0.5) * slab_size
+            slice_center = min_val + (i + 0.5) * slab_size
             # extract image via orthographic camera
             render_dict = self.render_image(
                 plan=plan, position=slice_center, cam_config=cam
