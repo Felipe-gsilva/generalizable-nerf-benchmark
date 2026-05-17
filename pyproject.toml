@@ -16,7 +16,7 @@ dependencies = [
     "tqdm>=4.67.3",
     "pillow>=12.2.0",
     # models
-    "merfstudio @ git+https://github.com/felipe-gsilva/merfstudio",
+    "merf @ git+https://github.com/felipe-gsilva/merfstudio",
     "nerfstudio-gnt",
     "nerfstudio-pixelnerf"
 ]
