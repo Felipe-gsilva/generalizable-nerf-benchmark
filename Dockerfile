@@ -34,7 +34,7 @@ WORKDIR /workspace
 COPY pyproject.toml ./
 
 # 🔥 Ignora instalação do projeto (CRÍTICO para cache)
-RUN uv sync --prerelease=allow --no-install-project
+RUN uv sync --prerelease=allow --no-install-project --upgrade-package=nerfstudio-gnt --upgrade-package=nerfstudio-pixelnerf
 
 # -----------------------------------
 # 2. 🔨 TINY-CUDA-NN (HEAVY COMPILATION)

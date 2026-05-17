@@ -10,7 +10,7 @@
 \usepackage{titlesec}
 \usepackage{indentfirst}
 \sloppy
-\title{Uma Análise Qualitativa e Computacional de NeRFs Few-Shot Vs Per-Scene aplicadas em Conjuntos de Dados de Vistas Esparsas}
+\title{Uma Análise Comparativa entre NeRFs Few-Shot e Per-Scene aplicadas em Conjuntos de Dados de Vistas Esparsas}
 \author{Felipe G. da Silva\inst{1}}
 \address{Departamento de Ciências da Computação e Estatística -- UNESP\\
   CEP: 15054-000 -- São José do Rio Preto -- SP -- Brazil
@@ -20,11 +20,11 @@
 \begin{document} 
 \maketitle
 \begin{abstract}
-This work compares hybrid Generalizable NeRFs and classic Per-Scene trained models applied to sparse-view datasets, evaluating the impact of these feature extraction architectures on novel view synthesis performance. Through a quantitative analysis using visual fidelity (PSNR, SSIM, LPIPS) and computational efficiency metrics (convergence time, VRAM footprint, inference time), this study highlights the trade-offs between the global generalization of Transformers and the local processing efficiency of convolutions. Ultimately, it aims to guide the selection of 3D rendering models for practical scenarios often constrained by hardware limitations and data scarcity.
+This work compares hybrid Generalizable NeRFs and Fast Optmization Per-Scene trained models applied to sparse-view datasets, evaluating the impact of these feature extraction architectures on novel view synthesis performance. Through a quantitative analysis using visual fidelity (PSNR, SSIM, LPIPS) and computational efficiency metrics (convergence time, VRAM footprint, inference time), this study highlights the trade-offs between the global generalization of Transformers and the local processing efficiency of convolutions. Ultimately, it aims to guide the selection of 3D rendering models for practical scenarios often constrained by hardware limitations and data scarcity.
 \end{abstract}
 
 \begin{resumo}
-  Esse trabalho apresenta uma comparação entre modelos generalizáveis via extratores de características e modelos de otimização aápida por cena aplicados em conjuntos de dados com vistas esparsas e avalia o impacto dessas arquiteturas de extração de características no desempenho em síntese de novas vistas. Por meio de uma análise quantitativa baseada em métricas de fidelidade visual (PSNR, SSIM e LPIPS) e de eficiência computacional (tempo de convergência, consumo de VRAM e tempo de inferência), o estudo busca evidenciar os trade-offs entre a capacidade de generalização global dos Transformers e a eficiência de processamento local das convoluções,  visando auxiliar na seleção de modelos de renderização 3D em cenários práticos, os quais são frequentemente marcados por restrições de hardware e escassez de dados.
+  Esse trabalho apresenta uma comparação entre modelos generalizáveis via extratores de características e modelos de otimização rápida por cena aplicados em conjuntos de dados com vistas esparsas e avalia o impacto dessas arquiteturas de extração de características no desempenho em síntese de novas vistas. Por meio de uma análise quantitativa baseada em métricas de fidelidade visual (PSNR, SSIM e LPIPS) e de eficiência computacional (tempo de convergência, consumo de VRAM e tempo de inferência), o estudo busca evidenciar os trade-offs entre a capacidade de generalização global dos Transformers e a eficiência de processamento local das convoluções,  visando auxiliar na seleção de modelos de renderização 3D em cenários práticos, os quais são frequentemente marcados por restrições de hardware e escassez de dados.
 \end{resumo}
 
 \section{Introdução}
