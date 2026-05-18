@@ -11,8 +11,10 @@ dependencies = [
     "numpy>=2.2.6",
     "scikit-image>=0.25.2",
     "scikit-learn>=1.7.2",
-    "torch>=2.11.0",
-    "torchmetrics>=1.9.0",
+    "torch>=2.5.1",
+    "torchvision>=0.20.1",
+    "torchmetrics",
+    "torch-fidelity",
     "tqdm>=4.67.3",
     "pillow>=12.2.0",
     # models
