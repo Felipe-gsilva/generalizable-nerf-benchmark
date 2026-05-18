@@ -12,4 +12,4 @@ if [ -z "$GPU_ARCH" ]; then
 fi
 
 # Build and run
-docker compose up --build -d
+COMPOSE_BAKE=true docker compose up --build -d
