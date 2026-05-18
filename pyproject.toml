@@ -1,6 +1,6 @@
 [project]
 name = "nerf-ann-paper"
-version = "0.1.0"
+version = "0.0.1"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,3 +20,25 @@ dependencies = [
     "nerfstudio-gnt",
     "nerfstudio-pixelnerf"
 ]
+
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu124" },
+]
+torchvision = [
+    { index = "pytorch-cu124" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu113"
+url = "https://download.pytorch.org/whl/cu113"
+explicit = true
+
+[tool.uv.extra-build-dependencies]
+nerfstudio = ["setuptools>=61", "wheel"]
