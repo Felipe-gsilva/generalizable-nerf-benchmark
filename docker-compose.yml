@@ -6,7 +6,7 @@ services:
       args:
         GPU_ARCH: ${GPU_ARCH:-86}
     image: gan-nerf-project:latest
-    container_name: gan-nerf-container
+    container_name: nerf-ann-paper
     deploy:
       resources:
         reservations:

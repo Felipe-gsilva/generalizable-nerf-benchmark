@@ -16,7 +16,7 @@ from typing import Dict, List, Literal, Optional
 from PIL import Image
 from nerfstudio.pipelines.base_pipeline import Pipeline
 from validation.eval_images import calculate_fid, calculate_psnr_ssim_lpips
-from dataset.ImageDataset import ImageDataset
+from dataset.ImageDataset import ImageDataset, _llffhold_indices
 from utils.config import config
 from utils.types import AvailableMetrics, Plans, GenerateCameraConfig, RenderMode
 from nerfstudio.cameras.cameras import Cameras, CameraType
@@ -56,6 +56,7 @@ class NerfModel:
         num_views: int = 0,  # 0 = Usa o dataset todo. >0 = Few-shot.
         split: List[float] = [0.7, 0.15, 0.15],
         split_strategy: str = "uniform",  # "uniform" ou "random"
+        llffhold: Optional[int] = None,
         regime: Literal["per-scene", "zero-shot", "tta"] = "per-scene",
         tta_steps: int = 500,
     ) -> None:
@@ -73,12 +74,16 @@ class NerfModel:
         self.regime = regime
         self.tta_steps = tta_steps
 
+        # Parâmetros do Paper
         self.num_views = num_views
         if sum(split) != 1.0:
             raise ValueError("Split ratios must sum to 1.0")
         self.val_split = split[1]
         self.test_split = split[2]
         self.split_strategy = split_strategy
+        if llffhold is not None and llffhold <= 0:
+            raise ValueError("llffhold must be > 0 when provided.")
+        self.llffhold = llffhold
 
     def _apply_dataset_splits(self, data_path: Path) -> Path:
         """
@@ -86,7 +91,14 @@ class NerfModel:
         """
         json_path = data_path / "transforms.json"
 
-        if self.num_views > 0:
+        if self.llffhold is not None and self.num_views > 0:
+            out_json_path = (
+                data_path
+                / f"transforms_llffhold{self.llffhold}_{self.num_views}views_{self.split_strategy}.json"
+            )
+        elif self.llffhold is not None:
+            out_json_path = data_path / f"transforms_llffhold{self.llffhold}.json"
+        elif self.num_views > 0:
             out_json_path = (
                 data_path
                 / f"transforms_{self.num_views}views_{self.split_strategy}.json"
@@ -103,43 +115,75 @@ class NerfModel:
         if total_images == 0:
             return json_path
 
-        # if num_views is set to be less than total images, we take that many for training and split the rest for val/test
-        if self.num_views > 0 and self.num_views < total_images:
-            train_count = self.num_views
-            remaining = total_images - train_count
+        if self.llffhold is not None:
+            test_indices = _llffhold_indices(
+                total=total_images, hold=self.llffhold, split="test"
+            )
+            train_pool = _llffhold_indices(
+                total=total_images, hold=self.llffhold, split="train"
+            )
 
-            pool_ratio = self.val_split + self.test_split
-            if pool_ratio > 0:
-                val_count = int(remaining * (self.val_split / pool_ratio))
+            if self.num_views > 0 and self.num_views < len(train_pool):
+                if self.split_strategy == "uniform":
+                    picked_positions = np.linspace(
+                        0, len(train_pool) - 1, self.num_views, dtype=int
+                    ).tolist()
+                    train_indices = [train_pool[pos] for pos in picked_positions]
+                elif self.split_strategy == "random":
+                    np.random.seed(42)
+                    train_indices = np.random.choice(
+                        train_pool, self.num_views, replace=False
+                    ).tolist()
+                else:
+                    raise ValueError(f"Strategy {self.split_strategy} not supported.")
             else:
-                val_count = remaining // 2
+                train_indices = train_pool
 
+            val_set = set(i for i in train_pool if i not in set(train_indices))
+            test_set = set(test_indices)
+            train_set = set(train_indices)
         else:
-            # default split
-            train_count = int(total_images * (1.0 - self.val_split - self.test_split))
-            val_count = int(total_images * self.val_split)
+            # if num_views is set to be less than total images, we take that many for training and split the rest for val/test
+            if self.num_views > 0 and self.num_views < total_images:
+                train_count = self.num_views
+                remaining = total_images - train_count
 
-        all_indices = np.arange(total_images)
-        if self.split_strategy == "uniform":
-            train_indices = np.linspace(
-                0, total_images - 1, train_count, dtype=int
-            ).tolist()
-        elif self.split_strategy == "random":
-            np.random.seed(42)
-            train_indices = np.random.choice(
-                total_images, train_count, replace=False
-            ).tolist()
-        else:
-            raise ValueError(f"Strategy {self.split_strategy} not supported.")
+                pool_ratio = self.val_split + self.test_split
+                if pool_ratio > 0:
+                    val_count = int(remaining * (self.val_split / pool_ratio))
+                else:
+                    val_count = remaining // 2
 
-        # randomly shuffle the remaining indices for val/test split
-        remaining_indices = [idx for idx in all_indices if idx not in train_indices]
-        np.random.seed(42)  # fixed seed
-        np.random.shuffle(remaining_indices)
+            else:
+                # default split
+                train_count = int(
+                    total_images * (1.0 - self.val_split - self.test_split)
+                )
+                val_count = int(total_images * self.val_split)
 
-        val_set = set(remaining_indices[:val_count])
-        test_set = set(remaining_indices[val_count:])
-        train_set = set(train_indices)
+            all_indices = np.arange(total_images)
+            # this is not completely spatial coherent. Since the cameras do not need to be in order, it means that this "uniform" selection is not 3D uniform.
+            # the correct approach is to get all the values from the cameras to the c2w and them interpolate them in 3D space, but this is a good approximation and much faster to implement.
+            if self.split_strategy == "uniform":
+                train_indices = np.linspace(
+                    0, total_images - 1, train_count, dtype=int
+                ).tolist()
+            elif self.split_strategy == "random":
+                np.random.seed(42)
+                train_indices = np.random.choice(
+                    total_images, train_count, replace=False
+                ).tolist()
+            else:
+                raise ValueError(f"Strategy {self.split_strategy} not supported.")
+
+            # randomly shuffle the remaining indices for val/test split
+            remaining_indices = [idx for idx in all_indices if idx not in train_indices]
+            np.random.seed(42)  # fixed seed
+            np.random.shuffle(remaining_indices)
+
+            val_set = set(remaining_indices[:val_count])
+            test_set = set(remaining_indices[val_count:])
+            train_set = set(train_indices)
 
         # Updates the frames in the JSON with the new split information
         for i, frame in enumerate(frames):
@@ -153,9 +197,15 @@ class NerfModel:
         with open(out_json_path, "w") as f:
             json.dump(data, f, indent=4)
 
-        config.logger.info(
-            f"📊 Dataset Split [{out_json_path.name}]: {len(train_set)} Train | {len(val_set)} Val | {len(test_set)} Test"
-        )
+        if self.llffhold is not None:
+            config.logger.info(
+                f"📊 Dataset LLFF hold-{self.llffhold} [{out_json_path.name}]: "
+                f"{len(train_set)} Train | {len(val_set)} Val | {len(test_set)} Test"
+            )
+        else:
+            config.logger.info(
+                f"📊 Dataset Split [{out_json_path.name}]: {len(train_set)} Train | {len(val_set)} Val | {len(test_set)} Test"
+            )
         return out_json_path
 
     def _get_latest_checkpoint(self, output_path: Path) -> Optional[Path]:
@@ -268,7 +318,7 @@ class NerfModel:
                 and temp_config_path.exists()
             ):
                 try:
-                    temp_config_path.unlink(missing_ok=True)
+                    os.unlink(temp_config_path)
                 except Exception:
                     pass
 
@@ -420,20 +470,6 @@ class NerfModel:
         except subprocess.CalledProcessError as e:
             config.logger.error(f"❌ ns-process-data failed with code: {e.returncode}")
             return False
-
-    def _run_custom_transforms_generation(
-        self, data_path: Path, images_dir: Path, num_imgs: int = 0
-    ) -> bool:
-        config.logger.info(
-            f"🧭 Using custom grid-based transforms generation for {self.dataset_name}."
-        )
-        output_path = data_path / "transforms.json"
-        result = generate_transforms(images_dir, output_path, num_imgs=num_imgs)
-        if result is True:
-            config.logger.info("✅ Custom transforms generated successfully.")
-            return True
-        config.logger.error("❌ Custom transforms generation failed.")
-        return False
 
     @profiler.time_function
     def process_data(self, data_path: Path, num_imgs: int = 0) -> bool:
@@ -625,8 +661,9 @@ class NerfModel:
                 "--steps-per-eval-all-images",
                 str(self.tta_steps),
             ]
-            global_weights_dir = Path("assets/data/pretrained") / self.model_name
-            cmd += ["--load-dir", str(global_weights_dir)]
+            config.logger.info(
+                "ℹ️ Delegating pretrained weight resolution to Nerfstudio/model implementation."
+            )
         elif self.regime == "per-scene":
             config.logger.info(
                 "🆕 Per-scene regime enabled. Running full optimization for the target scene."
@@ -657,8 +694,14 @@ class NerfModel:
                 "32",
                 "--mixed-precision",
                 "True",
+                "--pipeline.model.eval-num-rays-per-chunk",
+                "512",
+                "--pipeline.datamanager.train-num-rays-per-batch",
+                "512",
+                "--pipeline.datamanager.cache-images-type",
+                "uint8",
             ]
-        if self.model_name in ["gnt", "gnt-transfer"]:
+        if self.model_name in ["gnt"]:
             cmd += [
                 "--pipeline.model.N-samples",
                 "48",
@@ -666,8 +709,8 @@ class NerfModel:
                 "48",
                 "--mixed-precision",
                 "True",
-                # "--pipeline.model.transdepth",
-                # "2",
+                "--pipeline.model.transdepth",
+                "2",
                 "--pipeline.model.netwidth",
                 "128",
                 "--pipeline.model.eval-num-rays-per-chunk",
@@ -715,6 +758,12 @@ class NerfModel:
                 # "--pipeline.datamanager.train-num-rays-per-batch",
                 # "256",
                 # "--auto-scale-poses", "False",
+            ]
+
+        if self.regime == "tta" and self.model_name in ["pixel-nerf", "gnt"]:
+            cmd += [
+                "--pipeline.model.transfer_learning",
+                "True",
             ]
 
         cmd += [
@@ -849,16 +898,31 @@ class NerfModel:
     ) -> float:
         """
         Measures the inference speed (FPS) of the NeRF model in either Orthographic or Perspective mode.
-         - Orthographic: Uses a synthetic ray bundle for a fixed view.
-         - Perspective: Uses the first camera from the validation/test set for a realistic scenario.
+         - Orthographic: Uses a synthetic ray bundle for a fixed view, injected with valid eval context.
+         - Perspective: Uses a real validation camera ray bundle populated with real source contexts.
         """
         if self.pipeline is None or self.model is None:
             return 0.0
 
         self.model.eval()
+        device = self.pipeline.device
+
+        try:
+            gnt_metadata = None
+            eval_ray_bundle, eval_batch = self.pipeline.datamanager.next_eval(step=0)
+            if self.model_name == "gnt":
+                eval_batch = self.pipeline._inject_gnt_metadata(
+                    eval_ray_bundle, eval_batch, split="eval"
+                )
+                gnt_metadata = eval_ray_bundle.metadata
+
+        except Exception as e:
+            config.logger.error(
+                f"Failed to fetch evaluation source metadata for GNT: {e}"
+            )
+            return 0.0
 
         if mode == RenderMode.ORTHOGRAPHIC:
-            # Reutiliza o método recém-criado com um config padrão
             cam = GenerateCameraConfig(
                 center=(0.0, 0.0),
                 extent=(1.0, 1.0),
@@ -866,30 +930,25 @@ class NerfModel:
                 thickness=0.1,
             )
             ray_bundle = self._generate_orthographic_rays(Plans.AXIAL, 0.0, cam)
+            # hot fix for gnt (I will try to unify this later but gnt's metadata handling is currently very coupled to the dataloader and eval batch)
+            if self.model_name == "gnt" and gnt_metadata is not None:
+                ray_bundle.metadata.update(gnt_metadata)
         else:
-            # Pega a primeira câmera real do conjunto de validação/teste (Perspectiva)
-            try:
-                camera = self.pipeline.datamanager.eval_dataloader.cameras[0]
-                if camera is None:
-                    raise AttributeError("No cameras found in eval_dataloader.")
+            ray_bundle = eval_ray_bundle
 
-            except AttributeError:
-                camera = self.pipeline.datamanager.eval_dataset.cameras[0]
-
-            camera = camera.to(self.pipeline.device)
-            ray_bundle = camera.generate_rays(camera_indices=0)
-
-        # Using CUDA for precise timing. TODO fallback to CPU timing if no GPU available.
+        ray_bundle = ray_bundle.to(device)
         start_event = torch.cuda.Event(enable_timing=True)
         end_event = torch.cuda.Event(enable_timing=True)
 
         with torch.no_grad():
+            # Warmup
             for _ in range(num_warmup):
                 self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
 
             torch.cuda.synchronize()
             start_event.record()
 
+            # Benchmark
             for _ in range(num_test):
                 self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
 
@@ -1044,9 +1103,20 @@ class NerfModel:
         """Returns the memory footprint of the NeRF model."""
         if self.model is None:
             return 0
-        return sum(
+
+        cuda_mem_usage = (
+            torch.cuda.max_memory_allocated() if torch.cuda.is_available() else 0
+        )
+        param_size = sum(
             param.numel() * param.element_size() for param in self.model.parameters()
         )
+        if cuda_mem_usage - param_size > 0:
+            config.logger.warning(
+                f"⚠️ Detected CUDA memory usage ({cuda_mem_usage} bytes) exceeds model parameter size ({param_size} bytes). "
+                "This may indicate additional memory usage from activations, buffers, or other components. "
+                "Reported memory footprint will reflect parameter size only."
+            )
+        return param_size
 
     def _generate_orthographic_rays(
         self, plan: Plans, position: float, cam_config: GenerateCameraConfig
@@ -1143,10 +1213,10 @@ class NerfModel:
         output_dir = self.get_augmentation_output_path(self.images.dataset_path)
         output_dir.mkdir(parents=True, exist_ok=True)
         # Determine scaling and bounds for the slicing based on the pipeline's datamanager
-        # Typically the scene box provides the bounds.
-        aabb = self.pipeline.model.scene_box.aabb.cpu().numpy()
-        min_bound = aabb[0]
-        max_bound = aabb[1]
+        # aabb = self.pipeline.model.scene_box.aabb.cpu().numpy()
+        # Im fixing the bounds to [0,1] for a test
+        min_bound = np.array([0.0, 0.0, 0.0])
+        max_bound = np.array([1.0, 1.0, 1.0])
 
         SAFE_MARGIN = 0.0
         if plan == Plans.AXIAL:

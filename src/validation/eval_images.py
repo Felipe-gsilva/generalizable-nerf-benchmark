@@ -39,7 +39,7 @@ def calculate_fid(
 def calculate_psnr_ssim_lpips(
     real_images: torch.Tensor,
     generated_images: torch.Tensor,
-    lpips_model=lpips.LPIPS(net="alex"),
+    lpips_model=lpips.LPIPS(net="vgg"),
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
     batch_size: int = 32,
 ):

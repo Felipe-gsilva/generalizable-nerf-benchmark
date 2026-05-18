@@ -1,0 +1,3 @@
+- explicar renderização volumétrica, positional encoding e troca para hash encoding
+- confirmar estrutura experimental com NerfBaselines
+- possiveis adições: RegNeRF MVSNeRF MIPNeRF-360

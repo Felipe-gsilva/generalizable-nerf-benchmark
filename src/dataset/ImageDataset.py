@@ -1,8 +1,8 @@
 from pathlib import Path
-from typing import Dict, List, Optional, Union, cast
+from typing import Dict, List, Literal, Optional, Union, cast
 
 from torch import Tensor
-from torch.utils.data import ConcatDataset, DataLoader, Dataset
+from torch.utils.data import ConcatDataset, DataLoader, Dataset, Subset
 from torchvision.datasets import ImageFolder
 from torchvision.datasets.folder import default_loader
 from torchvision.transforms import Compose, Resize, ToTensor, functional
@@ -51,8 +51,34 @@ class _FlatImageFolder(Dataset):
         return len(self.samples)
 
 
+def _llffhold_indices(
+    total: int,
+    hold: int = 8,
+    split: Literal["train", "test"] = "test",
+) -> list[int]:
+    """
+    Return sample indices following the LLFF hold-out protocol.
+
+    Every `hold`-th frame (indices 0, hold, 2*hold, ...) forms the test set.
+    All remaining frames form the training pool.
+
+    Args:
+        total: Total number of frames in the scene.
+        hold:  Hold-out interval (default 8, matching RegNeRF/NeRF convention).
+        split: Which split to return — 'test' or 'train'.
+
+    Returns:
+        Sorted list of integer indices for the requested split.
+    """
+    test_indices = list(range(0, total, hold))
+    train_indices = [i for i in range(total) if i not in set(test_indices)]
+    return test_indices if split == "test" else train_indices
+
+
 class ImageDataset(Dataset):
-    image_data: Union[ImageFolder, _FlatImageFolder, ConcatDataset, SubsetWrapper]
+    image_data: Union[
+        ImageFolder, _FlatImageFolder, ConcatDataset, SubsetWrapper, Subset
+    ]
     data_loader: DataLoader
     name: str
     step: str
@@ -95,13 +121,26 @@ class ImageDataset(Dataset):
         concat_dataset: Optional[ConcatDataset] = None,
         concat_classes: Optional[List[str]] = None,
         concat_class_to_idx: Optional[dict] = None,
+        # --- LLFF hold-out protocol ---
+        llffhold: Optional[int] = None,
+        llffhold_split: Literal["train", "test"] = "test",
     ):
+        """
+        Args:
+            llffhold:       If set, applies the LLFF hold-out protocol with this
+                            interval (typically 8). Every `llffhold`-th frame
+                            (by sorted index) is reserved for the test split;
+                            the remainder forms the training pool.
+            llffhold_split: Which partition to materialise — 'test' or 'train'.
+                            Ignored when llffhold is None.
+        """
         sources = sum(
             x is not None for x in [dataset_path, image_subset_wrapper, concat_dataset]
         )
         if sources != 1:
             raise ValueError(
-                f"Must provide exactly one of: dataset_path, image_subset_wrapper, or concat_dataset. (Provided {sources})"
+                f"Must provide exactly one of: dataset_path, image_subset_wrapper, "
+                f"or concat_dataset. (Provided {sources})"
             )
 
         self.name = name
@@ -140,15 +179,31 @@ class ImageDataset(Dataset):
             has_class_dirs = any(p.is_dir() for p in resolved_root.iterdir())
 
             if has_class_dirs:
-                self.image_data = ImageFolder(
+                base: Union[ImageFolder, _FlatImageFolder] = ImageFolder(
                     root=str(resolved_root), transform=transform
                 )
-                self._drop_missing_samples(self.image_data, str(dataset_path))
+                self._drop_missing_samples(base, str(dataset_path))
             else:
-                self.image_data = _FlatImageFolder(
-                    root=resolved_root,
-                    transform=transform,
+                base = _FlatImageFolder(root=resolved_root, transform=transform)
+
+            # Apply LLFF hold-out *after* the base dataset is fully built so
+            # that indices refer to the final, cleaned sample list.
+            if llffhold is not None:
+                indices = _llffhold_indices(
+                    total=len(base),
+                    hold=llffhold,
+                    split=llffhold_split,
                 )
+                self.image_data = Subset(base, indices)
+                config.logger.info(
+                    "LLFF hold-%d applied: %d frames total → %d '%s' frames",
+                    llffhold,
+                    len(base),
+                    len(indices),
+                    llffhold_split,
+                )
+            else:
+                self.image_data = base
 
     def load(
         self,
@@ -182,14 +237,17 @@ class ImageDataset(Dataset):
         """Return class names regardless of how the dataset was initialised."""
         if hasattr(self, "_concat_classes") and self._concat_classes:
             return self._concat_classes
-        return getattr(self.image_data, "classes", [])
+        # Subset wraps the base dataset — unwrap one level if needed
+        inner = getattr(self.image_data, "dataset", self.image_data)
+        return getattr(inner, "classes", [])
 
     @property
     def class_to_idx(self) -> dict:
         """Return class-to-index mapping regardless of how the dataset was initialised."""
         if hasattr(self, "_concat_class_to_idx") and self._concat_class_to_idx:
             return self._concat_class_to_idx
-        return getattr(self.image_data, "class_to_idx", {})
+        inner = getattr(self.image_data, "dataset", self.image_data)
+        return getattr(inner, "class_to_idx", {})
 
     def __getitem__(self, idx: int) -> tuple[Tensor, int]:
         return cast(tuple[Tensor, int], self.image_data[idx])
@@ -199,12 +257,19 @@ class ImageDataset(Dataset):
 
     def get_image_paths(self) -> list[Path]:
         """Return list of image file paths. Useful for NeRF/GAN pipelines."""
+        # Handle Subset wrapping
+        if isinstance(self.image_data, Subset):
+            inner = self.image_data.dataset
+            all_samples = getattr(inner, "samples", [])
+            return [Path(all_samples[i][0]) for i in self.image_data.indices]
+
         if isinstance(self.image_data, ConcatDataset):
             paths = []
             for ds in self.image_data.datasets:
                 if hasattr(ds, "samples"):
                     paths.extend(Path(s[0]) for s in ds.samples)
             return paths
+
         return [Path(s[0]) for s in self.image_data.samples]
 
     def save_generated_images_to_disk(

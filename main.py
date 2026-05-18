@@ -2,6 +2,7 @@ from pathlib import Path
 from itertools import product
 import time
 import torch
+import gc
 
 from src.dataset.ImageDataset import ImageDataset
 from src.nerf.NeRFModel import NerfModel
@@ -20,8 +21,8 @@ def main():
         {"model": "merf-ns", "regime": "per-scene"},
         {"model": "pixel-nerf", "regime": "zero-shot"},
         {"model": "pixel-nerf", "regime": "tta"},
-        {"model": "gnt-transfer", "regime": "zero-shot"},
-        {"model": "gnt-transfer", "regime": "tta"},
+        {"model": "gnt", "regime": "zero-shot"},
+        {"model": "gnt", "regime": "tta"},
     ]
 
     device_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
@@ -39,7 +40,11 @@ def main():
         print("=" * 80)
 
         dataset_obj = ImageDataset(
-            name=ds, step="train", dataset_path=Path("assets/data/baseline") / ds
+            name=ds,
+            step="train",
+            dataset_path=Path("assets/data/baseline") / ds,
+            llffhold=8,
+            llffhold_split="train",
         )
 
         metrics_logger = MetricsLogger(
@@ -59,6 +64,7 @@ def main():
                 images=dataset_obj,
                 split_strategy=strategy,
                 num_views=num_views,
+                llffhold=8,
                 regime=regime,
                 tta_steps=500,
             )
@@ -88,6 +94,7 @@ def main():
         finally:
             metrics_logger.close()
             torch.cuda.empty_cache()
+            gc.collect()
 
 
 if __name__ == "__main__":
