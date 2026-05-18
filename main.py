@@ -3,13 +3,11 @@ from itertools import product
 from src.dataset.ImageDataset import ImageDataset
 from src.nerf.NeRFModel import NerfModel
 from src.utils.metrics import MetricsLogger
-from src.utils.config import config
 from src.utils.types import AvailableMetrics, RenderMode
 
 import time
 import torch
 import gc
-import os
 
 
 def main():

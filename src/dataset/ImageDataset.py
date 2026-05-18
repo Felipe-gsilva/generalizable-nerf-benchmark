@@ -208,7 +208,15 @@ class ImageDataset(Dataset):
                         f"No images found in dataset directory: {resolved_root}"
                     )
 
-                def _image_dir_rank(path: Path) -> tuple[int, int, str]:
+                def _count_images(path: Path) -> int:
+                    return sum(
+                        1
+                        for entry in path.rglob("*")
+                        if entry.is_file()
+                        and entry.suffix.lower() in _VALID_IMAGE_SUFFIXES
+                    )
+
+                def _image_dir_rank(path: Path) -> tuple[int, int, int, str]:
                     name = path.name.lower()
                     if name == "images":
                         priority = 0
@@ -216,12 +224,18 @@ class ImageDataset(Dataset):
                         priority = 1
                     else:
                         priority = 2
-                    return (priority, len(name), name)
+                    return (-_count_images(path), priority, len(name), name)
 
                 selected_root = sorted(image_subdirs, key=_image_dir_rank)[0]
+                selected_count = sum(
+                    1
+                    for entry in selected_root.rglob("*")
+                    if entry.is_file() and entry.suffix.lower() in _VALID_IMAGE_SUFFIXES
+                )
                 config.logger.info(
-                    "Using '%s' as image root for dataset '%s'.",
+                    "Using '%s' (%d images) as image root for dataset '%s'.",
                     selected_root,
+                    selected_count,
                     resolved_root,
                 )
                 base = _FlatImageFolder(root=selected_root, transform=transform)

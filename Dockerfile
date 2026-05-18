@@ -1,3 +1,5 @@
+FROM colmap/colmap:latest AS colmap-bin
+
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -14,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     git build-essential cmake ninja-build \
     libgl1 libglib2.0-0 \
     libsm6 libxext6 libxrender1 \
+    ffmpeg colmap xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
@@ -72,6 +75,9 @@ RUN uv pip install -e .
 # Injeta o ambiente virtual diretamente no PATH do sistema.
 # Isso elimina a necessidade de usar o comando "uv run" para rodar scripts!
 ENV PATH="/workspace/.venv/bin:$PATH"
+
+COPY --from=colmap-bin /usr/local/ /usr/local/
+RUN ldconfig
 
 # Comando padrão caso você rode o container sem argumentos
 CMD ["python", "main.py"]

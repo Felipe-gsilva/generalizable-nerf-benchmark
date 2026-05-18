@@ -440,9 +440,10 @@ class NerfModel:
             "🧭 Using COLMAP-based transforms generation via ns-process-data."
         )
 
+        has_xvfb = shutil.which("xvfb-run") is not None
         cmd = []
-        if shutil.which("xvfb-run"):
-            cmd += ["xvfb-run", "-a"]
+        if has_xvfb:
+            cmd += ["xvfb-run", "-a", "-s", "-screen 0 1920x1080x24"]
 
         cmd += [
             "ns-process-data",
@@ -456,12 +457,17 @@ class NerfModel:
             "colmap",
         ]
         process_env = os.environ.copy()
-        process_env["QT_QPA_PLATFORM"] = "offscreen"
         process_env["PATH"] = (
             f"{os.path.expanduser('~/.local/bin')}:{os.environ['PATH']}"
         )
-        process_env.pop("DISPLAY", None)
-        process_env.pop("XAUTHORITY", None)
+        if has_xvfb:
+            process_env.pop("QT_QPA_PLATFORM", None)
+        elif not process_env.get("DISPLAY"):
+            process_env["QT_QPA_PLATFORM"] = "offscreen"
+            config.logger.warning(
+                "xvfb-run is not available and no DISPLAY was detected. "
+                "COLMAP GPU mode may fail without an X server."
+            )
 
         try:
             subprocess.run(cmd, check=True, env=process_env)
