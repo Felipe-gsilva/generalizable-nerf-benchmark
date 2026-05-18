@@ -15,10 +15,10 @@ import re
 from typing import Dict, List, Literal, Optional
 from PIL import Image
 from nerfstudio.pipelines.base_pipeline import Pipeline
-from validation.eval_images import calculate_fid, calculate_psnr_ssim_lpips
-from dataset.ImageDataset import ImageDataset, _llffhold_indices
-from utils.config import config
-from utils.types import AvailableMetrics, Plans, GenerateCameraConfig, RenderMode
+from src.validation.eval_images import calculate_fid, calculate_psnr_ssim_lpips
+from src.dataset.ImageDataset import ImageDataset, _llffhold_indices
+from src.utils.config import config
+from src.utils.types import AvailableMetrics, Plans, GenerateCameraConfig, RenderMode
 from nerfstudio.cameras.cameras import Cameras, CameraType
 from nerfstudio.utils.eval_utils import eval_setup
 from nerfstudio.utils import profiler

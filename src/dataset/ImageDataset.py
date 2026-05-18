@@ -10,6 +10,16 @@ from torchvision.transforms import Compose, Resize, ToTensor, functional
 from src.dataset.SubsetWrapper import SubsetWrapper
 from src.utils.config import config
 
+_VALID_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
+
+
+def _has_images(root: Path, recursive: bool = False) -> bool:
+    iterator = root.rglob("*") if recursive else root.iterdir()
+    return any(
+        entry.is_file() and entry.suffix.lower() in _VALID_IMAGE_SUFFIXES
+        for entry in iterator
+    )
+
 
 class _FlatImageFolder(Dataset):
     """Fallback dataset for directories that contain images directly (no class subfolders)."""
@@ -25,12 +35,12 @@ class _FlatImageFolder(Dataset):
         self.classes = ["default"]
         self.class_to_idx = {"default": 0}
 
-        valid_suffixes = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
         self.samples = sorted(
             [
                 (str(image_path), 0)
                 for image_path in root.iterdir()
-                if image_path.is_file() and image_path.suffix.lower() in valid_suffixes
+                if image_path.is_file()
+                and image_path.suffix.lower() in _VALID_IMAGE_SUFFIXES
             ]
         )
         self.targets = [0] * len(self.samples)
@@ -176,15 +186,45 @@ class ImageDataset(Dataset):
                 )
 
             resolved_root = dataset_path.expanduser().resolve()
-            has_class_dirs = any(p.is_dir() for p in resolved_root.iterdir())
+            subdirs = sorted([p for p in resolved_root.iterdir() if p.is_dir()])
+            has_root_images = _has_images(resolved_root)
+            class_like_layout = bool(subdirs) and all(
+                _has_images(subdir, recursive=True) for subdir in subdirs
+            )
 
-            if has_class_dirs:
+            if class_like_layout:
                 base: Union[ImageFolder, _FlatImageFolder] = ImageFolder(
                     root=str(resolved_root), transform=transform
                 )
                 self._drop_missing_samples(base, str(dataset_path))
-            else:
+            elif has_root_images:
                 base = _FlatImageFolder(root=resolved_root, transform=transform)
+            else:
+                image_subdirs = [
+                    subdir for subdir in subdirs if _has_images(subdir, recursive=True)
+                ]
+                if not image_subdirs:
+                    raise FileNotFoundError(
+                        f"No images found in dataset directory: {resolved_root}"
+                    )
+
+                def _image_dir_rank(path: Path) -> tuple[int, int, str]:
+                    name = path.name.lower()
+                    if name == "images":
+                        priority = 0
+                    elif name.startswith("images"):
+                        priority = 1
+                    else:
+                        priority = 2
+                    return (priority, len(name), name)
+
+                selected_root = sorted(image_subdirs, key=_image_dir_rank)[0]
+                config.logger.info(
+                    "Using '%s' as image root for dataset '%s'.",
+                    selected_root,
+                    resolved_root,
+                )
+                base = _FlatImageFolder(root=selected_root, transform=transform)
 
             # Apply LLFF hold-out *after* the base dataset is fully built so
             # that indices refer to the final, cleaned sample list.

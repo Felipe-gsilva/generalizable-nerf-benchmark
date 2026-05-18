@@ -14,7 +14,16 @@ import os
 
 def main():
     base_data_path = Path("assets/data/baseline/nerf_llff_data")
-    llff_names = [d.name for d in base_data_path.iterdir() if d.is_dir()]
+    llff_names = [
+        "fern",
+        "flower",
+        "fortress",
+        "horns",
+        "leaves",
+        "orchids",
+        "room",
+        "trex",
+    ]
     sampling_strategies = ["uniform", "random"]
     num_views_options = [3, 6, 10]
 

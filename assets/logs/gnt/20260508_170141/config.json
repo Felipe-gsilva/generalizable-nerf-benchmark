@@ -1,5 +1,0 @@
-{
-    "sampling_strategy": "uniform",
-    "num_views": 3,
-    "dataset": "nerf_llff_data"
-}
