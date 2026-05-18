@@ -1,18 +1,20 @@
 from pathlib import Path
 from itertools import product
-import time
-import torch
-import gc
-
 from src.dataset.ImageDataset import ImageDataset
 from src.nerf.NeRFModel import NerfModel
 from src.utils.metrics import MetricsLogger
 from src.utils.config import config
 from src.utils.types import AvailableMetrics, RenderMode
 
+import time
+import torch
+import gc
+import os
+
 
 def main():
-    datasets = config.datasets_name_list
+    base_data_path = Path("assets/data/baseline/nerf_llff_data")
+    llff_names = [d.name for d in base_data_path.iterdir() if d.is_dir()]
     sampling_strategies = ["uniform", "random"]
     num_views_options = [3, 6, 10]
 
@@ -28,7 +30,7 @@ def main():
     device_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
 
     for ds, strategy, exp, num_views in product(
-        datasets, sampling_strategies, experiments_config, num_views_options
+        llff_names, sampling_strategies, experiments_config, num_views_options
     ):
         model_name = exp["model"]
         regime = exp["regime"]
@@ -42,7 +44,7 @@ def main():
         dataset_obj = ImageDataset(
             name=ds,
             step="train",
-            dataset_path=Path("assets/data/baseline") / ds,
+            dataset_path=base_data_path / ds,
             llffhold=8,
             llffhold_split="train",
         )
