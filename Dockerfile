@@ -8,16 +8,19 @@ ENV PYTHONUNBUFFERED=1
 ENV UV_LINK_MODE=copy
 ENV IS_DOCKER=1
 
-# 2. Sistema: instalamos o colmap (para as dependências) e o intel-mkl
-# Removemos o python do apt, pois o 'uv' vai cuidar disso!
+# 2. Sistema: instalamos dependências extras explicitamente
 RUN apt-get update && apt-get install -y \
-    colmap ffmpeg xvfb \
+    colmap \
     intel-mkl \
+    libopenimageio-dev \
+    qt6-base-dev \
+    ffmpeg \
+    xvfb \
     git build-essential cmake ninja-build \
     libgl1 libglib2.0-0 \
     libsm6 libxext6 libxrender1 \
     curl ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* 
 
 # 3. Instalando o uv da forma mais elegante possível via Docker
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
