@@ -1,5 +1,4 @@
-FROM colmap/colmap:latest AS colmap-bin
-
+FROM colmap/colmap:3.9 AS colmap-bin
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -37,7 +36,7 @@ WORKDIR /workspace
 COPY pyproject.toml ./
 
 # 🔥 Ignora instalação do projeto (CRÍTICO para cache)
-RUN uv sync --prerelease=allow --no-install-project --upgrade-package=nerfstudio-gnt --upgrade-package=nerfstudio-pixelnerf
+RUN uv sync --prerelease=allow --no-install-project --upgrade
 
 # -----------------------------------
 # 2. 🔨 TINY-CUDA-NN (HEAVY COMPILATION)
