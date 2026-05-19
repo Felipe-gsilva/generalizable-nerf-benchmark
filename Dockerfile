@@ -11,7 +11,7 @@ ENV IS_DOCKER=1
 # 2. Sistema: instalamos o colmap (para as dependências) e o intel-mkl
 # Removemos o python do apt, pois o 'uv' vai cuidar disso!
 RUN apt-get update && apt-get install -y \
-    colmap \
+    colmap ffmpeg xvfb \
     intel-mkl \
     git build-essential cmake ninja-build \
     libgl1 libglib2.0-0 \
