@@ -9,6 +9,7 @@ ENV IS_DOCKER=1
 
 # 🔧 Sistema
 RUN apt-get update && apt-get install -y \
+    colmap ffmpeg xvfb \
     python3.11 \
     python3.11-venv \
     python3.11-dev \
@@ -16,7 +17,6 @@ RUN apt-get update && apt-get install -y \
     git build-essential cmake ninja-build \
     libgl1 libglib2.0-0 \
     libsm6 libxext6 libxrender1 \
-    ffmpeg colmap xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
