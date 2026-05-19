@@ -1,7 +1,7 @@
 FROM colmap/colmap:latest AS colmap-bin
 
 # 1. Subimos a base para o Ubuntu 24.04 (mesma versão do colmap:latest)
-FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu24.04
+FROM nvidia/cuda:12.6.2-devel-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
