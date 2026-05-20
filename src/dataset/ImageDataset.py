@@ -198,6 +198,11 @@ class ImageDataset(Dataset):
                 )
                 self._drop_missing_samples(base, str(dataset_path))
             elif has_root_images:
+                config.logger.info(
+                    "No class subdirectories found, but images detected directly in '%s'. "
+                    "Using flat dataset layout.",
+                    resolved_root,
+                )
                 base = _FlatImageFolder(root=resolved_root, transform=transform)
             else:
                 image_subdirs = [

@@ -52,8 +52,6 @@ def main():
             name=ds,
             step="train",
             dataset_path=base_data_path / ds,
-            llffhold=8,
-            llffhold_split="train",
         )
 
         metrics_logger = MetricsLogger(
