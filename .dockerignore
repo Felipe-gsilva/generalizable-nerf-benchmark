@@ -7,3 +7,5 @@ assets/data/
 .envrc
 *.pdf
 uv.lock
+.git
+*.egg-info

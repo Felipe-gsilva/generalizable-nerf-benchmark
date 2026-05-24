@@ -1,0 +1,7 @@
+{
+    "sampling_strategy": "random",
+    "num_views": 6,
+    "dataset": "horns",
+    "regime": "per-scene",
+    "device": "NVIDIA GeForce GTX 1660 SUPER"
+}

@@ -22,8 +22,8 @@ if [ "$answer_llff" != "${answer_llff#[Yy]}" ]; then
   echo "Downloading LLFF dataset..."
   # Assuming Kaggle CLI is authenticated
   if command -v kaggle &>/dev/null; then
-      mkdir -p assets/data/baseline/nerf_llff_data
-      kaggle datasets download -d arenagrenade/llff-dataset-full -p assets/data/baseline/nerf_llff_data --unzip
+      mkdir -p assets/data/baseline/
+      kaggle datasets download -d arenagrenade/llff-dataset-full -p assets/data/baseline/ --unzip
   else
       echo "Kaggle CLI not found. Please download the LLFF dataset manually: https://www.kaggle.com/api/v1/datasets/download/arenagrenade/llff-dataset-full"
   fi
@@ -31,6 +31,4 @@ fi
 
 # --- Environment ---
 echo "Setting up unified environment..."
-uv venv -p 3.11 .venv
-source .venv/bin/activate
-uv sync --upgrade --prerelease=allow
+bash run_docker.sh

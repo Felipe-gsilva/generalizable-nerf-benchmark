@@ -375,6 +375,67 @@ class NerfModel:
             ):
                 return d
 
+    def _find_scene_directories(self, data_path: Path) -> list[tuple[Path, Path]]:
+        if not data_path.exists() or not data_path.is_dir():
+            return []
+
+        scene_dirs: list[tuple[Path, Path]] = []
+        for entry in sorted(
+            (path for path in data_path.iterdir() if path.is_dir()),
+            key=lambda path: path.name,
+        ):
+            images_dir = entry / "images"
+            if images_dir.is_dir() and self._dir_has_images(images_dir):
+                scene_dirs.append((entry, images_dir))
+
+        return scene_dirs
+
+    def _process_scene_data(
+        self,
+        data_path: Path,
+        num_imgs: int = 0,
+        images_dir: Optional[Path] = None,
+    ) -> bool:
+        transforms_path = data_path / "transforms.json"
+        if transforms_path.exists() and num_imgs == 0:
+            transforms_data = self._load_transforms_json(transforms_path)
+            if transforms_data is not None:
+                missing_files = self._get_missing_transform_files(
+                    data_path, transforms_data
+                )
+                if not missing_files:
+                    config.logger.info(
+                        f"transforms.json already exists in {data_path}. Skipping regeneration."
+                    )
+                    return True
+                else:
+                    missing_preview = ", ".join(str(path) for path in missing_files[:3])
+                    config.logger.warning(
+                        f"⚠️ Found {len(missing_files)} missing image(s) referenced by transforms.json "
+                        f"in {data_path}. Example(s): {missing_preview}. Regenerating transforms."
+                    )
+
+        config.logger.info(
+            f"""
+            Preparing nerfstudio inputs for {data_path}...
+            """
+        )
+
+        if images_dir is None:
+            try:
+                images_dir = self._find_images_dir(data_path)
+            except FileNotFoundError as e:
+                config.logger.error(f"❌ {e}")
+                return False
+
+        if not images_dir:
+            config.logger.error(
+                f"❌ No valid images directory found in {data_path} for nerfstudio processing."
+            )
+            return False
+
+        return self._run_colmap_transforms_generation(data_path, images_dir)
+
     def _get_target_id(self, data_path: Path) -> str:
         if self.target_id:
             return self.target_id
@@ -437,97 +498,159 @@ class NerfModel:
         self, data_path: Path, images_dir: Path
     ) -> bool:
         config.logger.info(
-            "🧭 Using COLMAP-based transforms generation via ns-process-data."
+            "🧭 Running optimized COLMAP pipeline (Feature Extraction -> Matching -> Mapping)."
+        )
+
+        db_path = data_path / "colmap.db"
+        sparse_path = data_path / "sparse" / "0"
+        sparse_path.mkdir(parents=True, exist_ok=True)
+
+        # 1. CRITICAL: Stop CPU thread starvation
+        process_env = os.environ.copy()
+        process_env["OMP_NUM_THREADS"] = "4"
+        process_env["OPENBLAS_NUM_THREADS"] = "4"
+        process_env["MKL_NUM_THREADS"] = "4"
+        process_env["PATH"] = (
+            f"{os.path.expanduser('~/.local/bin')}:{os.environ.get('PATH', '')}"
         )
 
         has_xvfb = shutil.which("xvfb-run") is not None
-        cmd = []
-        if has_xvfb:
-            cmd += ["xvfb-run", "-a", "-s", "-screen 0 1920x1080x24"]
-
-        cmd += [
-            "ns-process-data",
-            "images",
-            "--data",
-            str(images_dir),
-            "--output-dir",
-            str(data_path),
-            "--gpu",
-            "--colmap-cmd",
-            "colmap",
-        ]
-        process_env = os.environ.copy()
-        process_env["PATH"] = (
-            f"{os.path.expanduser('~/.local/bin')}:{os.environ['PATH']}"
-        )
         if has_xvfb:
             process_env.pop("QT_QPA_PLATFORM", None)
-        elif not process_env.get("DISPLAY"):
-            process_env["QT_QPA_PLATFORM"] = "offscreen"
-            config.logger.warning(
-                "xvfb-run is not available and no DISPLAY was detected. "
-                "COLMAP GPU mode may fail without an X server."
-            )
+            xvfb_prefix = ["xvfb-run", "-a", "-s", "-screen 0 1920x1080x24"]
+        else:
+            if not process_env.get("DISPLAY"):
+                process_env["QT_QPA_PLATFORM"] = "offscreen"
+                config.logger.warning(
+                    "No DISPLAY detected. COLMAP GPU mode may fail without X server/xvfb."
+                )
+            xvfb_prefix = []
 
-        try:
-            subprocess.run(cmd, check=True, env=process_env)
-            config.logger.info("✅ ns-process-data finished successfully.")
-            return True
-        except subprocess.CalledProcessError as e:
-            config.logger.error(f"❌ ns-process-data failed with code: {e.returncode}")
-            return False
+        # 2. Define the explicit COLMAP stages
+        commands = [
+            {
+                "name": "Feature Extraction",
+                "cmd": [
+                    "colmap",
+                    "feature_extractor",
+                    "--database_path",
+                    str(db_path),
+                    "--image_path",
+                    str(images_dir),
+                    "--ImageReader.single_camera",
+                    "1",
+                    "--SiftExtraction.use_gpu",
+                    "1",
+                    "--SiftExtraction.gpu_index",
+                    "0",
+                    "--SiftExtraction.num_threads",
+                    "4",
+                    "--SiftExtraction.max_image_size",
+                    "1600",
+                    "--SiftExtraction.max_num_features",
+                    "8192",
+                ],
+            },
+            {
+                "name": "Exhaustive Matching",
+                "cmd": [
+                    "colmap",
+                    "exhaustive_matcher",
+                    "--database_path",
+                    str(db_path),
+                    "--SiftMatching.use_gpu",
+                    "1",
+                    "--SiftMatching.gpu_index",
+                    "0",
+                    "--SiftMatching.num_threads",
+                    "4",
+                    "--SiftMatching.guided_matching",
+                    "1",
+                ],
+            },
+            {
+                "name": "Mapping (Pose Estimation)",
+                "cmd": [
+                    "colmap",
+                    "mapper",
+                    "--database_path",
+                    str(db_path),
+                    "--image_path",
+                    str(images_dir),
+                    "--output_path",
+                    str(sparse_path),
+                    "--Mapper.num_threads",
+                    "4",
+                ],
+            },
+            {
+                "name": "Nerfstudio Conversion",
+                "cmd": [
+                    "ns-process-data",
+                    "images",
+                    "--data",
+                    str(images_dir.resolve()),
+                    "--output-dir",
+                    str(data_path.resolve()),
+                    "--skip-colmap",
+                    "--colmap-model-path",
+                    str(sparse_path.resolve()),
+                ],
+            },
+        ]
+
+        for step in commands:
+            try:
+                config.logger.info(f"⏳ Running: {step['name']}...")
+                final_cmd = xvfb_prefix + step["cmd"] if has_xvfb else step["cmd"]
+
+                subprocess.run(final_cmd, check=True, env=process_env)
+                config.logger.info(f"✅ Finished {step['name']}")
+
+            except subprocess.CalledProcessError as e:
+                config.logger.error(
+                    f"❌ Pipeline failed at {step['name']} with code: {e.returncode}"
+                )
+                return False
+
+        config.logger.info("🎉 COLMAP transforms generated successfully.")
+        return True
 
     @profiler.time_function
     def process_data(self, data_path: Path, num_imgs: int = 0) -> bool:
         """
-        Prepares nerfstudio transforms:
+            Prepares nerfstudio transforms:
 
-        Args:
-        data_path:
-        - 3D_virtual_HE_staining: custom grid transforms.
-        - Other datasets: COLMAP via ns-process-data.
+            Args:
+            data_path:
+            - 3D_virtual_HE_staining: custom grid transforms.
+            - Other datasets: COLMAP via ns-process-data.
 
         num_imgs:
         - if > 0, limits the number of images in transforms.json (for quick validation).
         """
-        transforms_path = data_path / "transforms.json"
-        if transforms_path.exists() and num_imgs == 0:
-            transforms_data = self._load_transforms_json(transforms_path)
-            if transforms_data is not None:
-                missing_files = self._get_missing_transform_files(
-                    data_path, transforms_data
-                )
-                if not missing_files:
-                    config.logger.info(
-                        f"transforms.json already exists in {data_path}. Skipping regeneration."
-                    )
-                    return True
-                else:
-                    missing_preview = ", ".join(str(path) for path in missing_files[:3])
-                    config.logger.warning(
-                        f"⚠️ Found {len(missing_files)} missing image(s) referenced by transforms.json "
-                        f"in {data_path}. Example(s): {missing_preview}. Regenerating transforms."
-                    )
+        scene_dirs = []
+        if not self._dir_has_images(data_path) and not (data_path / "images").exists():
+            scene_dirs = self._find_scene_directories(data_path)
 
-        config.logger.info(
-            f"""
-            Preparing nerfstudio inputs for {data_path}...
-            """
-        )
-
-        try:
-            images_dir = self._find_images_dir(data_path)
-        except FileNotFoundError as e:
-            config.logger.error(f"❌ {e}")
-            return False
-
-        if not images_dir:
-            config.logger.error(
-                f"❌ No valid images directory found in {data_path} for nerfstudio processing."
+        if scene_dirs:
+            config.logger.info(
+                f"Detected {len(scene_dirs)} scene(s) under {data_path}. "
+                "Running COLMAP sequentially per scene."
             )
-            return False
+            all_success = True
+            for scene_path, images_dir in scene_dirs:
+                success = self._process_scene_data(
+                    scene_path, num_imgs=num_imgs, images_dir=images_dir
+                )
+                if not success:
+                    config.logger.error(
+                        f"❌ Scene preprocessing failed for {scene_path}. Continuing."
+                    )
+                    all_success = False
+            return all_success
 
-        return self._run_colmap_transforms_generation(data_path, images_dir)
+        return self._process_scene_data(data_path, num_imgs=num_imgs)
 
     def get_output_path(self, data_path: Path) -> Path:
         """Generates a clean base path for checkpoints."""
