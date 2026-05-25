@@ -849,7 +849,7 @@ class NerfModel:
                 "--pipeline.datamanager.cache-images-type",
                 "uint8",
             ]
-        elif self.model_name == "nerfacto":
+        elif self.model_name in ["nerfacto", "instant-ngp"]:
             cmd += [
                 "--pipeline.model.eval-num-rays-per-chunk",
                 "1024",
@@ -868,13 +868,12 @@ class NerfModel:
             cmd += [
                 "--pipeline.model.s3im-loss-mult",
                 "0.0",
-                # "--pipeline.datamanager.train-num-images-to-sample-from",
-                # "500",
-                # "--pipeline.model.eval-num-rays-per-chunk",
-                # "256",
-                # "--pipeline.datamanager.train-num-rays-per-batch",
-                # "256",
-                # "--auto-scale-poses", "False",
+                "--pipeline.datamanager.train-num-images-to-sample-from",
+                "500",
+                "--pipeline.model.eval-num-rays-per-chunk",
+                "256",
+                "--pipeline.datamanager.train-num-rays-per-batch",
+                "256",
             ]
         if not self.model_name == "splatfacto":
             cmd += [

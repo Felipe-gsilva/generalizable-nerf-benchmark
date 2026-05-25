@@ -11,6 +11,9 @@ class MetricsLogger:
         model_name: str,
         base_dir: str = "assets/logs",
         hyperparams: Optional[Dict[str, Any]] = None,
+        group_dir: Optional[str] = None,
+        timestamp: Optional[str] = None,
+        run_id: Optional[str] = None,
     ):
         """
         Initializes the MetricsLogger.
@@ -19,13 +22,19 @@ class MetricsLogger:
             model_name: Name of the model (e.g., 'Classifier', 'DCGAN').
             base_dir: Base directory for logs.
             hyperparams: Optional dictionary of hyperparameters to log.
+            group_dir: Optional subdirectory under base_dir to group runs.
+            timestamp: Optional timestamp to reuse across runs.
+            run_id: Optional run identifier to avoid log collisions.
         """
         self.base_dir = Path(base_dir)
         self.model_name = model_name
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        group_path = Path(group_dir) if group_dir else Path(self.model_name)
+        timestamp = timestamp or time.strftime("%Y%m%d_%H%M%S")
         # Create directory if it doesn't exist
         # Directory name now includes timestamp for uniqueness per run
-        self.log_dir = self.base_dir / self.model_name / timestamp
+        self.log_dir = self.base_dir / group_path / timestamp
+        if run_id:
+            self.log_dir = self.log_dir / run_id
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.log_file = self.log_dir / "metrics.csv"
         # Save hyperparameters if provided
