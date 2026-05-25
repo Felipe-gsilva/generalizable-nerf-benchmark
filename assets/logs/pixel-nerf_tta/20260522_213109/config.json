@@ -1,7 +1,0 @@
-{
-    "sampling_strategy": "uniform",
-    "num_views": 3,
-    "dataset": "fern",
-    "regime": "tta",
-    "device": "NVIDIA GeForce GTX 1660 SUPER"
-}

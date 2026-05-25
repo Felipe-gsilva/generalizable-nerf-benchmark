@@ -6,3 +6,4 @@ docs/build
 /target
 assets/data/baseline
 __pycache__
+assets/logs

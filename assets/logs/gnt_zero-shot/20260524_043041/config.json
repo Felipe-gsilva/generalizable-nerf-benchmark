@@ -1,7 +1,0 @@
-{
-    "sampling_strategy": "uniform",
-    "num_views": 3,
-    "dataset": "horns",
-    "regime": "zero-shot",
-    "device": "NVIDIA GeForce GTX 1660 SUPER"
-}
