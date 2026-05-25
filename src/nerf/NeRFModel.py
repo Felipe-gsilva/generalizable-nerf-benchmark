@@ -845,7 +845,7 @@ class NerfModel:
                 "--pipeline.datamanager.cache-images-type",
                 "uint8",
             ]
-        elif self.model_name in ["nerfacto", "instant-ngp"]:
+        elif self.model_name in ["nerfacto"]:
             cmd += [
                 "--pipeline.model.eval-num-rays-per-chunk",
                 "1024",
@@ -858,6 +858,18 @@ class NerfModel:
                 "--pipeline.model.background-color",
                 "white",
             ]
+        elif self.model_name in ["instant-ngp"]:
+            cmd += [
+                "--pipeline.model.eval-num-rays-per-chunk",
+                "1024",
+                "--pipeline.datamanager.train-num-rays-per-batch",
+                "1024",
+                "--pipeline.model.log2-hashmap-size",
+                "16",
+                "--pipeline.model.background-color",
+                "white",
+            ]
+
         elif self.model_name == "splatfacto":
             cmd += []
         elif self.model_name == "merf-ns":
