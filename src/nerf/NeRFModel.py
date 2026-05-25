@@ -817,10 +817,6 @@ class NerfModel:
 
         if self.model_name == "pixel-nerf":
             cmd += [
-                "--pipeline.model.N-samples",
-                "32",
-                "--pipeline.model.N-importance",
-                "32",
                 "--mixed-precision",
                 "True",
                 "--pipeline.model.eval-num-rays-per-chunk",
