@@ -4,9 +4,11 @@ from src.nerf.NeRFModel import NerfModel
 from src.utils.metrics import MetricsLogger
 from src.utils.types import AvailableMetrics, RenderMode
 
+import os
 import time
 import torch
 import gc
+
 
 
 def main():
@@ -25,8 +27,8 @@ def main():
     num_views_options = [3, 6, 10]
 
     experiments_config = [
-        {"model": "instant-ngp", "regime": "per-scene"},
-        {"model": "merf-ns", "regime": "per-scene"},
+        #{"model": "instant-ngp", "regime": "per-scene"},
+        #{"model": "nerfacto", "regime": "per-scene"},
         {"model": "pixel-nerf", "regime": "zero-shot"},
         {"model": "pixel-nerf", "regime": "tta"},
         {"model": "gnt", "regime": "zero-shot"},
@@ -80,11 +82,12 @@ def main():
                             regime=regime,
                             tta_steps=500,
                         )
+                        current_downscale = 4 if model_name in ["gnt", "pixel-nerf"] else 2
 
                         # Medição rigorosa de tempo de convergência / preparação
                         start_time = time.time()
                         nerf_model.train(
-                            Path(dataset_obj.dataset_path), downscale_factor=1
+                            Path(dataset_obj.dataset_path), downscale_factor=current_downscale
                         )
                         training_time = time.time() - start_time
 

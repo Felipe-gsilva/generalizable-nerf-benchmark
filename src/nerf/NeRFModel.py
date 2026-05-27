@@ -138,7 +138,6 @@ class NerfModel:
                     raise ValueError(f"Strategy {self.split_strategy} not supported.")
             else:
                 train_indices = train_pool
-
             val_set = set(i for i in train_pool if i not in set(train_indices))
             test_set = set(test_indices)
             train_set = set(train_indices)
@@ -739,19 +738,6 @@ class NerfModel:
         split_json_path = self._apply_dataset_splits(data_path)
         output_path = self.get_output_path(data_path)
 
-        if self.regime == "zero-shot":
-            config.logger.info(
-                f"❄️ Zero-shot regime enabled for {self.model_name}. Skipping local optimization."
-            )
-            global_weights_dir = Path("assets/data/pretrained") / self.model_name
-            success = self.load_from_disk(global_weights_dir, mode="inference")
-            if not success:
-                raise RuntimeError(
-                    "Failed to load pretrained weights for zero-shot from: "
-                    f"{global_weights_dir}"
-                )
-            return
-
         clean_dataset = (
             self.dataset_name.split("_images")[0] if self.dataset_name else "unknown"
         )
@@ -763,9 +749,9 @@ class NerfModel:
         experiment_name = f"{clean_dataset}/{clean_target}"
 
         cmd = [
-            "python",
-            "-c",
-            "import torch; torch.backends.cudnn.enabled=False; torch.backends.cudnn.benchmark=False; import sys; sys.argv.pop(0); from nerfstudio.scripts.train import entrypoint; entrypoint()",
+            #"python",
+            #"-c",
+            #"import torch; torch.backends.cudnn.enabled=False; torch.backends.cudnn.benchmark=False; import sys; sys.argv.pop(0); from nerfstudio.scripts.train import entrypoint; entrypoint()",
             "ns-train",
             self.model_name,
             "--output-dir",
@@ -793,6 +779,15 @@ class NerfModel:
             config.logger.info(
                 "ℹ️ Delegating pretrained weight resolution to Nerfstudio/model implementation."
             )
+        elif self.regime == "zero-shot":
+            config.logger.info(
+                f"❄️ Zero-shot regime enabled. Running 0 iterations to trigger internal model loading."
+            )
+            cmd += [
+                "--max-num-iterations", "0",
+                "--steps-per-save", "0",
+                "--steps-per-eval-all-images", "0",
+            ]
         elif self.regime == "per-scene":
             config.logger.info(
                 "🆕 Per-scene regime enabled. Running full optimization for the target scene."
@@ -820,9 +815,9 @@ class NerfModel:
                 "--mixed-precision",
                 "True",
                 "--pipeline.model.eval-num-rays-per-chunk",
-                "512",
+                "128",
                 "--pipeline.datamanager.train-num-rays-per-batch",
-                "512",
+                "128",
                 "--pipeline.datamanager.cache-images-type",
                 "uint8",
             ]
@@ -839,9 +834,9 @@ class NerfModel:
                 "--pipeline.model.netwidth",
                 "128",
                 "--pipeline.model.eval-num-rays-per-chunk",
-                "512",
+                "128",
                 "--pipeline.datamanager.train-num-rays-per-batch",
-                "512",
+                "256",
                 "--pipeline.datamanager.cache-images-type",
                 "uint8",
             ]
@@ -861,46 +856,43 @@ class NerfModel:
         elif self.model_name in ["instant-ngp"]:
             cmd += [
                 "--pipeline.model.eval-num-rays-per-chunk",
-                "1024",
+                "256",
                 "--pipeline.datamanager.train-num-rays-per-batch",
                 "1024",
                 "--pipeline.model.log2-hashmap-size",
                 "16",
                 "--pipeline.model.background-color",
                 "white",
+                "--pipeline.datamanager.cache-images-type",
+                "uint8",
+                "--mixed-precision",
+                "True",
             ]
 
-        elif self.model_name == "splatfacto":
-            cmd += []
-        elif self.model_name == "merf-ns":
-            cmd += [
-                "--pipeline.model.s3im-loss-mult",
-                "0.0",
-                "--pipeline.datamanager.train-num-images-to-sample-from",
-                "500",
-                "--pipeline.model.eval-num-rays-per-chunk",
-                "256",
-                "--pipeline.datamanager.train-num-rays-per-batch",
-                "256",
-            ]
-        if not self.model_name == "splatfacto":
-            cmd += [
-                # "--pipeline.datamanager.cache-images-type",
-                # "uint8",
-                # "--pipeline.datamanager.train-num-images-to-sample-from",
-                # "500",
-                # "--pipeline.model.eval-num-rays-per-chunk",
-                # "256",
-                # "--pipeline.datamanager.train-num-rays-per-batch",
-                # "256",
-                # "--auto-scale-poses", "False",
-            ]
 
         if self.regime == "tta" and self.model_name in ["pixel-nerf", "gnt"]:
             cmd += [
                 "--pipeline.model.transfer_learning",
                 "True",
             ]
+            if self.model_name == "gnt":
+                gnt_pretrained_path = Path("assets/pretrained/gnt_pretrained.pth")
+                download_pretrained_gnt_model(gnt_pretrained_path)
+
+                cmd += [
+                    "--pipeline.model.pretrained-ckpt-path",
+                    str(gnt_pretrained_path.resolve()),
+                ]
+
+    
+            if self.model_name == "pixel-nerf":
+                pixelnerf_pretrained_path = Path("assets/pretrained/pixelnerf_pretrained.pth")
+                download_pretrained_pixelnerf_weights(pixelnerf_pretrained_path)
+
+                cmd += [
+                    "--pipeline.model.transfer-learning", "True",
+                    "--pipeline.model.pretrained-ckpt-path", str(pixelnerf_pretrained_path.resolve()),
+                ]
 
         cmd += [
             "nerfstudio-data",
@@ -912,6 +904,10 @@ class NerfModel:
 
         process_env = os.environ.copy()
         process_env["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+        process_env["PYTHONUNBUFFERED"] = "1"
+        process_env["TERM"] = "dumb"
+        process_env["MAX_JOBS"] = "1"
+        process_env["OMP_NUM_THREADS"] = "1"
 
         log_dir = Path("assets/logs") / self.model_name
         log_dir.mkdir(parents=True, exist_ok=True)
@@ -931,9 +927,11 @@ class NerfModel:
                 if process.stdout is None:
                     raise RuntimeError("Failed to capture training output.")
 
-                for line in iter(process.stdout.readline, b""):
-                    sys.stdout.write(line.decode("utf-8", errors="replace"))
-                    f.write(line)
+                for chunk in iter(lambda: process.stdout.read(1024), b""):
+                    sys.stdout.write(chunk.decode("utf-8", errors="replace"))
+                    sys.stdout.flush()
+                    f.write(chunk)
+
                 process.wait()
                 if process.returncode != 0:
                     raise subprocess.CalledProcessError(process.returncode, cmd)
@@ -1421,3 +1419,36 @@ class NerfModel:
 
                 output.append(rgb_uint8)
         return output
+
+
+def download_pretrained_pixelnerf_weights(path: Path):
+    import gdown
+
+    url = "https://drive.google.com/file/d/1UO_rL201guN6euoWkCOn-XpqR2e8o6ju"
+    output = path
+    Path(output).parent.mkdir(parents=True, exist_ok=True)
+    if not os.path.exists(output):
+        print("Downloading pretrained PixelNeRF weights...")
+        gdown.download(url, output, quiet=False)
+
+    else:
+        print("Pretrained PixelNeRF weights already downloaded.")
+
+    unzipped_path = "pixelnerf_pretrained"
+    if not os.path.exists(unzipped_path):
+        print("Unzipping pretrained weights...")
+        import zipfile
+
+        with zipfile.ZipFile(output, "r") as zip_ref:
+            zip_ref.extractall(unzipped_path)
+        print(f"Pretrained weights downloaded and unzipped to {unzipped_path}")
+
+
+def download_pretrained_gnt_model(path):
+    from gdown import download
+
+    url = "https://drive.google.com/file/d/1YvOJXa5eGpKgoMYcxC2ma7prB1n5UwRn/"  # Replace with actual URL
+    output = path
+    download(url, output, quiet=False)
+    print(f"Pretrained GNT model downloaded to {output}")
+

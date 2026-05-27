@@ -7,6 +7,7 @@ services:
         GPU_ARCH: ${GPU_ARCH:-86}
     image: gan-nerf-project:latest
     container_name: nerf-ann-paper
+    ipc: host 
     deploy:
       resources:
         reservations:
@@ -20,6 +21,7 @@ services:
     environment:
       - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
       - IS_DOCKER=1
+      # - MAX_JOBS=2
     stdin_open: true
     tty: true
     command: python main.py
