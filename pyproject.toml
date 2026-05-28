@@ -19,8 +19,8 @@ dependencies = [
     "pillow>=12.2.0",
     # models
     "merf @ git+https://github.com/felipe-gsilva/merfstudio",
-    "nerfstudio-gnt",
-    "nerfstudio-pixelnerf"
+    "nerfstudio-gnt==0.0.23",
+    "nerfstudio-pixelnerf==0.0.12"
 ]
 
 

@@ -10,7 +10,6 @@ import torch
 import gc
 
 
-
 def main():
     base_data_path = Path("assets/data/baseline/nerf_llff_data")
     llff_names = [
@@ -27,8 +26,8 @@ def main():
     num_views_options = [3, 6, 10]
 
     experiments_config = [
-        #{"model": "instant-ngp", "regime": "per-scene"},
-        #{"model": "nerfacto", "regime": "per-scene"},
+        {"model": "instant-ngp", "regime": "per-scene"},
+        {"model": "nerfacto", "regime": "per-scene"},
         {"model": "pixel-nerf", "regime": "zero-shot"},
         {"model": "pixel-nerf", "regime": "tta"},
         {"model": "gnt", "regime": "zero-shot"},
@@ -82,12 +81,15 @@ def main():
                             regime=regime,
                             tta_steps=500,
                         )
-                        current_downscale = 4 if model_name in ["gnt", "pixel-nerf"] else 2
+                        current_downscale = (
+                            4 if model_name in ["gnt", "pixel-nerf"] else 2
+                        )
 
                         # Medição rigorosa de tempo de convergência / preparação
                         start_time = time.time()
                         nerf_model.train(
-                            Path(dataset_obj.dataset_path), downscale_factor=current_downscale
+                            Path(dataset_obj.dataset_path),
+                            downscale_factor=current_downscale,
                         )
                         training_time = time.time() - start_time
 
@@ -107,6 +109,14 @@ def main():
                             print(
                                 f"⚠️ Falha: O modelo {model_name} retornou métricas vazias."
                             )
+
+                        nerf_model.render(
+                            mode=RenderMode.PERSPECTIVE,
+                            save_path=Path("results")
+                            / model_key
+                            / ds
+                            / f"{strategy}_{num_views}views",
+                        )
 
                     except Exception as e:
                         print(

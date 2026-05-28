@@ -749,9 +749,6 @@ class NerfModel:
         experiment_name = f"{clean_dataset}/{clean_target}"
 
         cmd = [
-            #"python",
-            #"-c",
-            #"import torch; torch.backends.cudnn.enabled=False; torch.backends.cudnn.benchmark=False; import sys; sys.argv.pop(0); from nerfstudio.scripts.train import entrypoint; entrypoint()",
             "ns-train",
             self.model_name,
             "--output-dir",
@@ -784,9 +781,12 @@ class NerfModel:
                 f"❄️ Zero-shot regime enabled. Running 0 iterations to trigger internal model loading."
             )
             cmd += [
-                "--max-num-iterations", "0",
-                "--steps-per-save", "0",
-                "--steps-per-eval-all-images", "0",
+                "--max-num-iterations",
+                "0",
+                "--steps-per-save",
+                "0",
+                "--steps-per-eval-all-images",
+                "0",
             ]
         elif self.regime == "per-scene":
             config.logger.info(
@@ -843,9 +843,9 @@ class NerfModel:
         elif self.model_name in ["nerfacto"]:
             cmd += [
                 "--pipeline.model.eval-num-rays-per-chunk",
-                "1024",
+                "512",
                 "--pipeline.datamanager.train-num-rays-per-batch",
-                "1024",
+                "512",
                 "--pipeline.model.log2-hashmap-size",
                 "16",
                 "--pipeline.model.camera-optimizer.mode",
@@ -869,7 +869,6 @@ class NerfModel:
                 "True",
             ]
 
-
         if self.regime == "tta" and self.model_name in ["pixel-nerf", "gnt"]:
             cmd += [
                 "--pipeline.model.transfer_learning",
@@ -884,14 +883,17 @@ class NerfModel:
                     str(gnt_pretrained_path.resolve()),
                 ]
 
-    
             if self.model_name == "pixel-nerf":
-                pixelnerf_pretrained_path = Path("assets/pretrained/pixelnerf_pretrained.pth")
+                pixelnerf_pretrained_path = Path(
+                    "assets/pretrained/pixelnerf_pretrained.pth"
+                )
                 download_pretrained_pixelnerf_weights(pixelnerf_pretrained_path)
 
                 cmd += [
-                    "--pipeline.model.transfer-learning", "True",
-                    "--pipeline.model.pretrained-ckpt-path", str(pixelnerf_pretrained_path.resolve()),
+                    "--pipeline.model.transfer-learning",
+                    "True",
+                    "--pipeline.model.pretrained-ckpt-path",
+                    str(pixelnerf_pretrained_path.resolve()),
                 ]
 
         cmd += [
@@ -935,14 +937,11 @@ class NerfModel:
                 process.wait()
                 if process.returncode != 0:
                     raise subprocess.CalledProcessError(process.returncode, cmd)
+
             config.logger.info(
                 f"✅ Success training/adapting {self.model_name} on {data_path} via {self.regime}"
             )
-            if self.regime == "tta":
-                if not self.load_from_disk(output_path, mode="test"):
-                    raise RuntimeError(
-                        f"Failed to load adapted TTA weights from: {output_path}"
-                    )
+
         except subprocess.CalledProcessError as e:
             config.logger.error(f"❌ Subprocess failed. Exit code: {e.returncode}")
         except KeyboardInterrupt:
@@ -1150,6 +1149,16 @@ class NerfModel:
             - Orthographic: Evaluates quality against ground truth slices if available, otherwise renders new slices for evaluation.
             - Perspective: Evaluates quality against the test set views using the pipeline's dataloader
         """
+        if self.pipeline is None:
+            if self.images and self.images.dataset_path:
+                path = self.get_output_path(self.images.dataset_path)
+                loaded = self.load_from_disk(path, mode="test")
+                if not loaded:
+                    logger.error(
+                        f"❌ Failed to load pipeline for metrics evaluation at {path}"
+                    )
+                    return {}
+
         results = {}
         results["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
         results["memory_footprint_bytes"] = self.get_memory_footprint()
@@ -1324,31 +1333,12 @@ class NerfModel:
 
         return outputs
 
-    def render(
-        self,
-        save: bool = False,
-        num_slices: int = 10,
-        plan: Plans = Plans.AXIAL,
-    ) -> Optional[List[np.ndarray]]:
-        if not self.images or not self.images.dataset_path:
-            logger.error("❌ No dataset path available for slicing.")
-            return
-        path = self.get_output_path(self.images.dataset_path)
-        if self.pipeline is None:
-            loaded = self.load_from_disk(path, mode="inference")
-            if not loaded:
-                logger.error(f"❌ Failed to load pipeline for NeRF slicing at {path}")
-                return
-
-        if self.pipeline is None:
-            logger.error(f"❌ Failed to load pipeline for NeRF slicing at {path}")
-            return
-
-        output_dir = self.get_augmentation_output_path(self.images.dataset_path)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        # Determine scaling and bounds for the slicing based on the pipeline's datamanager
-        # aabb = self.pipeline.model.scene_box.aabb.cpu().numpy()
-        # Im fixing the bounds to [0,1] for a test
+    def render_ortographic(
+        self, plan, slice_axis, num_slices, save_path: Optional[Path]
+    ) -> List[np.ndarray]:
+        assert self.pipeline is not None, (
+            "Pipeline must be loaded to render orthographic slices."
+        )
         min_bound = np.array([0.0, 0.0, 0.0])
         max_bound = np.array([1.0, 1.0, 1.0])
 
@@ -1409,8 +1399,8 @@ class NerfModel:
                 rgb_img = np.clip(rgb_img, 0.0, 1.0)
                 rgb_uint8 = (rgb_img * 255.0).astype(np.uint8)
 
-                if save:
-                    png_out = output_dir / f"slice_nerf_{i:03d}.png"
+                if save_path is not None:
+                    png_out = save_path / f"slice_nerf_{i:03d}.png"
                     Image.fromarray(rgb_uint8).save(png_out)
 
                     logger.info(
@@ -1419,6 +1409,72 @@ class NerfModel:
 
                 output.append(rgb_uint8)
         return output
+
+    def render_perspective(self, save_path: Optional[Path]) -> List[np.ndarray]:
+        assert self.pipeline is not None, (
+            "Pipeline must be loaded to render perspective views."
+        )
+
+        rendered_images = []
+        eval_dataloader = self.pipeline.datamanager.fixed_indices_eval_dataloader
+        with torch.no_grad():
+            for camera, batch, _ in eval_dataloader:
+                camera = camera.to(self.pipeline.device)
+                outputs = self.pipeline.model.get_outputs_for_camera(camera)
+                rendered_rgb = outputs["rgb"].cpu().numpy()
+                rendered_images.append(rendered_rgb)
+
+                if save_path is not None:
+                    for idx in range(rendered_rgb.shape[0]):
+                        img_uint8 = np.clip(rendered_rgb[idx], 0.0, 1.0)
+                        img_uint8 = (img_uint8 * 255.0).astype(np.uint8)
+                        png_out = save_path / f"perspective_view_{idx:03d}.png"
+                        Image.fromarray(img_uint8).save(png_out)
+                        logger.info(
+                            f"✅ Saved perspective rendered view {idx} → {png_out}"
+                        )
+        return rendered_images
+
+    def render(
+        self,
+        mode=RenderMode.ORTHOGRAPHIC,
+        save_path: Optional[Path] = None,
+        num_slices: int = 10,
+        plan: Optional[Plans] = None,
+    ) -> Optional[List[np.ndarray]]:
+        """
+        Renders either orthographic slices or perspective views from the NeRF model based on the specified mode.
+         - Orthographic: Renders a series of slices along the specified plane and saves them if requested.
+         - Perspective: Renders views from the evaluation camera poses and saves them if requested.
+         The method ensures the pipeline is loaded before rendering and handles output organization for both modes.
+         Returns a list of rendered images as numpy arrays, or None if rendering fails.
+         Note: Rendering can be time-consuming depending on the number of slices/views and image resolution.
+        """
+        if not self.images or not self.images.dataset_path:
+            logger.error("❌ No dataset path available for slicing.")
+            return
+        path = self.get_output_path(self.images.dataset_path)
+        if self.pipeline is None:
+            loaded = self.load_from_disk(path, mode="inference")
+            if not loaded:
+                logger.error(f"❌ Failed to load pipeline for NeRF slicing at {path}")
+                return
+
+        if self.pipeline is None:
+            logger.error(f"❌ Failed to load pipeline for NeRF slicing at {path}")
+            return
+
+        output_dir = self.get_augmentation_output_path(self.images.dataset_path)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        if mode == RenderMode.ORTHOGRAPHIC:
+            if not plan:
+                logger.error("❌ Plan must be specified for orthographic rendering.")
+                return
+            return self.render_ortographic(
+                plan, slice_axis=0, num_slices=num_slices, save_path=save_path
+            )
+        elif mode == RenderMode.PERSPECTIVE:
+            return self.render_perspective(save_path=save_path)
 
 
 def download_pretrained_pixelnerf_weights(path: Path):
@@ -1447,8 +1503,7 @@ def download_pretrained_pixelnerf_weights(path: Path):
 def download_pretrained_gnt_model(path):
     from gdown import download
 
-    url = "https://drive.google.com/file/d/1YvOJXa5eGpKgoMYcxC2ma7prB1n5UwRn/"  # Replace with actual URL
+    url = "https://drive.google.com/file/d/1YvOJXa5eGpKgoMYcxC2ma7prB1n5UwRn/"
     output = path
-    download(url, output, quiet=False)
+    download(url, str(output.resolve()), quiet=False)
     print(f"Pretrained GNT model downloaded to {output}")
-

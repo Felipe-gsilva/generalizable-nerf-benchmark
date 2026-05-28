@@ -33,7 +33,7 @@ This work compares hybrid Generalizable NeRFs and Fast Optmization Per-Scene tra
 \section{Introdução}
 \label{sec:intro}
 
-Modelos de campos de radiância neural (NeRF) consolidaram-se, nos anos recentes, como o estado da arte, tanto na indústria, quanto na academia, sobre geração de novas vistas \cite{kerbl3Dgaussians, Tancik2023, substance3dviewer}. Entretanto, as mais avançadas técnicas de renderização neural exigem uma grande quantidade de: (i) poder computacional; (ii) múltiplas vistas no conjunto de dados. Ambos os desafios tendem a impedir que aplicações mais simples, como escaneamento \textit{mobile} de objetos, provador virtual, geração de assets 3D e síntese em datasets pequenos, sejam aproveitados. É com tal problemática que projetos como Instant-NGP (\textit{Instant Neural Graphics Primitives}), MeRF (\textit{Memory-Efficient Neural Radiance Field}), Pixel-Nerf, Gnt (\textit{Generalizable Nerf Transformer}) \cite{muller2022, reiser2023merf, yu2021pixelnerfneuralradiancefields, t2023attentionnerfneeds}, entre outros, tentam expandir o estado da arte e, consequentemente, abordam temas análogos, como: (i) \textit{encoding} espacial de parâmetros \cite{muller2022, reiser2023merf}; (ii) uso de arquiteturas híbridas entre Convolutional Neural Networks (CNN) e Vision Transformers (ViT) \cite{schwarz2021grafgenerativeradiancefields, wu2021cvt, t2023attentionnerfneeds}; e (iii) pré-computação (\textit{baking}) dos modelos em estruturas de menor pegada de memória \cite{reiser2023merf, hedman2021bakingneuralradiancefields}.
+Modelos de campos de radiância neural (NeRF) consolidaram-se, nos anos recentes, como o estado da arte, tanto na indústria, quanto na academia, sobre geração de novas vistas \cite{kerbl3Dgaussians, Tancik2023, substance3dviewer}. Entretanto, as mais avançadas técnicas de renderização neural exigem uma grande quantidade de: (i) poder computacional; (ii) múltiplas vistas no conjunto de dados. Ambos os desafios tendem a impedir que aplicações mais simples, como escaneamento \textit{mobile} de objetos, provador virtual, geração de assets 3D e síntese em datasets pequenos, sejam aproveitados. É com tal problemática que projetos como Instant-NGP (\textit{Instant Neural Graphics Primitives}), Nerfacto, Pixel-Nerf, Gnt (\textit{Generalizable Nerf Transformer}) \cite{muller2022, Tancik2023, yu2021pixelnerfneuralradiancefields, t2023attentionnerfneeds}, entre outros, tentam expandir o estado da arte e, consequentemente, abordam temas análogos, como: (i) \textit{encoding} espacial de parâmetros \cite{muller2022}; (ii) uso de arquiteturas híbridas entre Convolutional Neural Networks (CNN) e Vision Transformers (ViT) \cite{schwarz2021grafgenerativeradiancefields, wu2021cvt, t2023attentionnerfneeds}; e (iii) pré-computação (\textit{baking}) dos modelos em estruturas de menor pegada de memória \cite{hedman2021bakingneuralradiancefields}.
 
 Este trabalho tem, portanto, o objetivo de explorar o uso dos diferentes modelos de campos de radiância neural e suas respectivas técnicas de otimização, ao aplicá-las em alguns conjuntos de dados com vistas esparsas, promovendo uma análise exploratória entre desempenho computacional e qualidade dos volumes gerados. Para avaliar a fidelidade das reconstruções, serão utilizadas métricas de qualidade visual amplamente consagradas na literatura, como PSNR (\textit{Peak Signal-to-Noise Ratio}), SSIM (\textit{Structural Similarity Index Measure}) \cite{wang2004image} e LPIPS (\textit{Learned Perceptual Image Patch Similarity}) \cite{zhang2018unreasonable}. Paralelamente, a quantificação do custo operacional basear-se-á em métricas de desempenho sistêmico, incluindo o tempo de convergência no treinamento, a velocidade de inferência e a pegada de memória (\textit{memory footprint}), sobretudo o consumo de VRAM (\textit{Video Random Access Memory}). Embora trabalhos como \cite{niemeyer2022regnerf} e \cite{kim2023poserefinement} tenham avaliado NeRFs em regimes de dados limitados, a comparação sistemática entre modelos generalizáveis com extratores convolucionais versus baseados em atenção, sob condições controladas de hardware e splits reprodutíveis, permanece pouco explorada na literatura. Em suma, esta investigação fornece um panorama consolidado sobre os \textit{trade-offs} entre eficiência computacional e fidelidade visual, estabelecendo diretrizes claras para a viabilização e aplicação prática de modelos de síntese de novas vistas em cenários com restrições das mais diversas, especialmente de dados e de hardware.
 
@@ -50,7 +50,7 @@ F_\theta(\mathbf{x}, d) = F_\theta\prime \circ \gamma(\mathbf{x}, d) \rightarrow
 \]
 onde $\theta$ representa os pesos da rede neural e $\gamma$ um codificador posicional.
 
-\subsection{Representações de Cena} Trabalhos subsequentes introduziram representações híbridas que desacoplam a estrutura espacial da rede neural, dado a viabilidade de alterar-se o \textit{positional encoding} via codificação de fourier por um sistema de \textit{hash encoding}. O Instant-NGP \cite{muller2022} propõe uma codificação por tabela de hash multiescala, que mapeia coordenadas espaciais em vetores de características de forma eficiente, reduzindo drasticamente o tempo de otimização por cena. O MERF \cite{reiser2023merf} estende essa ideia com representações tridimenseionais esparsas orientadas à renderização em tempo real.
+\subsection{Representações de Cena} Trabalhos subsequentes introduziram representações híbridas que desacoplam a estrutura espacial da rede neural, dado a viabilidade de alterar-se o \textit{positional encoding} via codificação de fourier por um sistema de \textit{hash encoding}. O Instant-NGP \cite{muller2022} propõe uma codificação por tabela de hash multiescala, que mapeia coordenadas espaciais em vetores de características de forma eficiente, reduzindo drasticamente o tempo de otimização por cena. O Nerfacto \cite{Tancik2023} estende essa ideia combinando múltiplas otimizações comprovadas da literatura focando no equilíbrio entre qualidade visual e tempo de renderização em tempo real.
 
 \subsection{Extrator de Características} O extrator de características se torna, portanto, responsável por codificar as imagens de entrada em representações que a rede neural possa condicionar. O PixelNeRF \cite{yu2021pixelnerfneuralradiancefields} utiliza uma ResNet (\textit{Residual Neural Network}) pré-treinada para extrair mapas de características por imagem; dado um ponto 3D, sua projeção nas vistas de entrada recupera os vetores de características espaciais correspondentes, que são agregados e passados à MLP de radiância. Essa abordagem é local e opera por pixel, sem modelar explicitamente relações entre vistas. O GNT \cite{t2023attentionnerfneeds} substitui a MLP de radiância por um transformador que processa amostras ao longo do raio e agrega informação entre vistas por meio de atenção cruzada, eliminando a dependência de uma função de volume explícita.
 
@@ -104,7 +104,7 @@ Para fins de linha de base (baseline) comparativa, este estudo também avalia m�
 \begin{enumerate}
 \item Instant-NGP \cite{muller2022}, que substitui a MLP tradicional por uma codificação em tabela de hash multiescala, permitindo otimização por cena em tempo significativamente reduzido; e
 
-\item MERF \cite{reiser2023merf}, que estende representações baseadas em hash com estruturas esparsas orientadas à renderização em tempo real.
+\item Nerfacto \cite{Tancik2023}, modelo focado em eficiência que agrega as melhores heurísticas da literatura para proporcionar alta qualidade e treinamento rápido.
 \end{enumerate}
 
 
@@ -115,7 +115,7 @@ A fim de justificar a seleção das linhas de base, ressalta-se a ausência de o
     
     \item \textbf{MVSNeRF:} Apesar de ser um modelo generalizável robusto, sua arquitetura fundamenta-se na construção de volumes de custo 3D (\textit{cost volumes}) baseados em princípios de \textit{Multi-View Stereo} (MVS). Esta formulação impõe uma dinâmica de uso de memória e um paradigma de reconstrução geométrica que diferem substancialmente da codificação direta por projeção 2D (PixelNeRF) ou da agregação puramente atencional (GNT), inviabilizando uma comparação direta (\textit{apples-to-apples}) no que tange ao \textit{footprint} de VRAM.
     
-    \item \textbf{Mip-NeRF 360:} Projetado especificamente para mitigar o problema de aliasing e parametrizar o espaço de forma não linear em cenas abertas e irrestritas (\textit{unbounded 360-degree}). Dado que o protocolo experimental deste estudo adota o dataset LLFF, caracterizado majoritariamente por capturas frontais de profundidade delimitada (\textit{forward-facing}), a principal contribuição do Mip-NeRF 360 torna-se mecanicamente subutilizada. Ademais, sem acoplamento a estratégias de regularização \textit{few-shot}, o modelo sofre degradação análoga aos métodos \textit{per-scene} já representados de forma mais eficiente pelo Instant-NGP e MERF.
+    \item \textbf{Mip-NeRF 360:} Projetado especificamente para mitigar o problema de aliasing e parametrizar o espaço de forma não linear em cenas abertas e irrestritas (\textit{unbounded 360-degree}). Dado que o protocolo experimental deste estudo adota o dataset LLFF, caracterizado majoritariamente por capturas frontais de profundidade delimitada (\textit{forward-facing}), a principal contribuição do Mip-NeRF 360 torna-se mecanicamente subutilizada. Ademais, sem acoplamento a estratégias de regularização \textit{few-shot}, o modelo sofre degradação análoga aos métodos \textit{per-scene} já representados de forma mais eficiente pelo Instant-NGP e Nerfacto.
 \end{itemize}
 
 A seleção e exclusão dos modelos supracitados visa proporcionar uma análise abrangente entre diferentes abordagens, cobrindo métodos baseados em CNNs, transformadores, reconstrução volumétrica explícita e modelos generativos baseados em representações por hash \textit{per-scene}. Essa diversidade permite avaliar a qualidade de reconstrução em cenários com vistas limitadas e o compromisso entre generalização e custo computational, bem como o impacto de estratégias distintas nos três regimes de avaliação considerados, como observado na seção \ref{sec:stdin}.
@@ -132,7 +132,7 @@ Os modelos foram implementados no framework \textit{Nerfstudio} \cite{Tancik2023
 \item infraestrutura de logging e exportação de métricas, incluindo salvamento de checkpoints e integração com \textit{Weights \& Biases}, que padroniza o registro dos experimentos entre os diferentes modelos.
 \end{enumerate}
 
-Dentre os modelos avaliados, o Instant-NGP e o MERF encontram-se nativamente integrados ao \textit{Nerfstudio}, dispensando adaptações de implementação. Os demais modelos (PixelNeRF e GNT) foram portados para o framework a partir de suas implementações originais, com adaptações nos componentes de \textit{DataManager} e \textit{Pipeline} para conformidade com a interface do \textit{Nerfstudio}, ambos utilizando-se do otimizador Adam (otimizado pelo tinycudann) com \textit{learning rate} $\eta = 1^{-3}$ e \textit{weight decay} = 0.0. No caso do MERF, adicionalmente, foi utilizada a extensão \textit{MERFStudio} \cite{song2024cityonwebrealtimeneuralrendering}, disponível em \url{https://github.com/USTC3DV/MERFStudio}.
+Dentre os modelos avaliados, o Instant-NGP e o Nerfacto encontram-se nativamente integrados ao \textit{Nerfstudio}, dispensando adaptações de implementação. Os demais modelos (PixelNeRF e GNT) foram portados para o framework a partir de suas implementações originais, com adaptações nos componentes de \textit{DataManager} e \textit{Pipeline} para conformidade com a interface do \textit{Nerfstudio}, ambos utilizando-se do otimizador Adam (otimizado pelo tinycudann) com \textit{learning rate} $\eta = 1^{-3}$ e \textit{weight decay} = 0.0.
 
 As implementações foram guiadas pelas descrições metodológicas dos trabalhos originais, mantendo equivalência funcional sempre que possível. A implementação completa encontra-se disponível em \url{https://github.com/felipe-gsilva/few-shot-nerfs}.
 
@@ -180,17 +180,17 @@ As avaliações de qualidade visual são realizadas sobre o conjunto de teste ge
 & PixelNeRF   & 00.00 & 0.000 & 0.000 \\
 & GNT         & 00.00 & 0.000 & 0.000 \\
 & Instant-NGP & 00.00 & 0.000 & 0.000 \\
-& MERF        & 00.00 & 0.000 & 0.000 \\
+& Nerfacto    & 00.00 & 0.000 & 0.000 \\
 \midrule
 \multirow{4}{*}{Test-Time Adaptation (TTA - 10 vistas)} 
 & PixelNeRF   & 00.00 & 0.000 & 0.000 \\
 & GNT         & 00.00 & 0.000 & 0.000 \\
 & Instant-NGP & 00.00 & 0.000 & 0.000 \\
-& MERF        & 00.00 & 0.000 & 0.000 \\
+& Nerfacto    & 00.00 & 0.000 & 0.000 \\
 \midrule
 \multirow{2}{*}{Per-Scene (100\% das vistas)} 
 & Instant-NGP & 00.00 & 0.000 & 0.000 \\
-& MERF        & \textbf{00.00} & \textbf{0.000} & \textbf{0.000} \\
+& Nerfacto    & \textbf{00.00} & \textbf{0.000} & \textbf{0.000} \\
 \bottomrule
 \end{tabular}
 }
@@ -227,11 +227,11 @@ As avaliações de qualidade visual são realizadas sobre o conjunto de teste ge
     \hfill
     \begin{subfigure}[b]{0.19\textwidth}
         \centering
-        \caption*{MERF}
+        \caption*{Nerfacto}
         %\includegraphics[width=\textwidth]{img/placeholder.jpg}
     \end{subfigure}
 
-    \caption{Comparação qualitativa no regime TTA (10 vistas) para a cena "Trex" do dataset LLFF. Destaca-se a perda de detalhes de alta frequência nos modelos generativos (PixelNeRF, GNT) em oposição aos ruídos de geometria apresentados pelos modelos per-scene (Instant-NGP, MERF) sob escassez de dados.}
+    \caption{Comparação qualitativa no regime TTA (10 vistas) para a cena "Trex" do dataset LLFF. Destaca-se a perda de detalhes de alta frequência nos modelos generativos (PixelNeRF, GNT) em oposição aos ruídos de geometria apresentados pelos modelos per-scene (Instant-NGP, Nerfacto) sob escassez de dados.}
     \label{fig:comparacao_qualitativa}
 \end{figure}
 
@@ -251,10 +251,10 @@ GNT         & Zero-Shot (0) & N/A (Pré-treinado) & 00.0 & 00.0 \\
 PixelNeRF   & TTA (10)      & 00 min 00 s & 00.0 & 00.0 \\
 GNT         & TTA (10)      & 00 min 00 s & 00.0 & 00.0 \\
 Instant-NGP & TTA (10)      & 00 min 00 s & 00.0 & 00.0 \\
-MERF        & TTA (10)      & 00 min 00 s & 00.0 & 00.0 \\
+Nerfacto    & TTA (10)      & 00 min 00 s & 00.0 & 00.0 \\
 \midrule
 Instant-NGP & Per-Scene     & 00 min 00 s & 00.0 & 00.0 \\
-MERF        & Per-Scene     & 00 min 00 s & 00.0 & 00.0 \\
+Nerfacto    & Per-Scene     & 00 min 00 s & 00.0 & 00.0 \\
 \bottomrule
 \end{tabular}
 \end{table}
