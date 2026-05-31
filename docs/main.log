@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.4.6)  31 MAY 2026 15:27
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.4.6)  31 MAY 2026 18:21
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -511,7 +511,7 @@ File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count320
 ) (./main.aux
 Package babel Info: 'brazilian' activates 'portuges' shorthands.
-(babel)             Reported on input line 21.
+(babel)             Reported on input line 17.
 )
 \openout1 = `main.aux'.
 
@@ -627,10 +627,7 @@ LaTeX Font Info:    Font shape `T1/phv/b/it' in size <10> not available
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-[6]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
- [7]
+[6] [7]
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
@@ -649,66 +646,66 @@ Underfull \hbox (badness 1478) in paragraph at lines 349--349
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 400--400
+Underfull \hbox (badness 10000) in paragraph at lines 374--374
 [] |\T1/phv/b/n/8 Ground
  []
 
 
-Overfull \hbox (13.60777pt too wide) in paragraph at lines 400--400
+Overfull \hbox (13.60777pt too wide) in paragraph at lines 374--374
 \T1/phv/b/n/8 Truth| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 406--406
+Underfull \hbox (badness 10000) in paragraph at lines 380--380
 [] |\T1/phv/b/n/8 Pi-xel-
  []
 
 
-Overfull \hbox (14.69576pt too wide) in paragraph at lines 406--406
+Overfull \hbox (14.69576pt too wide) in paragraph at lines 380--380
 \T1/phv/b/n/8 NeRF| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 418--418
+Underfull \hbox (badness 10000) in paragraph at lines 392--392
 [] |\T1/phv/b/n/8 Instant-
  []
 
 
-Overfull \hbox (11.1437pt too wide) in paragraph at lines 418--418
+Overfull \hbox (11.1437pt too wide) in paragraph at lines 392--392
 \T1/phv/b/n/8 NGP| 
  []
 
 
-Overfull \hbox (26.12093pt too wide) in paragraph at lines 438--454
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
+Overfull \hbox (26.12093pt too wide) in paragraph at lines 412--428
  [][] 
  []
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-[8] [9] [10] [11] (./main.bbl
+[8] [9] [10] (./main.bbl
 Underfull \hbox (badness 10000) in paragraph at lines 35--39
 []\T1/ptm/m/n/12 Müller, T. (2021).  tiny-cuda-nn.  $\T1/pcr/m/n/12 https : / /
  github . com / NVlabs /
  []
 
-[12]) [13] (./main.aux)
+[11]) [12] (./main.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 18124 strings out of 469375
- 358158 string characters out of 5466623
- 777231 words of memory out of 5000000
- 46464 multiletter control sequences out of 15000+600000
+ 18123 strings out of 469375
+ 358144 string characters out of 5466623
+ 771513 words of memory out of 5000000
+ 46463 multiletter control sequences out of 15000+600000
  687689 words of font info for 112 fonts, out of 8000000 for 9000
  64 hyphenation exceptions out of 8191
- 84i,12n,104p,1705b,1069s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 84i,12n,104p,1744b,1069s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/share/
 texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texmf-dist/fon
 ts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texmf-dist/fonts/type1/publi
@@ -724,10 +721,10 @@ pe1/urw/helvetic/uhvb8a.pfb></usr/share/texmf-dist/fonts/type1/urw/helvetic/uhv
 bo8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/te
 xmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/share/texmf-dist/fonts/type1/u
 rw/times/utmr8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (13 pages, 242283 bytes).
+Output written on main.pdf (12 pages, 241802 bytes).
 PDF statistics:
- 146 PDF objects out of 1000 (max. 8388607)
- 92 compressed objects within 1 object stream
+ 142 PDF objects out of 1000 (max. 8388607)
+ 89 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
  13 words of extra memory for PDF output out of 10000 (max. 10000000)
 

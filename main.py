@@ -16,16 +16,15 @@ def main():
     base_data_path = Path("assets/data/baseline/nerf_llff_data")
     llff_names = [
         "fern",
-        "flower",
-        "fortress",
-        "horns",
-        "leaves",
-        "orchids",
-        "room",
-        "trex",
+        #"flower",
+        #"fortress",
+        #"horns",
+        #"leaves",
+        #"orchids",
+        #"room",
+        #"trex",
     ]
-    sampling_strategies = ["uniform" ]
-                          # "random"]
+    sampling_strategies = ["uniform", "random"]
     num_views_options = [3, 6, 10]
 
     experiments_config = [
@@ -33,7 +32,7 @@ def main():
         {"model": "nerfacto", "regime": "per-scene"},
         #{"model": "pixel-nerf", "regime": "zero-shot"},
         #{"model": "gnt", "regime": "zero-shot"},
-        #{"model": "pixel-nerf", "regime": "tta"},
+        {"model": "pixel-nerf", "regime": "tta"},
         #{"model": "gnt", "regime": "tta"},
     ]
 
