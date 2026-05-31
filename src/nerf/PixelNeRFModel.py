@@ -193,10 +193,11 @@ class PixelNeRFModel(Model):
         self, outputs, batch, metrics_dict=None
     ) -> Dict[str, torch.Tensor]:
         """The paper calcs loss"""
-        loss = torch.nn.functional.mse_loss(outputs["rgb_coarse"], batch["image"])
+        target = batch["image"].to(outputs["rgb_coarse"].device)
+        loss = torch.nn.functional.mse_loss(outputs["rgb_coarse"], target)
         if "rgb_fine" in outputs:
             loss = loss + torch.nn.functional.mse_loss(
-                outputs["rgb_fine"], batch["image"]
+                outputs["rgb_fine"], target
             )
         return {"rgb_loss": loss}
 

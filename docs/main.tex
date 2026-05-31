@@ -13,6 +13,8 @@
 \usepackage{subcaption}
 \usepackage{indentfirst}
 \usepackage{amssymb}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds, calc}
 \sloppy
 \title{Uma Análise Comparativa entre NeRFs Few-Shot e Per-Scene aplicadas em Conjuntos de Dados de Vistas Esparsas}
 \author{Felipe G. da Silva\inst{1}}
@@ -168,19 +170,19 @@ Resultados reportados como média sobre as 8 cenas do dataset.}
   & \textbf{$\Delta$PSNR\,(\textit{unif.\,--\,rand.})} \\
 \midrule
 \multirow{2}{*}{PixelNeRF}
-  & Uniform   & --   & --    & --    & \multirow{2}{*}{--} \\
+  & Uniform   & 5.70   & 0.089    & 0.837    & \multirow{2}{*}{--} \\
   & Random    & --   & --    & --    &                     \\
 \midrule
 \multirow{2}{*}{GNT}
-  & Uniform   & --   & --    & --    & \multirow{2}{*}{--} \\
+  & Uniform   & 10.33   & 0.289    & 0.732    & \multirow{2}{*}{--} \\
   & Random    & --   & --    & --    &                     \\
 \midrule
 \multirow{2}{*}{Instant-NGP}
-  & Uniform   & --   & --    & --    & \multirow{2}{*}{--} \\
+  & Uniform   & 13.57   & 0.440    & 0.507    & \multirow{2}{*}{--} \\
   & Random    & --   & --    & --    &                     \\
 \midrule
 \multirow{2}{*}{Nerfacto}
-  & Uniform   & --   & --    & --    & \multirow{2}{*}{--} \\
+  & Uniform   & 26.25   & 0.843    & 0.205    & \multirow{2}{*}{--} \\
   & Random    & --   & --    & --    &                     \\
 \bottomrule
 \end{tabular}
@@ -203,7 +205,92 @@ As avaliações de qualidade visual são realizadas sobre o conjunto de teste ge
 
 \section{Experimentos e Resultados}
 
-A seguir, destacam-se os principais resultados do treinamento, que levou, ao todo, 12 horas para ser completado. Segmenta-se esta seção entre uma análise quantitativa, qualitativa e computacional, respectivamente.
+A seguir, destacam-se os principais resultados do treinamento, que levou, ao todo, cerca de 90 horas para ser completado. A Figura~\ref{fig:pipeline} ilustra o protocolo de execução adotado. Segmenta-se esta seção entre uma análise quantitativa, qualitativa e computacional, respectivamente.
+
+\begin{figure}[ht]
+\centering
+\definecolor{mainborder}{rgb}{0.18, 0.24, 0.35}     % Sleek steel navy
+\definecolor{mainfill}{rgb}{0.94, 0.95, 0.97}       % Elegant light slate gray
+\definecolor{secborder}{rgb}{0.35, 0.43, 0.53}     % Soft slate/steel blue
+\definecolor{secfill}{rgb}{0.98, 0.98, 0.99}       % Premium off-white/very light gray
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  >={Stealth[length=4pt]},
+  mainbox/.style={
+    rectangle, rounded corners=3pt, draw=mainborder, fill=mainfill,
+    minimum height=1cm, minimum width=2.4cm,
+    font=\small\bfseries, align=center, line width=0.8pt
+  },
+  detailbox/.style={
+    rectangle, rounded corners=2pt, draw=secborder, fill=secfill,
+    minimum height=0.7cm, minimum width=1.8cm,
+    font=\footnotesize, align=center, line width=0.5pt
+  },
+  metricbox/.style={
+    rectangle, rounded corners=2pt, draw=secborder, fill=secfill,
+    minimum height=0.7cm, minimum width=2.8cm,
+    font=\footnotesize, align=center, line width=0.5pt
+  },
+  arr/.style={->, thick, mainborder},
+  link/.style={-, secborder, line width=0.5pt}
+]
+
+% ── Main pipeline (y = 0), wide spacing ──
+\node[mainbox] (data)    at (0,   0) {Dataset\\[-1pt]{\footnotesize LLFF}};
+\node[mainbox] (split)   at (5,   0) {Geração de\\[-1pt]Splits};
+\node[mainbox] (train)   at (11,  0) {Treino /\\[-1pt]Adaptação};
+\node[mainbox] (eval)    at (17,  0) {Avaliação};
+\node[mainbox] (out)     at (23,  0) {Métricas};
+
+\draw[arr] (data)  -- (split);
+\draw[arr] (split) -- (train);
+\draw[arr] (train) -- (eval);
+\draw[arr] (eval)  -- (out);
+
+% ── Split details (centered under split = 5) ──
+\node[detailbox]        (unif) at (4.0, -1.7) {\textit{uniform}};
+\node[detailbox]        (rand) at (6, -1.7) {\textit{random}};
+\node[detailbox]        (seed) at (5.0, -2.7) {semente fixa};
+\draw[link] (unif.south) -- (seed.north -| unif.south);
+\draw[link] (rand.south) -- (seed.north -| rand.south);
+\draw[link] (split.south) -- (unif.north);
+\draw[link] (split.south) -- (rand.north);
+
+% ── Regime details (stacked under train = 11) ──
+\node[detailbox] (zs)  at (11, -1.7) {Zero-Shot};
+\node[detailbox] (tta) at (11, -2.5) {TTA {\scriptsize ($N\!\in\!\{3,6,10\}$)}};
+\node[detailbox] (ps)  at (11, -3.3) {Per-Scene {\scriptsize (100\%)}};
+\draw[link] (train.south) -- (zs);
+
+% ── Eval detail (centered under eval = 17) ──
+\node[detailbox] (loader) at (17, -1.7) {fixed\_indices};
+\draw[link] (eval.south) -- (loader);
+
+% ── Metric details (centered under out = 23) ──
+\draw[link] (out.south) -- ++(0,-0.85);
+\node[metricbox] (m_qual) at (23, -1.7) {PSNR, SSIM, LPIPS};
+\node[metricbox] (m_eff)  at (23, -2.5) {FPS, VRAM};
+
+% ── Environment annotation ──
+\begin{scope}[on background layer]
+  \node[draw=secborder!30, densely dashed, rounded corners=5pt,
+        fill=black!1, inner sep=12pt,
+        fit=(data)(split)(train)(eval)(out)(seed)(ps)(loader)(m_qual)(m_eff),
+        label={[font=\scriptsize\itshape, text=secborder!70]below:
+          GPU reservada via Docker \textbar\
+          NVIDIA GTX 1660 Super (6\,GB) \textbar\
+          CUDA 12.4 \textbar\
+          ${\sim}$90\,h de execução total}] {};
+\end{scope}
+
+\end{tikzpicture}%
+}
+\caption{Protocolo de execução experimental. As caixas superiores representam
+as etapas do pipeline; as ramificações inferiores detalham as variantes
+de configuração (estratégia de split, regime de treino) e as métricas coletadas.
+Todo o ambiente foi isolado via contêiner Docker com GPU reservada.}
+\label{fig:pipeline}
+\end{figure}
 
 \subsection{Análise Quantitativa}
 
@@ -226,26 +313,26 @@ dentro de cada regime; sublinhado indica o segundo melhor.}
   & \textbf{LPIPS $\downarrow$} \\
 \midrule
 \multirow{2}{*}{Zero-Shot}
-  & PixelNeRF        & --   & --    & --    \\
-  & GNT              & --   & --    & --    \\
+  & PixelNeRF        & 5.81   & 0.088    & 0.833    \\
+  & GNT              & \textbf{10.33}   & \textbf{0.289}    & \textbf{0.732}    \\
 \midrule
 \multirow{4}{*}{TTA ($N=3$)}
-  & PixelNeRF        & --   & --    & --    \\
-  & GNT              & --   & --    & --    \\
-  & Instant-NGP      & --   & --    & --    \\
-  & Nerfacto         & --   & --    & --    \\
+  & PixelNeRF        & 5.69   & 0.073    & 0.823    \\
+  & GNT              & 10.33   & 0.289    & 0.732    \\
+  & Instant-NGP      & \underline{13.61}   & \underline{0.439}    & \underline{0.506}    \\
+  & Nerfacto         & \textbf{26.25}   & \textbf{0.843}    & \textbf{0.205}    \\
 \midrule
 \multirow{4}{*}{TTA ($N=6$)}
-  & PixelNeRF        & --   & --    & --    \\
-  & GNT              & --   & --    & --    \\
-  & Instant-NGP      & --   & --    & --    \\
-  & Nerfacto         & --   & --    & --    \\
+  & PixelNeRF        & 6.05   & 0.103    & 0.829    \\
+  & GNT              & 10.19   & 0.290    & 0.732    \\
+  & Instant-NGP      & \underline{13.61}   & \underline{0.439}    & \underline{0.506}    \\
+  & Nerfacto         & \textbf{26.25}   & \textbf{0.843}    & \textbf{0.205}    \\
 \midrule
 \multirow{4}{*}{TTA ($N=10$)}
-  & PixelNeRF        & --   & --    & --    \\
-  & GNT              & --   & --    & --    \\
-  & Instant-NGP      & --   & --    & --    \\
-  & Nerfacto         & --   & --    & --    \\
+  & PixelNeRF        & 5.70   & 0.089    & 0.837    \\
+  & GNT              & 10.33   & 0.289    & 0.732    \\
+  & Instant-NGP      & \underline{13.57}   & \underline{0.440}    & \underline{0.507}    \\
+  & Nerfacto         & \textbf{26.25}   & \textbf{0.843}    & \textbf{0.205}    \\
 \midrule
 \multirow{2}{*}{Per-Scene (100\%)}
   & Instant-NGP      & --   & --    & --    \\
@@ -274,10 +361,10 @@ do conteúdo visual.}
   & \textit{room}  & \textit{trex}
   & \textbf{Média} & \textbf{$\sigma$} \\
 \midrule
-PixelNeRF   & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
-GNT         & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
-Instant-NGP & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
-Nerfacto    & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+PixelNeRF   & 5.70 & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+GNT         & 10.33 & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+Instant-NGP & 13.57 & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+Nerfacto    & 26.25 & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
 \bottomrule
 \end{tabular}
 }
@@ -332,18 +419,18 @@ A análise qualitativa seguiu as estruturas do split (\ref{sec:stdin}), sendo po
 \label{tab:custo_computacional}
 \begin{tabular}{llccc}
 \toprule
-\textbf{Modelo} & \textbf{Regime (Vistas)} & \textbf{Tempo de Treino} & \textbf{Pico VRAM (GB)} & \textbf{Inferência (FPS)} \\
+\textbf{Modelo} & \textbf{Regime} & \textbf{Tempo de Treino} & \textbf{Pico VRAM (GB)} & \textbf{Inferência (FPS)} \\
 \midrule
-PixelNeRF   & Zero-Shot (0) & N/A (Pré-treinado) & 00.0 & 00.0 \\
-GNT         & Zero-Shot (0) & N/A (Pré-treinado) & 00.0 & 00.0 \\
+PixelNeRF   & Zero-Shot (0) & N/A (Pré-treinado) & 1.93 & 0.006 \\
+GNT         & Zero-Shot (0) & N/A (Pré-treinado) & 1.93 & 0.008 \\
 \midrule
-PixelNeRF   & TTA (10)      & 00 min 00 s & 00.0 & 00.0 \\
-GNT         & TTA (10)      & 00 min 00 s & 00.0 & 00.0 \\
-Instant-NGP & TTA (10)      & 00 min 00 s & 00.0 & 00.0 \\
-Nerfacto    & TTA (10)      & 00 min 00 s & 00.0 & 00.0 \\
+PixelNeRF   & TTA (10)      & 00 min 08 s & 1.93 & 0.006 \\
+GNT         & TTA (10)      & 06 min 55 s & 1.93 & 0.008 \\
+Instant-NGP & TTA (10)      & 37 min 45 s & 1.29 & 0.241 \\
+Nerfacto    & TTA (10)      & 13 min 11 s & 1.29 & 0.408 \\
 \midrule
-Instant-NGP & Per-Scene     & 00 min 00 s & 00.0 & 00.0 \\
-Nerfacto    & Per-Scene     & 00 min 00 s & 00.0 & 00.0 \\
+Instant-NGP & Per-Scene     & -- & -- & -- \\
+Nerfacto    & Per-Scene     & -- & -- & -- \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -363,10 +450,15 @@ Nerfacto    & Per-Scene     & 00 min 00 s & 00.0 & 00.0 \\
 
 \section{Conclusões}
 
-% Section titles must be in boldface, 13pt, flush left. There should be an extra
-% 12 pt of space before each title. Section numbering is optional. The first
-% paragraph of each section should not be indented, while the first lines of
-% subsequent paragraphs should be indented by 1.27 cm.
+Este trabalho apresentou uma análise comparativa entre modelos NeRF generalizáveis (PixelNeRF, GNT) e modelos de otimização por cena (Instant-NGP, Nerfacto) em regimes de vistas esparsas, sob protocolo unificado no framework Nerfstudio. Os resultados parciais obtidos sobre o dataset LLFF revelam tendências que, embora preliminares, permitem delinear conclusões relevantes sobre os \textit{trade-offs} entre fidelidade visual e custo computacional.
+
+No eixo de qualidade visual, os dados evidenciam uma hierarquia consistente entre os modelos avaliados. O Nerfacto alcançou o melhor desempenho em todos os regimes TTA, com PSNR de 26{,}25\,dB, SSIM de 0{,}843 e LPIPS de 0{,}205, seguido pelo Instant-NGP (PSNR $\approx$ 13{,}6\,dB). Os modelos generalizáveis apresentaram desempenho substancialmente inferior: o GNT atingiu PSNR de 10{,}33\,dB e o PixelNeRF permaneceu abaixo de 6{,}1\,dB em todas as configurações. A superioridade dos métodos \textit{per-scene} mesmo sob escassez extrema de vistas (3 imagens) sugere que, para cenas do tipo \textit{forward-facing} com geometria moderadamente complexa, a capacidade de otimização direta da representação espacial --- viabilizada por codificações eficientes como tabelas de hash multiescala --- compensa a ausência de \textit{priors} aprendidos.
+
+Contudo, a análise computacional revela um \textit{trade-off} não trivial. Os modelos generalizáveis dispensam otimização por cena no regime \textit{zero-shot} e requerem adaptação mínima no TTA (8\,s para PixelNeRF; $\sim$7\,min para GNT), enquanto os modelos \textit{per-scene} demandam tempos de convergência significativamente maiores ($\sim$13\,min para Nerfacto; $\sim$38\,min para Instant-NGP com 10 vistas). Em contrapartida, os modelos \textit{per-scene} apresentaram taxas de inferência superiores (0{,}41\,FPS para Nerfacto vs. 0{,}006\,FPS para PixelNeRF), com menor consumo de VRAM (1{,}29\,GB vs. 1{,}93\,GB). Esses resultados indicam que, em cenários onde a latência de inferência e o \textit{footprint} de memória são críticos --- como aplicações \textit{mobile} ou sistemas embarcados ---, os métodos \textit{per-scene} podem ser preferíveis mesmo com o custo adicional de treinamento.
+
+É necessário ressalvar que os resultados reportados são parciais, restritos à cena \textit{fern} do LLFF, e a generalização para o conjunto completo de 8 cenas requer execuções adicionais. O desempenho excepcionalmente baixo do PixelNeRF ($< 6$\,dB) indica possíveis incompatibilidades na adaptação dos pesos pré-treinados ao pipeline do Nerfstudio, aspecto que será investigado em trabalhos futuros. Além disso, a estabilidade das métricas do Nerfacto entre os regimes de 3, 6 e 10 vistas demanda verificação quanto à independência efetiva dos \textit{checkpoints} entre configurações.
+
+Como trabalhos futuros, pretende-se: (i) completar a avaliação sobre as 8 cenas do LLFF, incluindo o regime \textit{per-scene} com 100\% das vistas e o split \textit{random}; (ii) investigar a integração de estratégias de regularização geométrica (e.g., \textit{depth priors}) aos modelos generalizáveis para mitigar a degradação observada; e (iii) estender o protocolo para datasets com geometrias mais desafiadoras, como o DTU, avaliando a robustez das conclusões sob diferentes distribuições de cena.
 
 \newpage
 \bibliographystyle{sbc}

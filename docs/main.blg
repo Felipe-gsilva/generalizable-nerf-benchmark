@@ -1,0 +1,51 @@
+This is BibTeX, Version 0.99e (TeX Live 2026/Arch Linux)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: main.aux
+The style file: sbc.bst
+Database file #1: sbc-template.bib
+Repeated entry---line 445 of file sbc-template.bib
+ : @misc{niemeyer2022regnerf
+ :                          ,
+I'm skipping whatever remains of this entry
+You've used 16 entries,
+            1935 wiz_defined-function locations,
+            555 strings with 7219 characters,
+and the built_in function-call counts, 7450 in all, are:
+= -- 690
+> -- 486
+< -- 6
++ -- 178
+- -- 176
+* -- 654
+:= -- 1327
+add.period$ -- 44
+call.type$ -- 16
+change.case$ -- 167
+chr.to.int$ -- 16
+cite$ -- 16
+duplicate$ -- 250
+empty$ -- 396
+format.name$ -- 192
+if$ -- 1421
+int.to.chr$ -- 1
+int.to.str$ -- 0
+missing$ -- 8
+newline$ -- 78
+num.names$ -- 48
+pop$ -- 163
+preamble$ -- 1
+purify$ -- 168
+quote$ -- 0
+skip$ -- 200
+stack$ -- 0
+substring$ -- 359
+swap$ -- 50
+text.length$ -- 4
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 96
+warning$ -- 0
+while$ -- 45
+width$ -- 0
+write$ -- 194
+(There was 1 error message)
