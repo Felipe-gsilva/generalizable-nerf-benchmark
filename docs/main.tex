@@ -342,6 +342,24 @@ dentro de cada regime; sublinhado indica o segundo melhor.}
 }
 \end{table}
 
+Como referência externa, a Tabela \ref{tab:nerfbaselines_llff} compila resultados reportados pelo \textit{NerfBaselines} \cite{kulhanek2025nerfbaselinesconsistentreproducibleevaluation} para o LLFF --- um dataset predominantemente \textit{forward-facing}, para o qual métodos NeRF costumam empregar parametrização em espaço NDC. Estes números são apresentados apenas como comparativo de literatura (protocolo/hardware podem divergir do presente estudo).
+
+\begin{table}[h]
+\centering
+\caption{Resultados no LLFF reportados pelo \textit{NerfBaselines} \cite{kulhanek2025nerfbaselinesconsistentreproducibleevaluation}. "Time" refere-se ao tempo total de treinamento reportado e "GPU mem." ao pico de memória alocada durante o treino.}
+\label{tab:nerfbaselines_llff}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccccl}
+\toprule
+\textbf{Método} & \textbf{PSNR (dB) $\uparrow$} & \textbf{SSIM $\uparrow$} & \textbf{LPIPS (VGG) $\downarrow$} & \textbf{Time} & \textbf{GPU mem. (GB)} \\
+\midrule
+Mip-NeRF 360 & 26.59 & 0.846 & 0.168 & 9h 55m 23s & 104.98 \\
+TensoRF      & 26.68 & 0.834 & 0.202 & 31m 32s    & 20.38 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
 A Tabela \ref{tab:por_cena} desagrega o PSNR por cena individual do LLFF, revelando a variabilidade de desempenho em função das características estruturais de cada cena.
 
 \begin{table}[h]

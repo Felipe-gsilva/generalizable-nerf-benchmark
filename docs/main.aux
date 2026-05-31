@@ -56,6 +56,9 @@
 \newlabel{tab:split}{{1}{7}{Protocolo Experimental}{table.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Métricas de Avaliação}{7}{}\protected@file@percent }
 \newlabel{sec:metricas}{{3.4}{7}{Métricas de Avaliação}{subsection.3.4}{}}
+\citation{kulhanek2025nerfbaselinesconsistentreproducibleevaluation}
+\citation{kulhanek2025nerfbaselinesconsistentreproducibleevaluation}
+\citation{kulhanek2025nerfbaselinesconsistentreproducibleevaluation}
 \@writefile{toc}{\contentsline {section}{\numberline {4}Experimentos e Resultados}{8}{}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Protocolo de execução experimental. As caixas superiores representam as etapas do pipeline; as ramificações inferiores detalham as variantes de configuração (estratégia de split, regime de treino) e as métricas coletadas. Todo o ambiente foi isolado via contêiner Docker com GPU reservada.}}{8}{}\protected@file@percent }
 \newlabel{fig:pipeline}{{1}{8}{Experimentos e Resultados}{figure.1}{}}
@@ -63,22 +66,25 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Análise Qualitativa}{8}{}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Comparação qualitativa no regime TTA (10 vistas) para a cena "Trex" do dataset LLFF. Destaca-se a perda de detalhes de alta frequência nos modelos generativos (PixelNeRF, GNT) em oposição aos ruídos de geometria apresentados pelos modelos per-scene (Instant-NGP, Nerfacto) sob escassez de dados.}}{8}{}\protected@file@percent }
 \newlabel{fig:comparacao_qualitativa}{{2}{8}{Análise Qualitativa}{figure.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Trade-offs Computacionais}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusões}{8}{}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Avaliação quantitativa da qualidade visual no dataset LLFF. As setas indicam se valores maiores ($\uparrow $) ou menores ($\downarrow $) representam desempenho superior. Negrito indica o melhor resultado dentro de cada regime; sublinhado indica o segundo melhor.}}{9}{}\protected@file@percent }
 \newlabel{tab:qualidade_visual}{{2}{9}{Análise Quantitativa}{table.2}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Trade-off entre Fidelidade Visual (PSNR) e Consumo de VRAM no regime de 10 vistas. O quadrante superior esquerdo representa a região ideal (alta qualidade, baixo custo).}}{9}{}\protected@file@percent }
 \newlabel{fig:scatter_tradeoff}{{3}{9}{Trade-offs Computacionais}{figure.3}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Análise de desempenho por cena do dataset LLFF (PSNR em dB), regime TTA com $N=10$ vistas, split \textit  {uniform}. A última coluna reporta o desvio padrão entre cenas ($\sigma $), indicando a estabilidade de cada modelo frente à variabilidade do conteúdo visual.}}{10}{}\protected@file@percent }
-\newlabel{tab:por_cena}{{3}{10}{Análise Quantitativa}{table.3}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Comparativo de custo computacional e pegada de memória. O tempo de treinamento refere-se à convergência da cena (ou adaptação no caso TTA), e a VRAM indica o pico de alocação durante o treinamento. A taxa de FPS foi medida na renderização do conjunto de teste.}}{10}{}\protected@file@percent }
-\newlabel{tab:custo_computacional}{{4}{10}{Trade-offs Computacionais}{table.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Trade-offs Computacionais}{9}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusões}{9}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Resultados no LLFF reportados pelo \textit  {NerfBaselines} \cite  {kulhanek2025nerfbaselinesconsistentreproducibleevaluation}. "Time" refere-se ao tempo total de treinamento reportado e "GPU mem." ao pico de memória alocada durante o treino.}}{10}{}\protected@file@percent }
+\newlabel{tab:nerfbaselines_llff}{{3}{10}{Análise Quantitativa}{table.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Análise de desempenho por cena do dataset LLFF (PSNR em dB), regime TTA com $N=10$ vistas, split \textit  {uniform}. A última coluna reporta o desvio padrão entre cenas ($\sigma $), indicando a estabilidade de cada modelo frente à variabilidade do conteúdo visual.}}{10}{}\protected@file@percent }
+\newlabel{tab:por_cena}{{4}{10}{Análise Quantitativa}{table.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Comparativo de custo computacional e pegada de memória. O tempo de treinamento refere-se à convergência da cena (ou adaptação no caso TTA), e a VRAM indica o pico de alocação durante o treinamento. A taxa de FPS foi medida na renderização do conjunto de teste.}}{11}{}\protected@file@percent }
+\newlabel{tab:custo_computacional}{{5}{11}{Trade-offs Computacionais}{table.5}{}}
 \bibstyle{sbc}
 \bibdata{sbc-template}
 \bibcite{substance3dviewer}{{Adobe} 2025}
 \bibcite{hedman2021bakingneuralradiancefields}{Hedman et~al. 2021}
 \bibcite{kim2023poserefinement}{Heo et~al. 2023}
 \bibcite{kerbl3Dgaussians}{Kerbl et~al. 2023}
+\bibcite{kulhanek2025nerfbaselinesconsistentreproducibleevaluation}{Kulhanek and Sattler 2025}
 \bibcite{mildenhall2019locallightfieldfusion}{Mildenhall et~al. 2019}
 \bibcite{tinycudann}{M{\"u}ller 2021}
 \bibcite{muller2022}{Müller et~al. 2022}

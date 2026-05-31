@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.4.6)  31 MAY 2026 14:45
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.4.6)  31 MAY 2026 15:27
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -635,52 +635,62 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 
+Underfull \hbox (badness 10000) in paragraph at lines 349--349
+[] \T1/phv/b/n/10 Ta-bela 3. |Re-sul-ta-dos no LLFF re-por-ta-dos pelo \T1/phv/
+b/sl/10 Nerf-Ba-se-li-nes
+ []
+
+
+Underfull \hbox (badness 1478) in paragraph at lines 349--349
+\T1/phv/b/n/10 [[]]. "Time"refere-se ao tempo to-tal de trei-
+ []
+
+
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 382--382
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 400--400
 [] |\T1/phv/b/n/8 Ground
  []
 
 
-Overfull \hbox (13.60777pt too wide) in paragraph at lines 382--382
+Overfull \hbox (13.60777pt too wide) in paragraph at lines 400--400
 \T1/phv/b/n/8 Truth| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 388--388
+Underfull \hbox (badness 10000) in paragraph at lines 406--406
 [] |\T1/phv/b/n/8 Pi-xel-
  []
 
 
-Overfull \hbox (14.69576pt too wide) in paragraph at lines 388--388
+Overfull \hbox (14.69576pt too wide) in paragraph at lines 406--406
 \T1/phv/b/n/8 NeRF| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 400--400
+Underfull \hbox (badness 10000) in paragraph at lines 418--418
 [] |\T1/phv/b/n/8 Instant-
  []
 
 
-Overfull \hbox (11.1437pt too wide) in paragraph at lines 400--400
+Overfull \hbox (11.1437pt too wide) in paragraph at lines 418--418
 \T1/phv/b/n/8 NGP| 
  []
 
 
-Overfull \hbox (41.00049pt too wide) in paragraph at lines 420--436
+Overfull \hbox (26.12093pt too wide) in paragraph at lines 438--454
  [][] 
  []
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-[8]
-Underfull \vbox (badness 1389) has occurred while \output is active []
-
- [9]
-[10] [11] (./main.bbl
-Underfull \hbox (badness 10000) in paragraph at lines 29--33
+[8] [9] [10] [11] (./main.bbl
+Underfull \hbox (badness 10000) in paragraph at lines 35--39
 []\T1/ptm/m/n/12 Müller, T. (2021).  tiny-cuda-nn.  $\T1/pcr/m/n/12 https : / /
  github . com / NVlabs /
  []
@@ -690,16 +700,12 @@ Underfull \hbox (badness 10000) in paragraph at lines 29--33
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
  ***********
-
-
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-
  ) 
 Here is how much of TeX's memory you used:
- 18120 strings out of 469375
- 358043 string characters out of 5466623
- 774160 words of memory out of 5000000
- 46460 multiletter control sequences out of 15000+600000
+ 18124 strings out of 469375
+ 358158 string characters out of 5466623
+ 777231 words of memory out of 5000000
+ 46464 multiletter control sequences out of 15000+600000
  687689 words of font info for 112 fonts, out of 8000000 for 9000
  64 hyphenation exceptions out of 8191
  84i,12n,104p,1705b,1069s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -718,7 +724,7 @@ pe1/urw/helvetic/uhvb8a.pfb></usr/share/texmf-dist/fonts/type1/urw/helvetic/uhv
 bo8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/te
 xmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/share/texmf-dist/fonts/type1/u
 rw/times/utmr8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (13 pages, 240238 bytes).
+Output written on main.pdf (13 pages, 242283 bytes).
 PDF statistics:
  146 PDF objects out of 1000 (max. 8388607)
  92 compressed objects within 1 object stream

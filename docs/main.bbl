@@ -19,6 +19,12 @@ Kerbl, B., Kopanas, G., Leimk{\"u}hler, T., and Drettakis, G. (2023).
 \newblock 3d gaussian splatting for real-time radiance field rendering.
 \newblock {\em ACM Transactions on Graphics}, 42(4).
 
+\bibitem[Kulhanek and Sattler
+  2025]{kulhanek2025nerfbaselinesconsistentreproducibleevaluation}
+Kulhanek, J. and Sattler, T. (2025).
+\newblock Nerfbaselines: Consistent and reproducible evaluation of novel view
+  synthesis methods.
+
 \bibitem[Mildenhall et~al. 2019]{mildenhall2019locallightfieldfusion}
 Mildenhall, B., Srinivasan, P.~P., Ortiz-Cayon, R., Kalantari, N.~K.,
   Ramamoorthi, R., Ng, R., and Kar, A. (2019).
