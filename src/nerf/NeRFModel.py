@@ -1,3 +1,5 @@
+import os
+os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
 import yaml
 import torch
 import subprocess
@@ -12,7 +14,7 @@ import matplotlib
 import tempfile
 import re
 
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Tuple
 from PIL import Image
 from nerfstudio.pipelines.base_pipeline import Pipeline
 from src.validation.eval_images import calculate_fid, calculate_psnr_ssim_lpips
@@ -23,7 +25,51 @@ from nerfstudio.cameras.cameras import Cameras, CameraType
 from nerfstudio.utils.eval_utils import eval_setup
 from nerfstudio.utils import profiler
 from pathlib import Path
+from nerfstudio.cameras.rays import RayBundle
 
+# Universal Monkey-Patch for RayBundle to fix Shape Mismatch during get_outputs_for_camera_ray_bundle
+_original_sliced = RayBundle.get_row_major_sliced_ray_bundle
+
+def _safe_sliced(self, start_idx, end_idx):
+    popped = {}
+    if self.metadata is not None:
+        batch_shape = self.origins.shape[:-1]
+        batch_ndim = len(batch_shape)
+        for k in list(self.metadata.keys()):
+            v = self.metadata[k]
+            should_pop = True
+            if isinstance(v, torch.Tensor):
+                if v.ndim == batch_ndim + 1 and v.shape[:batch_ndim] == batch_shape:
+                    should_pop = False
+            elif isinstance(v, dict):
+                dict_safe = True
+                for kk, vv in v.items():
+                    if not isinstance(vv, torch.Tensor):
+                        dict_safe = False
+                        break
+                    if vv.ndim != batch_ndim + 1 or vv.shape[:batch_ndim] != batch_shape:
+                        dict_safe = False
+                        break
+                if dict_safe:
+                    should_pop = False
+            
+            if should_pop:
+                popped[k] = self.metadata.pop(k)
+    
+    sliced = _original_sliced(self, start_idx, end_idx)
+    
+    if popped:
+        if self.metadata is None:
+            self.metadata = {}
+        if sliced.metadata is None:
+            sliced.metadata = {}
+        for k, v in popped.items():
+            self.metadata[k] = v
+            sliced.metadata[k] = v
+            
+    return sliced
+
+RayBundle.get_row_major_sliced_ray_bundle = _safe_sliced
 matplotlib.use("Agg")
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
@@ -221,7 +267,7 @@ class NerfModel:
         except Exception:
             return None
 
-    def _patch_config_yaml(self, config_path: Path, checkpoint_dir: Path) -> Path:
+    def _patch_config_yaml(self, config_path: Path, checkpoint_dir: Path, downscale_factor: Optional[int] = None) -> Path:
         """
         Patches the config to set an explicit 'load_dir', bypassing folder crawling logic.
         """
@@ -259,6 +305,14 @@ class NerfModel:
             except Exception:
                 pass
 
+            if downscale_factor is not None:
+                # Force the config to use the requested downscale factor
+                content = re.sub(
+                    r"downscale_factor:\s*\d+",
+                    f"downscale_factor: {downscale_factor}",
+                    content,
+                )
+
             temp_config = tempfile.NamedTemporaryFile(
                 mode="w", suffix=".yml", delete=False
             )
@@ -274,6 +328,7 @@ class NerfModel:
         self,
         path: Path,
         mode: Literal["test", "val", "inference"] = "test",
+        downscale_factor: Optional[int] = None,
     ) -> bool:
         """Loads a NeRF model from disk using eval_setup."""
         config.logger.info(f"Loading NeRF model from {path}...")
@@ -290,7 +345,7 @@ class NerfModel:
                 raise FileNotFoundError(f"config.yml not found at {config_path}")
 
             # Patch the config to handle moved checkpoints or "dirty" names
-            temp_config_path = self._patch_config_yaml(config_path, Path(c_path))
+            temp_config_path = self._patch_config_yaml(config_path, Path(c_path), downscale_factor=downscale_factor)
 
             _, pipeline, _, _ = eval_setup(
                 config_path=temp_config_path,
@@ -506,6 +561,7 @@ class NerfModel:
 
         # 1. CRITICAL: Stop CPU thread starvation
         process_env = os.environ.copy()
+        process_env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
         process_env["OMP_NUM_THREADS"] = "4"
         process_env["OPENBLAS_NUM_THREADS"] = "4"
         process_env["MKL_NUM_THREADS"] = "4"
@@ -830,13 +886,13 @@ class NerfModel:
                 "--mixed-precision",
                 "True",
                 "--pipeline.model.transdepth",
-                "2",
+                "8",
                 "--pipeline.model.netwidth",
-                "128",
+                "64",
                 "--pipeline.model.eval-num-rays-per-chunk",
-                "128",
+                "64",
                 "--pipeline.datamanager.train-num-rays-per-batch",
-                "256",
+                "64",
                 "--pipeline.datamanager.cache-images-type",
                 "uint8",
             ]
@@ -856,9 +912,9 @@ class NerfModel:
         elif self.model_name in ["instant-ngp"]:
             cmd += [
                 "--pipeline.model.eval-num-rays-per-chunk",
-                "256",
+                "128",
                 "--pipeline.datamanager.train-num-rays-per-batch",
-                "1024",
+                "512",
                 "--pipeline.model.log2-hashmap-size",
                 "16",
                 "--pipeline.model.background-color",
@@ -869,9 +925,9 @@ class NerfModel:
                 "True",
             ]
 
-        if self.regime == "tta" and self.model_name in ["pixel-nerf", "gnt"]:
+        if self.regime in ["tta", "zero-shot"] and self.model_name in ["pixel-nerf", "gnt"]:
             cmd += [
-                "--pipeline.model.transfer_learning",
+                "--pipeline.model.transfer-learning",
                 "True",
             ]
             if self.model_name == "gnt":
@@ -884,16 +940,16 @@ class NerfModel:
                 ]
 
             if self.model_name == "pixel-nerf":
-                pixelnerf_pretrained_path = Path(
-                    "assets/pretrained/pixelnerf_pretrained.pth"
+                pixelnerf_pretrained_zip = Path(
+                    "assets/pretrained/pixelnerf_pretrained.zip"
                 )
-                download_pretrained_pixelnerf_weights(pixelnerf_pretrained_path)
+                unzipped_path = download_pretrained_pixelnerf_weights(pixelnerf_pretrained_zip)
 
                 cmd += [
                     "--pipeline.model.transfer-learning",
                     "True",
                     "--pipeline.model.pretrained-ckpt-path",
-                    str(pixelnerf_pretrained_path.resolve()),
+                    str(unzipped_path.resolve()),
                 ]
 
         cmd += [
@@ -905,6 +961,7 @@ class NerfModel:
         ]
 
         process_env = os.environ.copy()
+        process_env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
         process_env["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
         process_env["PYTHONUNBUFFERED"] = "1"
         process_env["TERM"] = "dumb"
@@ -1041,49 +1098,81 @@ class NerfModel:
         device = self.pipeline.device
 
         try:
-            gnt_metadata = None
-            eval_ray_bundle, eval_batch = self.pipeline.datamanager.next_eval(step=0)
-            if self.model_name == "gnt":
-                eval_batch = self.pipeline._inject_gnt_metadata(
-                    eval_ray_bundle, eval_batch, split="eval"
-                )
-                gnt_metadata = eval_ray_bundle.metadata
+            model_metadata = None
+            if self.model_name in ["gnt", "pixel-nerf"]:
+                eval_ray_bundle, eval_batch = self.pipeline.datamanager.next_eval(step=0)
+                if self.model_name == "gnt":
+                    eval_batch = self.pipeline._inject_gnt_metadata(
+                        eval_ray_bundle, eval_batch, split="eval"
+                    )
+                model_metadata = eval_ray_bundle.metadata
 
         except Exception as e:
             config.logger.error(
-                f"Failed to fetch evaluation source metadata for GNT: {e}"
+                f"Failed to fetch evaluation source metadata for {self.model_name}: {e}"
             )
             return 0.0
 
-        if mode == RenderMode.ORTHOGRAPHIC:
-            cam = GenerateCameraConfig(
-                center=(0.0, 0.0),
-                extent=(1.0, 1.0),
-                resolution=(config.img_size, config.img_size),
-                thickness=0.1,
-            )
-            ray_bundle = self._generate_orthographic_rays(Plans.AXIAL, 0.0, cam)
-            # hot fix for gnt (I will try to unify this later but gnt's metadata handling is currently very coupled to the dataloader and eval batch)
-            if self.model_name == "gnt" and gnt_metadata is not None:
-                ray_bundle.metadata.update(gnt_metadata)
-        else:
-            ray_bundle = eval_ray_bundle
-
-        ray_bundle = ray_bundle.to(device)
-        start_event = torch.cuda.Event(enable_timing=True)
-        end_event = torch.cuda.Event(enable_timing=True)
-
         with torch.no_grad():
-            # Warmup
-            for _ in range(num_warmup):
-                self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
+            if mode == RenderMode.ORTHOGRAPHIC:
+                cam = GenerateCameraConfig(
+                    center=(0.0, 0.0),
+                    extent=(1.0, 1.0),
+                    resolution=(config.img_size, config.img_size),
+                    thickness=0.1,
+                )
+                ray_bundle = self._generate_orthographic_rays(Plans.AXIAL, 0.0, cam)
+            else:
+                eval_dataloader = self.pipeline.datamanager.fixed_indices_eval_dataloader
+                outputs = next(iter(eval_dataloader))
+                camera = outputs[0]
+                camera = camera.to(device)
+                ray_bundle = camera.generate_rays(camera_indices=0, keep_shape=True)
+            ray_bundle = ray_bundle.to(device)
+            if model_metadata is not None:
+                # Some models (e.g., PixelNeRF) require additional per-ray-bundle metadata
+                # such as focal length and source-view conditioning tensors.
+                injected = 0
+                for k, v in model_metadata.items():
+                    if isinstance(v, torch.Tensor):
+                        v = v.to(device)
+                    elif isinstance(v, dict):
+                        # Best-effort device move for nested tensor dicts.
+                        v = {
+                            kk: (vv.to(device) if isinstance(vv, torch.Tensor) else vv)
+                            for kk, vv in v.items()
+                        }
+                    ray_bundle.metadata[k] = v
+                    injected += 1
+                if injected == 0:
+                    config.logger.warning(
+                        f"⚠️ No metadata keys injected for {self.model_name}; FPS measurement may be invalid."
+                    )
 
-            torch.cuda.synchronize()
-            start_event.record()
+            start_event = torch.cuda.Event(enable_timing=True)
+            end_event = torch.cuda.Event(enable_timing=True)
 
-            # Benchmark
-            for _ in range(num_test):
-                self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
+            try:
+                # Warmup
+                for _ in range(num_warmup):
+                    self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
+
+                torch.cuda.synchronize()
+                start_event.record()
+
+                # Benchmark
+                for _ in range(num_test):
+                    self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
+            except KeyError as e:
+                config.logger.warning(
+                    f"⚠️ Skipping FPS measurement for {self.model_name}: {e}"
+                )
+                return 0.0
+            except Exception as e:
+                config.logger.warning(
+                    f"⚠️ Skipping FPS measurement for {self.model_name} due to runtime error: {e}"
+                )
+                return 0.0
 
             end_event.record()
             torch.cuda.synchronize()
@@ -1117,13 +1206,90 @@ class NerfModel:
         config.logger.info(
             "🔍 Evaluating perspective test metrics against ground truth views... (This may take a while depending on the number of test views and image resolution.)"
         )
+
+        def ensure_3d_rgb(img: torch.Tensor, th: int, tw: int) -> torch.Tensor:
+            if img.ndim == 3:
+                return img
+            elif img.ndim == 4:
+                return img.squeeze(0)
+            elif img.ndim == 2:
+                C = img.shape[1]
+                try:
+                    return img.reshape(th, tw, C)
+                except Exception:
+                    H = int(np.sqrt(img.shape[0]))
+                    W = img.shape[0] // H
+                    return img.reshape(H, W, C)
+            return img
+
+        target_h, target_w = None, None
         with torch.no_grad():
-            for camera, batch, _ in eval_dataloader:
-                camera = camera.to(self.pipeline.device)
-                outputs = self.pipeline.model.get_outputs_for_camera(camera)
+            model_metadata = None
+            if self.model_name in ["gnt", "pixel-nerf"]:
+                try:
+                    eval_ray_bundle, eval_batch = self.pipeline.datamanager.next_eval(step=0)
+                    if self.model_name == "gnt":
+                        self.pipeline._inject_gnt_metadata(eval_ray_bundle, eval_batch, split="eval")
+                    model_metadata = eval_ray_bundle.metadata
+                except Exception as e:
+                    config.logger.warning(f"Failed to fetch metadata in perspective eval for {self.model_name}: {e}")
+
+            for outputs in eval_dataloader:
+                camera = outputs[0].to(self.pipeline.device)
+                batch = outputs[1]
+                if model_metadata is not None:
+                    ray_bundle = camera.generate_rays(camera_indices=0, keep_shape=True)
+                    ray_bundle = ray_bundle.to(self.pipeline.device)
+                    for k, v in model_metadata.items():
+                        if isinstance(v, torch.Tensor):
+                            v = v.to(self.pipeline.device)
+                        elif isinstance(v, dict):
+                            v = {
+                                kk: (vv.to(self.pipeline.device) if isinstance(vv, torch.Tensor) else vv)
+                                for kk, vv in v.items()
+                            }
+                        ray_bundle.metadata[k] = v
+                    outputs = self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
+                else:
+                    outputs = self.pipeline.model.get_outputs_for_camera(camera)
                 # Extract RGB and GT images, move to CPU for metric calculations
                 rendered_rgb = outputs["rgb"].cpu()
                 gt_rgb = batch["image"].cpu()
+
+                if target_h is None or target_w is None:
+                    # Initialize dimensions from first GT image assuming 3D format initially
+                    target_h = int(np.sqrt(gt_rgb.shape[0])) if gt_rgb.ndim == 2 else gt_rgb.shape[0]
+                    target_w = gt_rgb.shape[0] // target_h if gt_rgb.ndim == 2 else gt_rgb.shape[1]
+
+                rendered_rgb = ensure_3d_rgb(rendered_rgb, target_h, target_w)
+                gt_rgb = ensure_3d_rgb(gt_rgb, target_h, target_w)
+
+                # Resize gt_rgb if it doesn't match target shape
+                if gt_rgb.shape[0] != target_h or gt_rgb.shape[1] != target_w:
+                    config.logger.warning(
+                        f"⚠️ GT image shape mismatch: {gt_rgb.shape} vs target ({target_h}, {target_w}). Resizing."
+                    )
+                    gt_rgb_t = gt_rgb.permute(2, 0, 1).unsqueeze(0)
+                    gt_rgb = torch.nn.functional.interpolate(
+                        gt_rgb_t,
+                        size=(target_h, target_w),
+                        mode="bilinear",
+                        align_corners=False
+                    ).squeeze(0).permute(1, 2, 0)
+
+                # Resize rendered_rgb if it doesn't match target shape
+                if rendered_rgb.shape[0] != target_h or rendered_rgb.shape[1] != target_w:
+                    config.logger.warning(
+                        f"⚠️ Rendered image shape mismatch: {rendered_rgb.shape} vs target ({target_h}, {target_w}). Resizing."
+                    )
+                    rendered_rgb_t = rendered_rgb.permute(2, 0, 1).unsqueeze(0)
+                    rendered_rgb = torch.nn.functional.interpolate(
+                        rendered_rgb_t,
+                        size=(target_h, target_w),
+                        mode="bilinear",
+                        align_corners=False
+                    ).squeeze(0).permute(1, 2, 0)
+
                 rendered_images.append(rendered_rgb)
                 gt_images.append(gt_rgb)
 
@@ -1138,6 +1304,7 @@ class NerfModel:
         mode: RenderMode,
         metrics: List[AvailableMetrics],
         already_rendered_slices: Optional[List[np.ndarray]] = None,
+        downscale_factor: Optional[int] = None,
     ) -> Dict[str, float]:
         """
         Returns a comprehensive dictionary of evaluation results, including:
@@ -1152,16 +1319,19 @@ class NerfModel:
         if self.pipeline is None:
             if self.images and self.images.dataset_path:
                 path = self.get_output_path(self.images.dataset_path)
-                loaded = self.load_from_disk(path, mode="test")
+                loaded = self.load_from_disk(path, mode="test", downscale_factor=downscale_factor)
                 if not loaded:
                     logger.error(
                         f"❌ Failed to load pipeline for metrics evaluation at {path}"
                     )
                     return {}
 
+
         results = {}
         results["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
-        results["memory_footprint_bytes"] = self.get_memory_footprint()
+        param_size, cuda_mem = self.get_memory_footprint()
+        results["memory_footprint_bytes"] = param_size
+        results["cuda_memory_usage_bytes"] = cuda_mem
         results["inference_fps"] = self.measure_inference_fps(mode)
 
         # visual quality metrics depends on the rendering mode and available data
@@ -1230,6 +1400,18 @@ class NerfModel:
             logger.warning("⚠️ Empty tensors generated for NeRF metrics evaluation.")
             return None
 
+        # Resize rendered_tensor to match ground_truth_tensor shape if they differ
+        if rendered_tensor.shape[2:] != ground_truth_tensor.shape[2:]:
+            logger.warning(
+                f"⚠️ Shape mismatch in ORTHOGRAPHIC metrics: rendered {rendered_tensor.shape[2:]} vs GT {ground_truth_tensor.shape[2:]}. Resizing rendered to match GT."
+            )
+            rendered_tensor = torch.nn.functional.interpolate(
+                rendered_tensor.float(),
+                size=ground_truth_tensor.shape[2:],
+                mode="bilinear",
+                align_corners=False
+            ).to(torch.uint8)
+
         selected_metrics = metrics or [
             AvailableMetrics.FID,
             AvailableMetrics.PSNR,
@@ -1242,7 +1424,7 @@ class NerfModel:
             metrics=selected_metrics,
         )
 
-    def get_memory_footprint(self) -> int:
+    def get_memory_footprint(self) -> Tuple[int, int]:
         """Returns the memory footprint of the NeRF model."""
         if self.model is None:
             return 0
@@ -1259,7 +1441,7 @@ class NerfModel:
                 "This may indicate additional memory usage from activations, buffers, or other components. "
                 "Reported memory footprint will reflect parameter size only."
             )
-        return param_size
+        return param_size, cuda_mem_usage
 
     def _generate_orthographic_rays(
         self, plan: Plans, position: float, cam_config: GenerateCameraConfig
@@ -1326,9 +1508,23 @@ class NerfModel:
             config.logger.error("❌ Pipeline not loaded. Call load_from_disk first.")
             return None
 
-        ray_bundle = self._generate_orthographic_rays(plan, position, cam_config)
-
         with torch.no_grad():
+            ray_bundle = self._generate_orthographic_rays(plan, position, cam_config)
+            ray_bundle = ray_bundle.to(self.pipeline.device)
+            
+            if self.model_name in ["gnt", "pixel-nerf"]:
+                try:
+                    eval_ray_bundle, eval_batch = self.pipeline.datamanager.next_eval(step=0)
+                    if self.model_name == "gnt":
+                        self.pipeline._inject_gnt_metadata(eval_ray_bundle, eval_batch, split="eval")
+                    
+                    for k, v in eval_ray_bundle.metadata.items():
+                        if isinstance(v, torch.Tensor):
+                            eval_ray_bundle.metadata[k] = v.to(self.pipeline.device)
+                    ray_bundle.metadata.update(eval_ray_bundle.metadata)
+                except Exception as e:
+                    config.logger.warning(f"Failed to fetch metadata in render_image for {self.model_name}: {e}")
+
             outputs = self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
 
         return outputs
@@ -1339,6 +1535,11 @@ class NerfModel:
         assert self.pipeline is not None, (
             "Pipeline must be loaded to render orthographic slices."
         )
+
+        if save_path is not None:
+            save_path = Path(save_path)
+            save_path.mkdir(parents=True, exist_ok=True)
+
         min_bound = np.array([0.0, 0.0, 0.0])
         max_bound = np.array([1.0, 1.0, 1.0])
 
@@ -1415,12 +1616,35 @@ class NerfModel:
             "Pipeline must be loaded to render perspective views."
         )
 
+        if save_path is not None:
+            save_path = Path(save_path)
+            save_path.mkdir(parents=True, exist_ok=True)
+
         rendered_images = []
         eval_dataloader = self.pipeline.datamanager.fixed_indices_eval_dataloader
         with torch.no_grad():
-            for camera, batch, _ in eval_dataloader:
-                camera = camera.to(self.pipeline.device)
-                outputs = self.pipeline.model.get_outputs_for_camera(camera)
+            model_metadata = None
+            if self.model_name in ["gnt", "pixel-nerf"]:
+                try:
+                    eval_ray_bundle, eval_batch = self.pipeline.datamanager.next_eval(step=0)
+                    if self.model_name == "gnt":
+                        self.pipeline._inject_gnt_metadata(eval_ray_bundle, eval_batch, split="eval")
+                    model_metadata = eval_ray_bundle.metadata
+                except Exception as e:
+                    config.logger.warning(f"Failed to fetch metadata in perspective render for {self.model_name}: {e}")
+
+            for outputs in eval_dataloader:
+                camera = outputs[0].to(self.pipeline.device)
+                if model_metadata is not None:
+                    ray_bundle = camera.generate_rays(camera_indices=0, keep_shape=True)
+                    ray_bundle = ray_bundle.to(self.pipeline.device)
+                    for k, v in model_metadata.items():
+                        if isinstance(v, torch.Tensor):
+                            model_metadata[k] = v.to(self.pipeline.device)
+                    ray_bundle.metadata.update(model_metadata)
+                    outputs = self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
+                else:
+                    outputs = self.pipeline.model.get_outputs_for_camera(camera)
                 rendered_rgb = outputs["rgb"].cpu().numpy()
                 rendered_images.append(rendered_rgb)
 
@@ -1441,6 +1665,7 @@ class NerfModel:
         save_path: Optional[Path] = None,
         num_slices: int = 10,
         plan: Optional[Plans] = None,
+        downscale_factor: Optional[int] = None,
     ) -> Optional[List[np.ndarray]]:
         """
         Renders either orthographic slices or perspective views from the NeRF model based on the specified mode.
@@ -1455,7 +1680,7 @@ class NerfModel:
             return
         path = self.get_output_path(self.images.dataset_path)
         if self.pipeline is None:
-            loaded = self.load_from_disk(path, mode="inference")
+            loaded = self.load_from_disk(path, mode="inference", downscale_factor=downscale_factor)
             if not loaded:
                 logger.error(f"❌ Failed to load pipeline for NeRF slicing at {path}")
                 return
@@ -1477,33 +1702,37 @@ class NerfModel:
             return self.render_perspective(save_path=save_path)
 
 
-def download_pretrained_pixelnerf_weights(path: Path):
+def download_pretrained_pixelnerf_weights(path: Path) -> Path:
     import gdown
 
-    url = "https://drive.google.com/file/d/1UO_rL201guN6euoWkCOn-XpqR2e8o6ju"
     output = path
     Path(output).parent.mkdir(parents=True, exist_ok=True)
     if not os.path.exists(output):
         print("Downloading pretrained PixelNeRF weights...")
-        gdown.download(url, output, quiet=False)
-
+        gdown.download(id="1UO_rL201guN6euoWkCOn-XpqR2e8o6ju", output=str(output), quiet=False)
     else:
         print("Pretrained PixelNeRF weights already downloaded.")
 
-    unzipped_path = "pixelnerf_pretrained"
+    unzipped_path = path.parent / "pixelnerf_pretrained"
     if not os.path.exists(unzipped_path):
         print("Unzipping pretrained weights...")
         import zipfile
-
         with zipfile.ZipFile(output, "r") as zip_ref:
             zip_ref.extractall(unzipped_path)
         print(f"Pretrained weights downloaded and unzipped to {unzipped_path}")
+    
+    # Check if there is a nested folder with the same name
+    nested_path = unzipped_path / "pixelnerf_pretrained"
+    if nested_path.exists() and nested_path.is_dir():
+        return nested_path
+    return unzipped_path
 
 
 def download_pretrained_gnt_model(path):
     from gdown import download
 
-    url = "https://drive.google.com/file/d/1YvOJXa5eGpKgoMYcxC2ma7prB1n5UwRn/"
     output = path
-    download(url, str(output.resolve()), quiet=False)
-    print(f"Pretrained GNT model downloaded to {output}")
+    Path(output).parent.mkdir(parents=True, exist_ok=True)
+    if not os.path.exists(output):
+        download(id="1YvOJXa5eGpKgoMYcxC2ma7prB1n5UwRn", output=str(output.resolve()), quiet=False)
+        print(f"Pretrained GNT model downloaded to {output}")

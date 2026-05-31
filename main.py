@@ -1,10 +1,12 @@
+import os
+os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
+
 from pathlib import Path
 from src.dataset.ImageDataset import ImageDataset
 from src.nerf.NeRFModel import NerfModel
 from src.utils.metrics import MetricsLogger
 from src.utils.types import AvailableMetrics, RenderMode
 
-import os
 import time
 import torch
 import gc
@@ -22,16 +24,17 @@ def main():
         "room",
         "trex",
     ]
-    sampling_strategies = ["uniform", "random"]
+    sampling_strategies = ["uniform" ]
+                          # "random"]
     num_views_options = [3, 6, 10]
 
     experiments_config = [
         {"model": "instant-ngp", "regime": "per-scene"},
         {"model": "nerfacto", "regime": "per-scene"},
-        {"model": "pixel-nerf", "regime": "zero-shot"},
-        {"model": "pixel-nerf", "regime": "tta"},
-        {"model": "gnt", "regime": "zero-shot"},
-        {"model": "gnt", "regime": "tta"},
+        #{"model": "pixel-nerf", "regime": "zero-shot"},
+        #{"model": "gnt", "regime": "zero-shot"},
+        #{"model": "pixel-nerf", "regime": "tta"},
+        #{"model": "gnt", "regime": "tta"},
     ]
 
     device_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
@@ -63,6 +66,7 @@ def main():
                         timestamp=dataset_timestamp,
                         run_id=f"{strategy}_{num_views}views",
                         hyperparams={
+                            "date": time.strftime("%Y-%m-%d %H:%M:%S"),
                             "sampling_strategy": strategy,
                             "num_views": num_views,
                             "dataset": ds,
@@ -81,21 +85,31 @@ def main():
                             regime=regime,
                             tta_steps=500,
                         )
-                        current_downscale = (
-                            4 if model_name in ["gnt", "pixel-nerf"] else 2
-                        )
+                        current_downscale = 8
 
+                        if dataset_obj.dataset_path is None:
+                            print(
+                                f"⚠️ Aviso: O dataset {ds} não foi encontrado. Pulando esta configuração."
+                            )
+                            continue
                         # Medição rigorosa de tempo de convergência / preparação
                         start_time = time.time()
-                        nerf_model.train(
-                            Path(dataset_obj.dataset_path),
-                            downscale_factor=current_downscale,
-                        )
+                        try:
+                            nerf_model.train(
+                                Path(dataset_obj.dataset_path),
+                                downscale_factor=current_downscale,
+                            )
+                        except KeyboardInterrupt:
+                            print(f"\n⚠️ Treinamento interrompido pelo usuário para {model_name}. Avaliando métricas parciais...")
+                        except Exception as e:
+                            print(f"\n⚠️ Treinamento abortado com erro ({e}). Avaliando métricas a partir do último checkpoint salvo...")
+                        
                         training_time = time.time() - start_time
 
                         # Avaliação de Métricas de Qualidade Visual e Perceptual (PSNR, SSIM, LPIPS)
                         metrics = nerf_model.evaluate_all_metrics(
-                            mode=RenderMode.PERSPECTIVE, metrics=list(AvailableMetrics)
+                            mode=RenderMode.PERSPECTIVE, metrics=list(AvailableMetrics),
+                            downscale_factor=current_downscale
                         )
 
                         if metrics:
@@ -116,9 +130,12 @@ def main():
                             / model_key
                             / ds
                             / f"{strategy}_{num_views}views",
+                            downscale_factor=current_downscale,
                         )
 
                     except Exception as e:
+                        import traceback
+                        traceback.print_exc()
                         print(
                             f"❌ Erro crítico ao executar {model_name} no dataset {ds}: {str(e)}"
                         )
@@ -126,6 +143,8 @@ def main():
 
                     finally:
                         metrics_logger.close()
+                        if 'nerf_model' in locals():
+                            del nerf_model
                         torch.cuda.empty_cache()
                         gc.collect()
 

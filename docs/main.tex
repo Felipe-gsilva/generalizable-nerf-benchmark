@@ -12,6 +12,7 @@
 \usepackage{multirow}
 \usepackage{subcaption}
 \usepackage{indentfirst}
+\usepackage{amssymb}
 \sloppy
 \title{Uma Análise Comparativa entre NeRFs Few-Shot e Per-Scene aplicadas em Conjuntos de Dados de Vistas Esparsas}
 \author{Felipe G. da Silva\inst{1}}
@@ -27,7 +28,7 @@ This work compares hybrid Generalizable NeRFs and Fast Optmization Per-Scene tra
 \end{abstract}
 
 \begin{resumo}
-  Esse trabalho apresenta uma comparação entre modelos generalizáveis via extratores de características e modelos de otimização rápida por cena aplicados em conjuntos de dados com vistas esparsas e avalia o impacto dessas arquiteturas de extração de características no desempenho em síntese de novas vistas. Por meio de uma análise quantitativa baseada em métricas de fidelidade visual (PSNR, SSIM e LPIPS) e de eficiência computacional (tempo de convergência, consumo de VRAM e tempo de inferência), o estudo busca evidenciar os trade-offs entre a capacidade de generalização global dos Transformers e a eficiência de processamento local das convoluções,  visando auxiliar na seleção de modelos de renderização 3D em cenários práticos, os quais são frequentemente marcados por restrições de hardware e escassez de dados.
+  Esse trabalho apresenta uma comparação entre modelos generalizáveis via extratores de características e modelos de otimização rápida por cena aplicados em conjuntos de dados com vistas esparsas e avalia o impacto dessas arquiteturas de extração de características no desempenho em síntese de novas vistas. Por meio de uma análise quantitativa baseada em métricas de fidelidade visual (PSNR, SSIM e LPIPS) e de eficiência computacional (tempo de convergência, consumo de VRAM e tempo de inferência), o estudo busca quantifica os trade-offs entre a capacidade de generalização global dos Transformers e a eficiência de processamento local das convoluções,  estabelecendo diretrizes empíricas para a seleção de modelos NeRF em regimes de dados escassos.
 \end{resumo}
 
 \section{Introdução}
@@ -35,7 +36,9 @@ This work compares hybrid Generalizable NeRFs and Fast Optmization Per-Scene tra
 
 Modelos de campos de radiância neural (NeRF) consolidaram-se, nos anos recentes, como o estado da arte, tanto na indústria, quanto na academia, sobre geração de novas vistas \cite{kerbl3Dgaussians, Tancik2023, substance3dviewer}. Entretanto, as mais avançadas técnicas de renderização neural exigem uma grande quantidade de: (i) poder computacional; (ii) múltiplas vistas no conjunto de dados. Ambos os desafios tendem a impedir que aplicações mais simples, como escaneamento \textit{mobile} de objetos, provador virtual, geração de assets 3D e síntese em datasets pequenos, sejam aproveitados. É com tal problemática que projetos como Instant-NGP (\textit{Instant Neural Graphics Primitives}), Nerfacto, Pixel-Nerf, Gnt (\textit{Generalizable Nerf Transformer}) \cite{muller2022, Tancik2023, yu2021pixelnerfneuralradiancefields, t2023attentionnerfneeds}, entre outros, tentam expandir o estado da arte e, consequentemente, abordam temas análogos, como: (i) \textit{encoding} espacial de parâmetros \cite{muller2022}; (ii) uso de arquiteturas híbridas entre Convolutional Neural Networks (CNN) e Vision Transformers (ViT) \cite{schwarz2021grafgenerativeradiancefields, wu2021cvt, t2023attentionnerfneeds}; e (iii) pré-computação (\textit{baking}) dos modelos em estruturas de menor pegada de memória \cite{hedman2021bakingneuralradiancefields}.
 
-Este trabalho tem, portanto, o objetivo de explorar o uso dos diferentes modelos de campos de radiância neural e suas respectivas técnicas de otimização, ao aplicá-las em alguns conjuntos de dados com vistas esparsas, promovendo uma análise exploratória entre desempenho computacional e qualidade dos volumes gerados. Para avaliar a fidelidade das reconstruções, serão utilizadas métricas de qualidade visual amplamente consagradas na literatura, como PSNR (\textit{Peak Signal-to-Noise Ratio}), SSIM (\textit{Structural Similarity Index Measure}) \cite{wang2004image} e LPIPS (\textit{Learned Perceptual Image Patch Similarity}) \cite{zhang2018unreasonable}. Paralelamente, a quantificação do custo operacional basear-se-á em métricas de desempenho sistêmico, incluindo o tempo de convergência no treinamento, a velocidade de inferência e a pegada de memória (\textit{memory footprint}), sobretudo o consumo de VRAM (\textit{Video Random Access Memory}). Embora trabalhos como \cite{niemeyer2022regnerf} e \cite{kim2023poserefinement} tenham avaliado NeRFs em regimes de dados limitados, a comparação sistemática entre modelos generalizáveis com extratores convolucionais versus baseados em atenção, sob condições controladas de hardware e splits reprodutíveis, permanece pouco explorada na literatura. Em suma, esta investigação fornece um panorama consolidado sobre os \textit{trade-offs} entre eficiência computacional e fidelidade visual, estabelecendo diretrizes claras para a viabilização e aplicação prática de modelos de síntese de novas vistas em cenários com restrições das mais diversas, especialmente de dados e de hardware.
+Este trabalho tem, portanto, o objetivo de explorar o uso dos diferentes modelos de campos de radiância neural e suas respectivas técnicas de otimização, ao aplicá-las em conjuntos de dados com vistas esparsas, promovendo uma análise exploratória entre desempenho computacional e qualidade dos volumes gerados. Para avaliar a fidelidade das reconstruções, serão utilizadas métricas de qualidade visual amplamente consagradas na literatura, como PSNR (\textit{Peak Signal-to-Noise Ratio}), SSIM (\textit{Structural Similarity Index Measure}) \cite{wang2004image} e LPIPS (\textit{Learned Perceptual Image Patch Similarity}) \cite{zhang2018unreasonable}. Paralelamente, a quantificação do custo operacional basear-se-á em métricas de desempenho sistêmico, incluindo o tempo de convergência no treinamento, a velocidade de inferência e a pegada de memória (\textit{memory footprint}), sobretudo o consumo de VRAM (\textit{Video Random Access Memory}). Embora trabalhos como \cite{niemeyer2022regnerf} e \cite{kim2023poserefinement} tenham avaliado NeRFs em regimes de dados limitados, a comparação sistemática entre modelos generalizáveis com extratores convolucionais versus baseados em atenção, sob condições controladas de hardware e splits reprodutíveis, permanece pouco explorada na literatura. Em suma, esta investigação fornece um panorama consolidado sobre os \textit{trade-offs} entre eficiência computacional e fidelidade visual, estabelecendo diretrizes claras para a viabilização e aplicação prática de modelos de síntese de novas vistas em cenários com restrições das mais diversas, especialmente de dados e de hardware.
+
+As contribuições deste trabalho são: (i) uma avaliação sistemática e reprodutível de modelos NeRF few-shot e per-scene sob três regimes de dados; (ii) a integração nativa de PixelNeRF e GNT ao framework Nerfstudio, disponibilizada publicamente em \url{https://github.com/felipe-gsilva/few-shot-nerfs}, permitindo que experimentos sejam reproduzidos sob protocolo unificado.
 
 \section{Fundamentação Teórica}
 \label{sec:fund}
@@ -46,13 +49,11 @@ Este trabalho tem, portanto, o objetivo de explorar o uso dos diferentes modelos
 \subsection{Campos de Radiância Neural} Campos de Radiância Neural (\textit{Neural Radiance Fields}, NeRF) utilizam-se de redes neurais do tipo MLP (\textit{Multilayer Perceptron}) para aproximar uma função contínua no espaço 5D. 
 Essa função recebe como entrada uma posição espacial $\mathbf{x} = (x, y, z)$ e uma direção de visualização $d = (\theta, \phi)$, retornando a densidade volumétrica $\sigma(\mathbf{x})$ e a cor associada $\mathbf{c} = (r, g, b)$:
 \[
-F_\theta(\mathbf{x}, d) = F_\theta\prime \circ \gamma(\mathbf{x}, d) \rightarrow (\sigma, \mathbf{c})
+  F_\theta : F_\theta\prime \circ \gamma(\mathbf{x}, d) \rightarrow (\sigma, \mathbf{c}) ,\ \ \sigma \in \mathbb{R}_{\geq0},\ c \in [0, 1]^3
 \]
 onde $\theta$ representa os pesos da rede neural e $\gamma$ um codificador posicional.
 
 \subsection{Representações de Cena} Trabalhos subsequentes introduziram representações híbridas que desacoplam a estrutura espacial da rede neural, dado a viabilidade de alterar-se o \textit{positional encoding} via codificação de fourier por um sistema de \textit{hash encoding}. O Instant-NGP \cite{muller2022} propõe uma codificação por tabela de hash multiescala, que mapeia coordenadas espaciais em vetores de características de forma eficiente, reduzindo drasticamente o tempo de otimização por cena. O Nerfacto \cite{Tancik2023} estende essa ideia combinando múltiplas otimizações comprovadas da literatura focando no equilíbrio entre qualidade visual e tempo de renderização em tempo real.
-
-\subsection{Extrator de Características} O extrator de características se torna, portanto, responsável por codificar as imagens de entrada em representações que a rede neural possa condicionar. O PixelNeRF \cite{yu2021pixelnerfneuralradiancefields} utiliza uma ResNet (\textit{Residual Neural Network}) pré-treinada para extrair mapas de características por imagem; dado um ponto 3D, sua projeção nas vistas de entrada recupera os vetores de características espaciais correspondentes, que são agregados e passados à MLP de radiância. Essa abordagem é local e opera por pixel, sem modelar explicitamente relações entre vistas. O GNT \cite{t2023attentionnerfneeds} substitui a MLP de radiância por um transformador que processa amostras ao longo do raio e agrega informação entre vistas por meio de atenção cruzada, eliminando a dependência de uma função de volume explícita.
 
 \subsection{Renderização Volumétrica} Seja um campo de radiância neural $F_\theta$, a cor esperada de um pixel é computada através de renderização volumétrica. Dado um raio $\mathbf{r}(t) = \mathbf{o} + t\mathbf{d}$ com limites de profundidade $(t_n, t_f)$, a cor resultante é dada pela integral:
 
@@ -61,8 +62,10 @@ onde $\theta$ representa os pesos da rede neural e $\gamma$ um codificador posic
 \]
 onde $T(t) = \exp\left(-\int_{t_n}^t \sigma(\mathbf{r}(s)) \, ds\right)$ denota a transmitância acumulada ao longo do raio, ou seja, a probabilidade de o raio não atingir nenhuma partícula obstrutiva até a profundidade $t$. Na prática, por ser uma função contínua, essa integral é aproximada numericamente via \textit{alpha compositing} sobre amostras discretas interpoladas ao longo de cada raio durante o treinamento.
 
-\subsection{NeRFs Few-Shot vs. Per-Scene} Com o objetivo de reduzir a necessidade de múltiplas vistas durante o treinamento, surgiram abordagens conhecidas como NeRFs \textit{few-shot}, capazes de generalizar a cena e produzir novas vistas a partir de poucas imagens, utilizando-se de diversos conceitos distintos aplicados aos componentes NeRF supracitados. Estas abordagens contrastam frontalmente com os métodos \textit{per-scene}. Enquanto modelos \textit{per-scene} (como Instant-NGP) otimizam uma estrutura de dados de forma isolada e colapsam sob a escassez de vistas — gerando graves artefatos visuais e ambiguidades geométricas —, arquiteturas \textit{few-shot} e generalizáveis incorporam \textit{priors} estruturais e semânticos aprendidos de grandes bases de dados. Essa distinção arquitetural torna-se indispensável em cenários onde a extração é severamente restrita. Em domínios de imagens patológicas e histologia, por exemplo, a capacidade de inferir uma geometria coerente a partir de amostragem esparsa é fundamental, viabilizando o uso desses modelos generativos não apenas para síntese, mas como mecanismos robustos de aumento de dados (data augmentation) para mitigar desbalanceamentos em pipelines complexos de classificação médica.
+\subsection{Extrator de Características} O extrator de características se torna, portanto, responsável por codificar as imagens de entrada em representações que a rede neural possa condicionar. O PixelNeRF \cite{yu2021pixelnerfneuralradiancefields} utiliza uma ResNet (\textit{Residual Neural Network}) pré-treinada para extrair mapas de características por imagem; dado um ponto 3D, sua projeção nas vistas de entrada recupera os vetores de características espaciais correspondentes, que são agregados e passados à MLP de radiância. Essa abordagem é local e opera por pixel, sem modelar explicitamente relações entre vistas. O GNT (Generalizable NeRF Transformer) \cite{t2023attentionnerfneeds} substitui: (i) o extrator de características por um \textit{transformer} capaz de utilizar de mecanismos de atenção para angariar características mais globais ao objeto; (ii) a MLP de radiância também por um \textit{transformer} que amostra pontos ao longo do raio e agrega informação entre vistas por meio de atenção cruzada, eliminando a dependência de uma função de volume explícita.
 
+
+\subsection{NeRFs Few-Shot vs. Per-Scene} Com o objetivo de reduzir a necessidade de múltiplas vistas durante o treinamento, surgiram abordagens conhecidas como NeRFs \textit{few-shot}, capazes de generalizar a cena e produzir novas vistas a partir de poucas imagens, utilizando-se de diversos conceitos distintos aplicados aos componentes NeRF supracitados. Estas abordagens contrastam frontalmente com os métodos \textit{per-scene}. Enquanto modelos \textit{per-scene} (como Instant-NGP) otimizam uma estrutura de dados de forma isolada e colapsam sob a escassez de vistas, arquiteturas \textit{few-shot} e generalizáveis incorporam \textit{priors} estruturais e semânticos aprendidos de grandes bases de dados. Essa distinção arquitetural torna-se indispensável em cenários onde a extração é severamente restrita.
 \section{Metodologia} 
 \label{sec:metodology}
 
@@ -122,7 +125,7 @@ A seleção e exclusão dos modelos supracitados visa proporcionar uma análise 
 
 
 \subsection{Implementação no Nerfstudio}
-Os modelos foram implementados no framework \textit{Nerfstudio} \cite{Tancik2023}, seguindo sua arquitetura modular. Para cada abordagem, foram definidos componentes específicos de \textit{DataManager}, \textit{Model}, \textit{Pipeline}, \textit{Trainer} e configurações associadas, aproveitando ao máximo as abstrações pré-existentes do framework e realizando adaptações pontuais para garantir compatibilidade com os modelos selecionados. A adoção de um framework unificado assegura equivalência no protocolo de avaliação entre os modelos, eliminando variáveis de implementação que poderiam comprometer a comparação, visto que o \textit{Nerfstudio} oferece, ademais, um conjunto de utilitários aproveitados neste trabalho:
+Os modelos foram implementados no framework \textit{Nerfstudio} \cite{Tancik2023}, seguindo sua arquitetura modular. As adaptações concentraram-se nos componentes DataManager e Pipeline, responsáveis pelo carregamento das vistas de entrada e pela agregação das características multi-vista, respectivamente, mantendo inalterados os módulos de renderização e avaliação nativos do framework. A adoção de um framework unificado assegura equivalência no protocolo de avaliação entre os modelos, eliminando variáveis de implementação que poderiam comprometer a comparação, visto que o \textit{Nerfstudio} oferece, ademais, um conjunto de utilitários aproveitados neste trabalho:
 
 \begin{enumerate}
 \item visualização em tempo real por meio de interface gráfica interativa, permitindo monitorar o treinamento e inspecionar qualitativamente os resultados de renderização durante o processo;
@@ -132,21 +135,60 @@ Os modelos foram implementados no framework \textit{Nerfstudio} \cite{Tancik2023
 \item infraestrutura de logging e exportação de métricas, incluindo salvamento de checkpoints e integração com \textit{Weights \& Biases}, que padroniza o registro dos experimentos entre os diferentes modelos.
 \end{enumerate}
 
-Dentre os modelos avaliados, o Instant-NGP e o Nerfacto encontram-se nativamente integrados ao \textit{Nerfstudio}, dispensando adaptações de implementação. Os demais modelos (PixelNeRF e GNT) foram portados para o framework a partir de suas implementações originais, com adaptações nos componentes de \textit{DataManager} e \textit{Pipeline} para conformidade com a interface do \textit{Nerfstudio}, ambos utilizando-se do otimizador Adam (otimizado pelo tinycudann) com \textit{learning rate} $\eta = 1^{-3}$ e \textit{weight decay} = 0.0.
+Dentre os modelos avaliados, o Instant-NGP e o Nerfacto encontram-se nativamente integrados ao \textit{Nerfstudio}, dispensando adaptações de implementação. Os demais modelos (PixelNeRF e GNT) foram portados para o framework a partir de suas implementações originais, com adaptações nos componentes de \textit{DataManager}, \textit{Pipeline} e \textit{model} para conformidade com a interface do \textit{Nerfstudio}, ambos utilizando-se do otimizador Adam (otimizado pelo tinycudann) com \textit{learning rate} $\eta = 1^{-3}$ e \textit{weight decay} = 0.0.
 
-As implementações foram guiadas pelas descrições metodológicas dos trabalhos originais, mantendo equivalência funcional sempre que possível. A implementação completa encontra-se disponível em \url{https://github.com/felipe-gsilva/few-shot-nerfs}.
+As implementações foram guiadas pelas descrições metodológicas dos trabalhos originais, mantendo equivalência funcional. A implementação completa encontra-se disponível em \url{https://github.com/felipe-gsilva/few-shot-nerfs}.
 
 % TODO talvez explicitar mais o código
 
 \subsection{Protocolo Experimental}
 \label{sec:stdin}
 
-Os experimentos foram conduzidos sobre o dataset LLFF (\textit{Local Light Field Fusion}) \cite{mildenhall2019locallightfieldfusion}, composto por cenas de objetos reais capturadas com câmera em movimento frontal, especialmente devido a limitação temporal do trabalho, sendo a escolha ideal trabalhar com DTU ou ShapeNet), devido às suas maiores correlações espaciais nas respectivas câmeras. Seguindo, ademais, o protocolo estabelecido por RegNeRF \cite{niemeyer2022regnerf}, reservam-se para teste as imagens cujo índice é múltiplo de 8 (llffhold=8), totalizando entre 5 e 8 imagens de teste por cena. As N vistas de treinamento ($N \in {3, 6, 10}$) são amostradas uniformemente das imagens remanescentes.
+Os experimentos foram conduzidos sobre o dataset LLFF (\textit{Local Light Field Fusion}) \cite{mildenhall2019locallightfieldfusion}, composto por cenas de objetos reais capturadas com câmera em movimento frontal. A adoção do LLFF decorre de sua compatibilidade com o protocolo de avaliação estabelecido por Niemeyer et al. [RegNeRF], da disponibilidade pública dos splits reprodutíveis e da viabilidade de execução em hardware com 6 GB de VRAM, condição que inviabiliza o processamento dos volumes de custo tridimensionais exigidos pelo DTU na resolução original. Seguindo, ademais, o protocolo estabelecido por \cite{niemeyer2022regnerf} no RegNeRF, reservam-se para teste as imagens cujo índice é múltiplo de 8 (llffhold=8), totalizando entre 5 e 8 imagens de teste por cena. As N vistas de treinamento ($N \in {3, 6, 10}$) são amostradas uniformemente das imagens remanescentes.
 
 A seleção das vistas de treino foi realizada por duas estratégias distintas: (i) \textit{uniform}, em que as vistas são amostradas por interpolação linear sobre os índices do dataset, distribuindo-as uniformemente ao longo da trajetória da câmera; e (ii) \textit{random}, em que as vistas são sorteadas aleatoriamente com semente fixa, garantindo reprodutibilidade. A comparação entre as duas estratégias permite avaliar a sensibilidade dos modelos à distribuição espacial das vistas de entrada.
 
-As imagens restantes foram divididas proporcionalmente entre conjuntos de validação e teste, também com semente fixa, assegurando que as vistas de teste sejam idênticas entre todos os modelos e estratégias de split, eliminando variáveis de avaliação que poderiam comprometer a comparação. As métricas finais são reportadas exclusivamente sobre o conjunto de teste, sem sobreposição com as vistas de treino. Todos os experimentos foram executados em uma GPU NVIDIA GeForce RTX 4060 Ti (16GB de VRAM), com CUDA 12.4 e driver 580.126.09.
-Para garantir reprodutibilidade em diferentes arquiteturas, optou-se por utilizar a ferramenta docker, a qual permite instanciar a GPU virtualmente e viabilizar o uso do torch, tiny-cuda-nn e cuda 12.4 entre diferentes arquiteturas de GPU.
+A Tabela \ref{tab:split} reporta o impacto da estratégia de amostragem das vistas de treino sobre o desempenho médio no conjunto de teste, para o regime TTA com $N=10$ vistas.
+
+\begin{table}[h]
+\centering
+\caption{Impacto da estratégia de seleção de vistas de treino
+(\textit{uniform} vs.\ \textit{random}) sobre a qualidade visual
+média no dataset LLFF, avaliado no regime TTA com $N=10$ vistas.
+Resultados reportados como média sobre as 8 cenas do dataset.}
+\label{tab:split}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Modelo}
+  & \textbf{Split}
+  & \textbf{PSNR (dB) $\uparrow$}
+  & \textbf{SSIM $\uparrow$}
+  & \textbf{LPIPS $\downarrow$}
+  & \textbf{$\Delta$PSNR\,(\textit{unif.\,--\,rand.})} \\
+\midrule
+\multirow{2}{*}{PixelNeRF}
+  & Uniform   & --   & --    & --    & \multirow{2}{*}{--} \\
+  & Random    & --   & --    & --    &                     \\
+\midrule
+\multirow{2}{*}{GNT}
+  & Uniform   & --   & --    & --    & \multirow{2}{*}{--} \\
+  & Random    & --   & --    & --    &                     \\
+\midrule
+\multirow{2}{*}{Instant-NGP}
+  & Uniform   & --   & --    & --    & \multirow{2}{*}{--} \\
+  & Random    & --   & --    & --    &                     \\
+\midrule
+\multirow{2}{*}{Nerfacto}
+  & Uniform   & --   & --    & --    & \multirow{2}{*}{--} \\
+  & Random    & --   & --    & --    &                     \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+As imagens restantes foram divididas proporcionalmente entre conjuntos de validação e teste, também com semente fixa, assegurando que as vistas de teste sejam idênticas entre todos os modelos e estratégias de split, eliminando variáveis de avaliação que poderiam comprometer a comparação. As métricas finais são reportadas exclusivamente sobre o conjunto de teste, sem sobreposição com as vistas de treino. Todos os experimentos foram executados em uma GPU NVIDIA GeForce GTX 1660 Super (6GB de VRAM), com CUDA 12.4 e driver 610.43.02.
+Para garantir reprodutibilidade em diferentes arquiteturas, optou-se por utilizar a ferramenta docker, a qual permite instanciar a GPU virtualmente e viabilizar o uso do torch, tiny-cuda-nn e cuda 12.4 entre diferentes arquiteturas de GPU (testado apenas em arquiteturas NVIDIA).
 
 
 \subsection{Métricas de Avaliação}
@@ -154,43 +196,88 @@ Para garantir reprodutibilidade em diferentes arquiteturas, optou-se por utiliza
 
 A avaliação dos modelos contempla três dimensões complementares: qualidade visual, eficiência computacional e pegada de memória.
 
-Para a qualidade visual, são empregadas três métricas amplamente adotadas na literatura de síntese de novas vistas: (i) PSNR (\textit{Peak Signal-to-Noise Ratio}), que mede a fidelidade pixel a pixel entre a imagem renderizada e a imagem de referência em escala logarítmica, sendo sensível a erros de brilho e cor; (ii) SSIM (\textit{Structural Similarity Index Measure}) \cite{wang2004image}, que avalia a similaridade estrutural entre imagens considerando luminância, contraste e estrutura, sendo mais correlacionado com a percepção humana do que o PSNR; e (iii) LPIPS (\textit{Learned Perceptual Image Patch Similarity}) \cite{zhang2018unreasonable} usando a rede vgg (Visual Geometry Group) como extrator de características \cite{niemeyer2022regnerf} para quantificar a distância perceptual entre imagens (valores menores indicam maior similaridade perceptual). Para a eficiência computacional, é medida a taxa de renderização em quadros por segundo (\textit{fps}), avaliada durante a inferência sobre as câmeras do conjunto de teste. Para a pegada de memória, é reportado o footprint de parâmetros do modelo, calculado como a soma do produto entre o número de parâmetros e o tamanho de cada elemento em bytes. Também comparou-se os respectivos tamanhos de parâmetros com a quantidade de memória alocada no torch naquele dado momento. Como o ambiente de GPU é controlado (reservado pelo ambiente docker), possíveis outros processos simultâneos não adicionaram ruído às métricas de avaliação.
+Para a qualidade visual, são empregadas três métricas amplamente adotadas na literatura de síntese de novas vistas: (i) PSNR (\textit{Peak Signal-to-Noise Ratio}), que mede a fidelidade pixel a pixel entre a imagem renderizada e a imagem de referência em escala logarítmica, sendo sensível a erros de brilho e cor; (ii) SSIM (\textit{Structural Similarity Index Measure}) \cite{wang2004image}, que avalia a similaridade estrutural entre imagens considerando luminância, contraste e estrutura, sendo mais correlacionado com a percepção humana do que o PSNR; e (iii) LPIPS (\textit{Learned Perceptual Image Patch Similarity}) \cite{zhang2018unreasonable} usando a rede VGG (Visual Geometry Group) como extrator de características, seguindo o protocolo de \cite{niemeyer2022regnerf} para quantificar a distância perceptual entre imagens (valores menores indicam maior similaridade perceptual). Para a eficiência computacional, é medida a taxa de renderização em quadros por segundo (\textit{fps}), avaliada durante a inferência sobre as câmeras do conjunto de teste. Para a pegada de memória, é reportado o footprint de parâmetros do modelo, calculado como a soma do produto entre o número de parâmetros e o tamanho de cada elemento em bytes. Também comparou-se os respectivos tamanhos de parâmetros com a quantidade de memória alocada no torch naquele dado momento. Como o ambiente de GPU é controlado (reservado pelo ambiente docker), possíveis outros processos simultâneos não adicionaram ruído às métricas de avaliação.
 
 
 As avaliações de qualidade visual são realizadas sobre o conjunto de teste gerado pelo protocolo de split descrito na Seção \ref{sec:stdin}, utilizando o \textit{dataloader} de avaliação do \textit{Nerfstudio} (\texttt{fixed\_indices\_eval\_dataloader}), que itera sobre câmeras fixas e compara as imagens renderizadas (\texttt{outputs["rgb"]}) com as imagens de referência (\texttt{batch["image"]}) sem amostras das vistas de treino.
 
 \section{Experimentos e Resultados}
 
+A seguir, destacam-se os principais resultados do treinamento, que levou, ao todo, 12 horas para ser completado. Segmenta-se esta seção entre uma análise quantitativa, qualitativa e computacional, respectivamente.
+
 \subsection{Análise Quantitativa}
 
-\begin{table}[ht]
+A análise quantitativa seguiu o protocolo experimental supracitados, comparando as métricas LPIPS, SIM e PSNR (Seção \ref{sec:metricas}) entre todos os modelo e regimes de treino (Seção \ref{sec:metodology}). A Tabela \ref{tab:qualidade_visual} apresenta as métricas escolhidas:
+
+
+\begin{table}[h]
 \centering
-\caption{Avaliação quantitativa da qualidade visual no dataset LLFF. As setas indicam se valores maiores ($\uparrow$) ou menores ($\downarrow$) representam um desempenho superior. Valores em negrito indicam o melhor resultado dentro de cada regime.}
+\caption{Avaliação quantitativa da qualidade visual no dataset LLFF.
+As setas indicam se valores maiores ($\uparrow$) ou menores ($\downarrow$)
+representam desempenho superior. Negrito indica o melhor resultado
+dentro de cada regime; sublinhado indica o segundo melhor.}
 \label{tab:qualidade_visual}
-\resizebox{\textwidth}{!}{% Usa o resizebox caso a tabela fique mais larga que a página
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{llccc}
 \toprule
-\textbf{Regime de Treinamento} & \textbf{Modelo} & \textbf{PSNR $\uparrow$} & \textbf{SSIM $\uparrow$} & \textbf{LPIPS $\downarrow$} \\
+\textbf{Regime} & \textbf{Modelo}
+  & \textbf{PSNR (dB) $\uparrow$}
+  & \textbf{SSIM $\uparrow$}
+  & \textbf{LPIPS $\downarrow$} \\
 \midrule
-\multirow{2}{*}{Zero-Shot (Apenas pesos pré-treinados)} 
-& PixelNeRF & 00.00 & 0.000 & 0.000 \\
-& GNT       & \textbf{00.00} & \textbf{0.000} & \textbf{0.000} \\
+\multirow{2}{*}{Zero-Shot}
+  & PixelNeRF        & --   & --    & --    \\
+  & GNT              & --   & --    & --    \\
 \midrule
-\multirow{4}{*}{Test-Time Adaptation (TTA - 3 vistas)} 
-& PixelNeRF   & 00.00 & 0.000 & 0.000 \\
-& GNT         & 00.00 & 0.000 & 0.000 \\
-& Instant-NGP & 00.00 & 0.000 & 0.000 \\
-& Nerfacto    & 00.00 & 0.000 & 0.000 \\
+\multirow{4}{*}{TTA ($N=3$)}
+  & PixelNeRF        & --   & --    & --    \\
+  & GNT              & --   & --    & --    \\
+  & Instant-NGP      & --   & --    & --    \\
+  & Nerfacto         & --   & --    & --    \\
 \midrule
-\multirow{4}{*}{Test-Time Adaptation (TTA - 10 vistas)} 
-& PixelNeRF   & 00.00 & 0.000 & 0.000 \\
-& GNT         & 00.00 & 0.000 & 0.000 \\
-& Instant-NGP & 00.00 & 0.000 & 0.000 \\
-& Nerfacto    & 00.00 & 0.000 & 0.000 \\
+\multirow{4}{*}{TTA ($N=6$)}
+  & PixelNeRF        & --   & --    & --    \\
+  & GNT              & --   & --    & --    \\
+  & Instant-NGP      & --   & --    & --    \\
+  & Nerfacto         & --   & --    & --    \\
 \midrule
-\multirow{2}{*}{Per-Scene (100\% das vistas)} 
-& Instant-NGP & 00.00 & 0.000 & 0.000 \\
-& Nerfacto    & \textbf{00.00} & \textbf{0.000} & \textbf{0.000} \\
+\multirow{4}{*}{TTA ($N=10$)}
+  & PixelNeRF        & --   & --    & --    \\
+  & GNT              & --   & --    & --    \\
+  & Instant-NGP      & --   & --    & --    \\
+  & Nerfacto         & --   & --    & --    \\
+\midrule
+\multirow{2}{*}{Per-Scene (100\%)}
+  & Instant-NGP      & --   & --    & --    \\
+  & Nerfacto         & --   & --    & --    \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+A Tabela \ref{tab:por_cena} desagrega o PSNR por cena individual do LLFF, revelando a variabilidade de desempenho em função das características estruturais de cada cena.
+
+\begin{table}[h]
+\centering
+\caption{Análise de desempenho por cena do dataset LLFF (PSNR em dB),
+regime TTA com $N=10$ vistas, split \textit{uniform}.
+A última coluna reporta o desvio padrão entre cenas ($\sigma$),
+indicando a estabilidade de cada modelo frente à variabilidade
+do conteúdo visual.}
+\label{tab:por_cena}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccccc|cc}
+\toprule
+\textbf{Modelo}
+  & \textit{fern} & \textit{flower} & \textit{fortress}
+  & \textit{horns} & \textit{leaves} & \textit{orchids}
+  & \textit{room}  & \textit{trex}
+  & \textbf{Média} & \textbf{$\sigma$} \\
+\midrule
+PixelNeRF   & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+GNT         & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+Instant-NGP & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+Nerfacto    & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
 \bottomrule
 \end{tabular}
 }
@@ -198,7 +285,9 @@ As avaliações de qualidade visual são realizadas sobre o conjunto de teste ge
 
 \subsection{Análise Qualitativa}
 
-\begin{figure}[ht]
+A análise qualitativa seguiu as estruturas do split (\ref{sec:stdin}), sendo possiveis renderizações do volume em projeções tanto ortográficas quanto perspectivas. Para facilitar a identificação visual, optou-se por utilizar o acúmulo dos raios em projeção perspectiva, requerindo à rede tanto vistas já conhecidas (com os dados de câmera existentes) quanto novas vistas (o objeto de estudo deste trabalho). Destaca-se, a seguir, os principais resultados visuais:
+
+\begin{figure}[h]
     \centering
     % Linha 1: Títulos dos modelos
     \begin{subfigure}[b]{0.19\textwidth}
@@ -237,7 +326,7 @@ As avaliações de qualidade visual são realizadas sobre o conjunto de teste ge
 
 \subsection{Trade-offs Computacionais}
 
-\begin{table}[ht]
+\begin{table}[h]
 \centering
 \caption{Comparativo de custo computacional e pegada de memória. O tempo de treinamento refere-se à convergência da cena (ou adaptação no caso TTA), e a VRAM indica o pico de alocação durante o treinamento. A taxa de FPS foi medida na renderização do conjunto de teste.}
 \label{tab:custo_computacional}
