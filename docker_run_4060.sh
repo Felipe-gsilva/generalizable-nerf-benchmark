@@ -20,4 +20,16 @@ docker run --gpus all --rm -it \
     nerf-ann-paper:4060 \
     python scratch/run_4060_experiments.py
     
-echo "✅ Todos os experimentos finalizados! Resultados salvos em results_4060/"
+echo ""
+echo "=========================================================="
+echo "🔥 Running 4060 TTA UNFROZEN Experiments via Docker..."
+echo "=========================================================="
+docker run --gpus all --rm -it \
+    -v "$(pwd)":/workspace \
+    -w /workspace \
+    -e PYTHONPATH=/workspace \
+    -e TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1 \
+    nerf-ann-paper:4060 \
+    python scratch/run_4060_tta_unfrozen.py
+
+echo "✅ Todos os experimentos finalizados! Resultados salvos nas pastas results_4060/ e results_4060_tta_unfrozen/"
