@@ -66,16 +66,17 @@
 \newlabel{tab:qualidade_visual}{{2}{9}{Análise Quantitativa}{table.2}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Resultados no LLFF reportados pelo \textit  {NerfBaselines} \cite  {kulhanek2025nerfbaselinesconsistentreproducibleevaluation}. "Time" refere-se ao tempo total de treinamento reportado e "GPU mem." ao pico de memória alocada durante o treino.}}{9}{}\protected@file@percent }
 \newlabel{tab:nerfbaselines_llff}{{3}{9}{Análise Quantitativa}{table.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Análise Qualitativa}{10}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Comparação qualitativa para a cena "Fern" do dataset LLFF. PixelNeRF e GNT operam no regime TTA (10 vistas), enquanto Instant-NGP e Nerfacto operam no regime Per-Scene.}}{10}{}\protected@file@percent }
-\newlabel{fig:comparacao_qualitativa}{{2}{10}{Análise Qualitativa}{figure.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Trade-offs Computacionais}{11}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Discussão Analítica}{10}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.1}O Fenômeno do Scale Mismatch}{10}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.2}Catastrophic Forgetting e Inércia no TTA}{10}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Análise Qualitativa}{10}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Comparação qualitativa para a cena "Fern" do dataset LLFF. PixelNeRF e GNT operam no regime TTA (10 vistas), enquanto Instant-NGP e Nerfacto operam no regime Per-Scene.}}{11}{}\protected@file@percent }
+\newlabel{fig:comparacao_qualitativa}{{2}{11}{Análise Qualitativa}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Trade-offs Computacionais}{11}{}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Comparativo de custo computacional e pegada de memória. O tempo de treinamento refere-se à convergência da cena (ou adaptação no caso TTA). O "Tamanho da Rede" indica o footprint estático alocado, enquanto o "Pico Torch" demonstra o pico real de memória na GPU aferido dinamicamente durante a inferência. A taxa de FPS foi medida na renderização do conjunto de teste.}}{11}{}\protected@file@percent }
 \newlabel{tab:custo_computacional}{{4}{11}{Trade-offs Computacionais}{table.4}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Trade-off entre Fidelidade Visual (PSNR) e Consumo de VRAM (10 vistas ou regime per-scene). O quadrante superior esquerdo representa a região ideal (alta qualidade, baixo custo).}}{11}{}\protected@file@percent }
-\newlabel{fig:scatter_tradeoff}{{3}{11}{Trade-offs Computacionais}{figure.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}O Fenômeno do Scale Mismatch}{12}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Catastrophic Forgetting e Inércia no TTA}{12}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Trade-off entre Fidelidade Visual (PSNR) e Consumo de VRAM (10 vistas ou regime per-scene). O quadrante superior esquerdo representa a região ideal (alta qualidade, baixo custo).}}{12}{}\protected@file@percent }
+\newlabel{fig:scatter_tradeoff}{{3}{12}{Trade-offs Computacionais}{figure.3}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {5}Conclusões}{13}{}\protected@file@percent }
 \bibstyle{sbc}
 \bibdata{sbc-template}

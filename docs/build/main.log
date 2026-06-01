@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.4.6)  1 JUN 2026 19:57
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.4.6)  1 JUN 2026 20:57
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -492,10 +492,7 @@ LaTeX Font Info:    Trying to load font information for T1+pcr on input line 28.
 File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
 ) [1
 
-{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texmf-dist/fonts/enc/dvips/base/8r.enc}] [2]
-Underfull \vbox (badness 6316) has occurred while \output is active []
-
- [3]
+{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texmf-dist/fonts/enc/dvips/base/8r.enc}] [2] [3]
 LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 101.
  (/usr/share/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
@@ -519,42 +516,39 @@ Underfull \hbox (badness 1478) in paragraph at lines 326--326
 \T1/phv/b/n/10 [[]]. "Time"refere-se ao tempo to-tal de trei-
  []
 
-[9]
-<img/gt.jpg, id=53, 1011.78pt x 758.835pt>
+[9] [10]
+<img/gt.jpg, id=56, 1011.78pt x 758.835pt>
 File: img/gt.jpg Graphic file (type jpg)
 <use img/gt.jpg>
-Package pdftex.def Info: img/gt.jpg  used on input line 352.
+Package pdftex.def Info: img/gt.jpg  used on input line 364.
 (pdftex.def)             Requested size: 110.9634pt x 83.21736pt.
-<img/pixel-nerf.png, id=54, 252.945pt x 189.70876pt>
+<img/pixel-nerf.png, id=57, 252.945pt x 189.70876pt>
 File: img/pixel-nerf.png Graphic file (type png)
 <use img/pixel-nerf.png>
-Package pdftex.def Info: img/pixel-nerf.png  used on input line 358.
+Package pdftex.def Info: img/pixel-nerf.png  used on input line 370.
 (pdftex.def)             Requested size: 110.9634pt x 83.22316pt.
-<img/gnt.png, id=55, 252.945pt x 189.70876pt>
+<img/gnt.png, id=58, 252.945pt x 189.70876pt>
 File: img/gnt.png Graphic file (type png)
 <use img/gnt.png>
-Package pdftex.def Info: img/gnt.png  used on input line 364.
+Package pdftex.def Info: img/gnt.png  used on input line 376.
 (pdftex.def)             Requested size: 110.9634pt x 83.22316pt.
-<img/instant-ngp.png, id=56, 252.945pt x 189.70876pt>
+<img/instant-ngp.png, id=59, 252.945pt x 189.70876pt>
 File: img/instant-ngp.png Graphic file (type png)
 <use img/instant-ngp.png>
-Package pdftex.def Info: img/instant-ngp.png  used on input line 370.
+Package pdftex.def Info: img/instant-ngp.png  used on input line 382.
 (pdftex.def)             Requested size: 110.9634pt x 83.22316pt.
-<img/nerfacto.png, id=57, 252.945pt x 189.70876pt>
+<img/nerfacto.png, id=60, 252.945pt x 189.70876pt>
 File: img/nerfacto.png Graphic file (type png)
 <use img/nerfacto.png>
-Package pdftex.def Info: img/nerfacto.png  used on input line 376.
+Package pdftex.def Info: img/nerfacto.png  used on input line 388.
 (pdftex.def)             Requested size: 110.9634pt x 83.22316pt.
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
- [10 <./img/gt.jpg> <./img/pixel-nerf.png (PNG copy)> <./img/gnt.png (PNG copy)> <./img/instant-ngp.png (PNG copy)> <./img/nerfacto.png (PNG copy)>]
-<img/grafico_tradeoff.pdf, id=61, 578.16pt x 433.62pt>
+ [11 <./img/gt.jpg> <./img/pixel-nerf.png (PNG copy)> <./img/gnt.png (PNG copy)> <./img/instant-ngp.png (PNG copy)> <./img/nerfacto.png (PNG copy)>]
+<img/grafico_tradeoff.pdf, id=64, 578.16pt x 433.62pt>
 File: img/grafico_tradeoff.pdf Graphic file (type pdf)
 <use img/grafico_tradeoff.pdf>
-Package pdftex.def Info: img/grafico_tradeoff.pdf  used on input line 413.
+Package pdftex.def Info: img/grafico_tradeoff.pdf  used on input line 427.
 (pdftex.def)             Requested size: 341.43437pt x 256.07178pt.
- [11 <./img/grafico_tradeoff.pdf>] [12] [13] [14] (build/main.bbl
+ [12 <./img/grafico_tradeoff.pdf>] [13] [14] (build/main.bbl
 Underfull \hbox (badness 10000) in paragraph at lines 34--38
 []\T1/ptm/m/n/12 Müller, T. (2021).  tiny-cuda-nn.  $\T1/pcr/m/n/12 https : / / github . com / NVlabs /
  []
@@ -566,15 +560,15 @@ L3 programming layer <2026-01-19>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 18231 strings out of 469375
- 360210 string characters out of 5466623
- 763993 words of memory out of 5000000
- 46566 multiletter control sequences out of 15000+600000
+ 18234 strings out of 469375
+ 360272 string characters out of 5466623
+ 762949 words of memory out of 5000000
+ 46569 multiletter control sequences out of 15000+600000
  687689 words of font info for 112 fonts, out of 8000000 for 9000
  64 hyphenation exceptions out of 8191
- 84i,12n,104p,1929b,1081s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 84i,12n,104p,1913b,1081s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texmf-dist/fonts/type1/urw/helvetic/uhvb8a.pfb></usr/share/texmf-dist/fonts/type1/urw/helvetic/uhvbo8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on build/main.pdf (16 pages, 817802 bytes).
+Output written on build/main.pdf (16 pages, 817991 bytes).
 PDF statistics:
  234 PDF objects out of 1000 (max. 8388607)
  115 compressed objects within 2 object streams

@@ -13,8 +13,6 @@ echo "🔥 Running Scratch Experiment via Docker..."
 echo "=========================================================="
 docker run --gpus all --rm -it \
     -v "$(pwd)":/workspace \
-    -v "$(pwd)/src/nerf/PixelNeRFModel.py:/opt/venv/lib/python3.11/site-packages/PixelNeRFModel.py" \
-    -v "$(pwd)/src/nerf/GNTModel.py:/opt/venv/lib/python3.11/site-packages/GNTModel.py" \
     -w /workspace \
     -e PYTHONPATH=/workspace \
     -e TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1 \
