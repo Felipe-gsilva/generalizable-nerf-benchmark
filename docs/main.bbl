@@ -31,6 +31,12 @@ Mildenhall, B., Srinivasan, P.~P., Ortiz-Cayon, R., Kalantari, N.~K.,
 \newblock Local light field fusion: Practical view synthesis with prescriptive
   sampling guidelines.
 
+\bibitem[Mildenhall et~al. 2020]{mildenhall2020nerfrepresentingscenesneural}
+Mildenhall, B., Srinivasan, P.~P., Tancik, M., Barron, J.~T., Ramamoorthi, R.,
+  and Ng, R. (2020).
+\newblock Nerf: Representing scenes as neural radiance fields for view
+  synthesis.
+
 \bibitem[M{\"u}ller 2021]{tinycudann}
 M{\"u}ller, T. (2021).
 \newblock tiny-cuda-nn.
