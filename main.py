@@ -24,7 +24,10 @@ def main():
         #"room",
         #"trex",
     ]
-    sampling_strategies = ["uniform", "random"]
+    sampling_strategies = ["uniform"
+                           ,
+                           #"random"
+                           ]
     num_views_options = [3, 6, 10]
 
     experiments_config = [

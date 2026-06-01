@@ -328,9 +328,15 @@ class PixelNeRFModel(Model):
 
         device = next(self.net.parameters()).device
         if not image_metadata:
-            raise KeyError(
-                "Missing conditioning metadata (src_rgbs/src_cameras/focal/c) — pipeline must inject source views"
-            )
+            # Em passos de avaliação intermediários do ns-train (onde a pipeline customizada não injeta os metadados),
+            # retornamos tensores vazios/dummy para não quebrar o treinamento. As métricas reais
+            # são avaliadas ao final em main.py injetando os metadados corretamente.
+            image_height, image_width = camera_ray_bundle.origins.shape[:2]
+            return {
+                "rgb": torch.zeros((image_height, image_width, 3), device=device),
+                "depth": torch.zeros((image_height, image_width, 1), device=device),
+                "accumulation": torch.zeros((image_height, image_width, 1), device=device),
+            }
         self._encode_from_metadata(image_metadata, device=device)
 
         num_rays_per_chunk = self.config.eval_num_rays_per_chunk

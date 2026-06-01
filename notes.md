@@ -1,2 +1,1 @@
-- confirmar estrutura experimental com NerfBaselines
-- possiveis adições: RegNeRF MVSNeRF MIPNeRF-360
+docs/future_roadmap.md
