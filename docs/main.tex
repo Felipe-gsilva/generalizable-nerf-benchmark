@@ -306,8 +306,8 @@ A análise quantitativa seguiu o protocolo experimental descrito na Seção \ref
   & GNT              & \textbf{10.34}   & \textbf{0.179}    & \textbf{0.738}    \\
 \midrule
 \multirow{2}{*}{Per-Scene (100\%)}
-  & Instant-NGP      & n.e      & n.e        & n.e        \\
-  & Nerfacto         & 12.04  & 0.227    & 0.809    \\
+  & Instant-NGP      & 15.29  & 0.545    & 0.358    \\
+  & Nerfacto         & 25.33  & 0.853    & 0.161    \\
 \midrule
 \multicolumn{5}{c}{\textbf{Avaliação em downscale 8 (Modelos Per-Scene na resolução nativa)}} \\
 \midrule
@@ -399,13 +399,11 @@ GNT         & Zero-Shot (0) & N/A (Pré-treinado) & 1.93 & 0.19 & 0.008 \\
 PixelNeRF   & TTA (10)      & 12 min 42 s        & 1.93 & 3.42 & 0.006 \\
 GNT         & TTA (10)      & 06 min 54 s        & 1.93 & 0.19 & 0.008 \\
 \midrule
-Instant-NGP & Per-Scene     & 41 min 02 s        & 1.30 & n.d.\textsuperscript{**} & 0.214 \\
-Nerfacto    & Per-Scene     & 21 min 52 s        & 1.30 & 0.20 & 0.394 \\
+Instant-NGP & Per-Scene     & 41 min 02 s        & 0.01 & 0.15 & 0.160 \\
+Nerfacto    & Per-Scene     & 21 min 52 s        & 0.02 & 0.05 & 0.203 \\
 \bottomrule
 \end{tabular}%
 }
-\smallskip
-\raggedright{\footnotesize \textsuperscript{**} n.d. (não disponível): O pico real de memória do Instant-NGP não pôde ser aferido dinamicamente, pois o modelo utiliza alocação dinâmica de CUDA não interceptável de forma nativa pelo \textit{profiler} do framework.}
 \end{table}
 
 Por fim, ressalta-se que todos os experimentos foram executados de forma única e exclusiva sobre a cena \textit{fern} do conjunto de dados LLFF. Essa decisão metodológica justifica-se pelo elevado custo de processamento exigido pelos modelos sob regime de Test-Time Adaptation (TTA), bem como pelo longo tempo total necessário para a convergência das demais variantes. Dessa forma, a cena \textit{fern} foi adotada como um estudo de caso representativo para viabilizar a validação completa do pipeline sob as restrições práticas de hardware, servindo como base sólida antes de uma eventual expansão para as demais cenas do dataset.
@@ -420,7 +418,9 @@ Por fim, ressalta-se que todos os experimentos foram executados de forma única 
 
 \subsection{O Fenômeno do Scale Mismatch}
 
-O modelo Nerfacto obteve um desempenho notável de 26,25 dB de PSNR quando avaliado na sua resolução nativa de treinamento (downscale 8). No entanto, ao ser inferido em uma resolução superior (downscale 4), a sua qualidade visual degradou severamente para 12,04 dB. Este fenômeno de \textit{Scale Mismatch} (incompatibilidade de escala) evidencia uma vulnerabilidade inerente às arquiteturas \textit{per-scene} que empregam estruturas de dados espaciais explícitas. Diferentemente das redes neurais convolucionais (PixelNeRF) ou dos mecanismos de atenção global (GNT), as tabelas de hash multiescala são otimizadas para codificar a cena nas frequências espaciais presentes nas imagens de treino. Ao avaliar em resolução superior, o renderizador precisa reconstruir detalhes de alta frequência para os quais a tabela não possui entradas de granularidade adequada, resultando em degradação.
+O modelo Nerfacto obteve um desempenho notável de 26,25 dB de PSNR quando treinado e avaliado na sua resolução nativa inicial (downscale 8). No entanto, em experimentos preliminares, ao inferir esse mesmo modelo numa resolução superior (downscale 4), a sua qualidade visual degradava severamente para 12,04 dB. Este fenômeno de \textit{Scale Mismatch} (incompatibilidade de escala) evidenciava uma vulnerabilidade inerente às arquiteturas \textit{per-scene} que empregam tabelas de hash multiescala, pois estas são otimizadas para codificar a cena estritamente nas frequências espaciais presentes nas imagens de treino. 
+
+Para validar essa hipótese e contornar a limitação, o modelo Nerfacto foi retreinado nativamente na resolução de downscale 4. Com a grade de características adequadamente ajustada para as altas frequências dessa nova escala, o desempenho saltou expressivamente para 25,33 dB de PSNR e 0,853 de SSIM. Esse resultado confirma que a arquitetura Nerfacto possui alta capacidade de reconstrução em maiores resoluções, desde que o processo de otimização (e consequentemente o \textit{footprint} das estruturas de hash) seja instanciado na escala alvo correspondente.
 
 \subsection{Catastrophic Forgetting e Inércia no TTA}
 
@@ -433,7 +433,7 @@ Este trabalho apresentou uma análise comparativa entre modelos NeRF generalizá
 
 No eixo de qualidade visual, os resultados corrigidos — obtidos após a identificação e resolução de um bug sistemático no carregador de checkpoints que anteriormente provocava avaliações redundantes do mesmo checkpoint — revelam o comportamento esperado das diferentes arquiteturas. Os modelos generalizáveis exibem robustez notável sob diferentes resoluções: o GNT mantém um desempenho estável em torno de $10{,}34$\,dB de PSNR e $0{,}738$ de LPIPS tanto no downscale 8 quanto no downscale 4, evidenciando a eficácia da agregação global por atenção cruzada em seu extrator de características. O PixelNeRF demonstra uma evolução coerente sob Test-Time Adaptation (TTA), subindo de $5{,}75$\,dB (Zero-Shot) para $6{,}98$\,dB ($N=10$).
 
-Em contrapartida, os modelos \textit{per-scene} evidenciam uma forte dependência da escala de treinamento. Quando avaliado em sua resolução nativa de treino (downscale 8), o Nerfacto atinge a marca superior de $26{,}25$\,dB de PSNR e $0{,}843$ de SSIM. Contudo, sob downscale 4, seu desempenho sofre uma severa degradação, caindo para $12{,}04$\,dB de PSNR e $0{,}227$ de SSIM. Esse fenômeno realça a vulnerabilidade intrínseca de representações implícitas/híbridas otimizadas localmente (como as tabelas de hash multiescala), que não generalizam para escalas espaciais distintas daquelas vistas em treino, ao passo que os modelos generalizáveis providos de redes convolucionais e mecanismos de atenção global acomodam variações de resolução de maneira inerente.
+Em contrapartida, os modelos \textit{per-scene} evidenciam uma forte dependência da escala de treinamento. Quando treinado e avaliado em sua resolução nativa inicial (downscale 8), o Nerfacto atingiu a marca superior de $26{,}25$\,dB de PSNR. Contudo, demonstrou-se que tentar inferir esse modelo em resoluções superiores (downscale 4) causava degradação severa devido ao \textit{Scale Mismatch} (caindo para $12{,}04$\,dB). Ao corrigir essa incompatibilidade por meio do retreino nativo do Nerfacto diretamente em downscale 4, o modelo recuperou sua excelência, atingindo $25{,}33$\,dB de PSNR e $0{,}853$ de SSIM. Esse fenômeno realça que representações implícitas/híbridas baseadas em hash multiescala requerem pareamento estrito entre a resolução de treino e inferência, ao passo que os modelos generalizáveis providos de redes convolucionais e mecanismos de atenção global acomodam variações de resolução de maneira inerente.
 
 Contudo, a análise computacional revela um \textit{trade-off} não trivial. Os modelos generalizáveis dispensam otimização por cena no regime \textit{zero-shot} e requerem adaptação mínima no TTA (12\,min para PixelNeRF; 06 min 54 s\,min para GNT), enquanto os modelos \textit{per-scene} demandam tempos de convergência significativamente maiores ($\sim$22\,min para Nerfacto; $\sim$41\,min para Instant-NGP com 10 vistas). Em contrapartida, os modelos \textit{per-scene} apresentaram taxas de inferência superiores (0{,}394\,FPS para Nerfacto vs. 0{,}006\,FPS para PixelNeRF), com menor consumo de VRAM (1{,}30\,GB vs. 1{,}93\,GB). Esses resultados indicam que, em cenários onde a latência de inferência e o \textit{footprint} de memória são críticos, a exemplo de aplicações \textit{mobile} ou sistemas embarcados, os métodos \textit{per-scene} podem ser preferíveis mesmo com o custo adicional de treinamento.
 

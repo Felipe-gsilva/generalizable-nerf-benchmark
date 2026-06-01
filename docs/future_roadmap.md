@@ -7,7 +7,7 @@ Este documento consolida as estratégias discutidas para contornar a falta de co
 A principal contribuição teórica dos testes mais recentes é o **Resolution Mismatch**. O artigo deve ser expandido para evidenciar por que a métrica quantitativa pode mentir.
 
 *   **Subseção Específica (O Fenômeno do Scale Mismatch):** Incluir uma discussão sobre a queda de 26 dB (treino e teste em ds=8) para 12 dB (treino ds=8, teste ds=4) no modelo Nerfacto. Explicar como a baixa resolução atua como uma barreira passa-baixa artificial que camufla a falta de coerência geométrica 3D do modelo quando dados escassos são fornecidos.
-*   **Adoção de Análise Visual e Profundidade:** Como as métricas PSNR puras são insuficientes no regime few-shot, incluir *Depth Maps* . O GNT, por utilizar atenção transversal nas *epipolar lines*, tenderá a gerar um mapa de profundidade muito mais sólido do que os artefatos em forma de "fumaça/floaters" do Instant-NGP.
+    *   **Adoção de Análise Visual e Profundidade:** Como as métricas PSNR puras são insuficientes no regime few-shot, incluir *Depth Maps* . O GNT, por utilizar atenção transversal nas *epipolar lines*, tenderá a gerar um mapa de profundidade muito mais sólido do que os artefatos em forma de "fumaça/floaters" do Instant-NGP.
 
 ## 2. Abordagens Experimentais (O Que Testar)
 

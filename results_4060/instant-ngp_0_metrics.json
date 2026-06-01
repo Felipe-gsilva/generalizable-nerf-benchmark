@@ -1,0 +1,1 @@
+{"timestamp": "2026-06-01 22:12:21", "memory_footprint_bytes": 17119064, "cuda_memory_usage_bytes": 148520960, "inference_fps": 0.0, "psnr": 15.289867854230913, "ssim": 0.5452062407721854, "lpips": 0.3584769368171692, "fps": 0.15953106287588137}
