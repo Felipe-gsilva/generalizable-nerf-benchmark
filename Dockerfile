@@ -55,9 +55,11 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /workspace
 
 # 5. Python & Virtual Environment Setup
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv
+ENV VIRTUAL_ENV=/opt/venv
 RUN uv python install 3.11
-RUN uv venv --python 3.11 .venv
-ENV PATH="/workspace/.venv/bin:$PATH"
+RUN uv venv --python 3.11 $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # 6. Project Dependencies (Cache Layer)
 COPY pyproject.toml ./

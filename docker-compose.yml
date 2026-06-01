@@ -19,7 +19,7 @@ services:
       - ./assets/data:/workspace/assets/data
       - ./assets/logs:/workspace/assets/logs
       - ./src:/workspace/src
-      - ./src/nerf/PixelNeRFModel.py:/workspace/.venv/lib/python3.11/site-packages/PixelNeRFModel.py
+      - ./src/nerf/PixelNeRFModel.py:/opt/venv/lib/python3.11/site-packages/PixelNeRFModel.py
       - ./main.py:/workspace/main.py
     environment:
       - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
