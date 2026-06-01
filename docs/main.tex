@@ -46,29 +46,30 @@ Diante desta problemática, as contribuições deste trabalho são: (i) uma aval
 \section{Fundamentação Teórica}
 \label{sec:fund}
 
-\subsection{Conjuntos de Dados de Vistas Esparsas} Essa nomenclatura refere-se, neste trabalho, aos conjuntos de dados imagéticos que possuem pouca (ou nenhuma) redundância e/ou variabilidade de poses de câmera referentes ao mesmo objeto. Áreas como histologia, holotomografia e microscopia confocal de fluorescência ilustram bem esse problema: a aquisição de imagens multi-vista é fisicamente limitada, biologicamente invasiva e estruturalmente esparsa por natureza \cite{XUE2021101816}.
+\textbf{Conjuntos de Dados de Vistas Esparsas.} Essa nomenclatura refere-se, neste trabalho, aos conjuntos de dados imagéticos que possuem pouca (ou nenhuma) redundância e/ou variabilidade de poses de câmera referentes ao mesmo objeto. Áreas como histologia, holotomografia e microscopia confocal de fluorescência ilustram bem esse problema: a aquisição de imagens multi-vista é fisicamente limitada, biologicamente invasiva e estruturalmente esparsa por natureza \cite{XUE2021101816}.
 
 
-\subsection{Campos de Radiância Neural} Campos de Radiância Neural (\textit{Neural Radiance Fields}, NeRF) utilizam-se de redes neurais do tipo MLP (\textit{Multilayer Perceptron}) para aproximar uma função contínua no espaço 5D. 
+\textbf{Campos de Radiância Neural.} Campos de Radiância Neural (\textit{Neural Radiance Fields}, NeRF) utilizam-se de redes neurais do tipo MLP (\textit{Multilayer Perceptron}) para aproximar uma função contínua no espaço 5D. 
 Essa função recebe como entrada uma posição espacial $\mathbf{x} = (x, y, z)$ e uma direção de visualização $d = (\theta, \phi)$, retornando a densidade volumétrica $\sigma(\mathbf{x})$ e a cor associada $\mathbf{c} = (r, g, b)$:
 \[
   F_\theta : F_\theta\prime \circ \gamma(\mathbf{x}, d) \rightarrow (\sigma, \mathbf{c}) ,\ \ \sigma \in \mathbb{R}_{\geq0},\ c \in [0, 1]^3
 \]
 onde $\theta$ representa os pesos da rede neural, sendo $F_\theta\prime$ o MLP original e $\gamma$ um codificador posicional.
 
-\subsection{Representações de Cena} Trabalhos subsequentes introduziram representações híbridas que desacoplam a estrutura espacial da rede neural, dado a viabilidade de alterar-se o \textit{positional encoding} via codificação de fourier por um sistema de \textit{hash encoding}. O Instant-NGP \cite{muller2022} propõe uma codificação por tabela de hash multiescala, que mapeia coordenadas espaciais em vetores de características de forma eficiente, reduzindo drasticamente o tempo de otimização por cena. O Nerfacto \cite{Tancik2023} estende essa ideia combinando múltiplas otimizações comprovadas da literatura focando no equilíbrio entre qualidade visual e tempo de renderização em tempo real.
+\textbf{Representações de Cena.} Trabalhos subsequentes introduziram representações híbridas que desacoplam a estrutura espacial da rede neural, dado a viabilidade de alterar-se o \textit{positional encoding} via codificação de fourier por um sistema de \textit{hash encoding}. O Instant-NGP \cite{muller2022} propõe uma codificação por tabela de hash multiescala, que mapeia coordenadas espaciais em vetores de características de forma eficiente, reduzindo drasticamente o tempo de otimização por cena. O Nerfacto \cite{Tancik2023} estende essa ideia combinando múltiplas otimizações comprovadas da literatura focando no equilíbrio entre qualidade visual e tempo de renderização em tempo real.
 
-\subsection{Renderização Volumétrica} Seja um campo de radiância neural $F_\theta$, a cor esperada de um pixel é computada através de renderização volumétrica. Dado um raio $\mathbf{r}(t) = \mathbf{o} + t\mathbf{d}$ com limites de profundidade $(t_n, t_f)$, a cor resultante é dada pela integral:
+\textbf{Renderização Volumétrica.} Seja um campo de radiância neural $F_\theta$, a cor esperada de um pixel é computada através de renderização volumétrica. Dado um raio $\mathbf{r}(t) = \mathbf{o} + t\mathbf{d}$ com limites de profundidade $(t_n, t_f)$, a cor resultante é dada pela integral:
 
 \[
 \hat{C}(\mathbf{r}) = \int_{t_n}^{t_f} T(t) \sigma(\mathbf{r}(t)) \mathbf{c}(\mathbf{r}(t), \mathbf{d}) \, dt
 \]
 onde $T(t) = \exp\left(-\int_{t_n}^t \sigma(\mathbf{r}(s)) \, ds\right)$ denota a transmitância acumulada ao longo do raio, ou seja, a probabilidade de o raio não atingir nenhuma partícula obstrutiva até a profundidade $t$. Na prática, por ser uma função contínua, essa integral é aproximada numericamente via \textit{alpha compositing} sobre amostras discretas interpoladas ao longo de cada raio durante o treinamento.
 
-\subsection{Extrator de Características} O extrator de características se torna, portanto, responsável por codificar as imagens de entrada em representações que a rede neural possa condicionar. O PixelNeRF \cite{yu2021pixelnerfneuralradiancefields} utiliza uma ResNet (\textit{Residual Neural Network}) pré-treinada para extrair mapas de características por imagem; dado um ponto 3D, sua projeção nas vistas de entrada recupera os vetores de características espaciais correspondentes, que são agregados e passados à MLP de radiância. Essa abordagem é local e opera por pixel, sem modelar explicitamente relações entre vistas. O GNT (Generalizable NeRF Transformer) \cite{t2023attentionnerfneeds} substitui: (i) o extrator de características por um \textit{transformer} capaz de utilizar de mecanismos de atenção para angariar características mais globais ao objeto; (ii) a MLP de radiância também por um \textit{transformer} que amostra pontos ao longo do raio e agrega informação entre vistas por meio de atenção cruzada, eliminando a dependência de uma função de volume explícita.
+\textbf{Extrator de Características.} O extrator de características se torna, portanto, responsável por codificar as imagens de entrada em representações que a rede neural possa condicionar. O PixelNeRF \cite{yu2021pixelnerfneuralradiancefields} utiliza uma ResNet (\textit{Residual Neural Network}) pré-treinada para extrair mapas de características por imagem; dado um ponto 3D, sua projeção nas vistas de entrada recupera os vetores de características espaciais correspondentes, que são agregados e passados à MLP de radiância. Essa abordagem é local e opera por pixel, sem modelar explicitamente relações entre vistas. O GNT (Generalizable NeRF Transformer) \cite{t2023attentionnerfneeds} substitui: (i) o extrator de características por um \textit{transformer} capaz de utilizar de mecanismos de atenção para angariar características mais globais ao objeto; (ii) a MLP de radiância também por um \textit{transformer} que amostra pontos ao longo do raio e agrega informação entre vistas por meio de atenção cruzada, eliminando a dependência de uma função de volume explícita.
 
 
-\subsection{NeRFs Few-Shot vs. Per-Scene} Com o objetivo de reduzir a necessidade de múltiplas vistas durante o treinamento, surgiram abordagens conhecidas como NeRFs \textit{few-shot}, capazes de generalizar a cena e produzir novas vistas a partir de poucas imagens, utilizando-se de diversos conceitos distintos aplicados aos componentes NeRF supracitados. Estas abordagens contrastam frontalmente com os métodos \textit{per-scene}. Enquanto modelos \textit{per-scene} (como Instant-NGP) otimizam uma estrutura de dados de forma isolada e colapsam sob a escassez de vistas, arquiteturas \textit{few-shot} e generalizáveis incorporam \textit{priors} estruturais e semânticos aprendidos de grandes bases de dados. Essa distinção arquitetural torna-se indispensável em cenários onde a extração é severamente restrita.
+\textbf{NeRFs Few-Shot vs. Per-Scene.} Com o objetivo de reduzir a necessidade de múltiplas vistas durante o treinamento, surgiram abordagens conhecidas como NeRFs \textit{few-shot}, capazes de generalizar a cena e produzir novas vistas a partir de poucas imagens, utilizando-se de diversos conceitos distintos aplicados aos componentes NeRF supracitados. Estas abordagens contrastam frontalmente com os métodos \textit{per-scene}. Enquanto modelos \textit{per-scene} (como Instant-NGP) otimizam uma estrutura de dados de forma isolada e colapsam sob a escassez de vistas, arquiteturas \textit{few-shot} e generalizáveis incorporam \textit{priors} estruturais e semânticos aprendidos de grandes bases de dados. Essa distinção arquitetural torna-se indispensável em cenários onde a extração é severamente restrita.
+
 \section{Metodologia} 
 \label{sec:metodology}
 
@@ -342,37 +343,37 @@ A análise qualitativa seguiu as estruturas do split (\ref{sec:stdin}), sendo po
 \begin{figure}[H]
     \centering
     % Linha 1: Títulos dos modelos
-    \begin{subfigure}[b]{0.19\textwidth}
+    \begin{subfigure}[b]{0.26\textwidth}
         \centering
         \caption*{Ground Truth}
         \includegraphics[width=\textwidth]{img/gt.jpg}
     \end{subfigure}%
     \hfill
-    \begin{subfigure}[b]{0.19\textwidth}
+    \begin{subfigure}[b]{0.26\textwidth}
         \centering
         \caption*{PixelNeRF}
         \includegraphics[width=\textwidth]{img/pixel-nerf.png}
     \end{subfigure}%
     \hfill
-    \begin{subfigure}[b]{0.19\textwidth}
+    \begin{subfigure}[b]{0.26\textwidth}
         \centering
         \caption*{GNT}
         \includegraphics[width=\textwidth]{img/gnt.png}
     \end{subfigure}%
     \hfill
-    \begin{subfigure}[b]{0.19\textwidth}
+    \begin{subfigure}[b]{0.26\textwidth}
         \centering
         \caption*{Instant-NGP}
         \includegraphics[width=\textwidth]{img/instant-ngp.png}
     \end{subfigure}%
     \hfill
-    \begin{subfigure}[b]{0.19\textwidth}
+    \begin{subfigure}[b]{0.26\textwidth}
         \centering
         \caption*{Nerfacto}
         \includegraphics[width=\textwidth]{img/nerfacto.png}
     \end{subfigure}
 
-    \caption{Comparação qualitativa no regime TTA (10 vistas) para a cena "Fern" do dataset LLFF.}
+    \caption{Comparação qualitativa no regime TTA (10 vistas) e Per-Scene para a cena "Fern" do dataset LLFF.}
     \label{fig:comparacao_qualitativa}
 \end{figure}
 
@@ -408,6 +409,11 @@ Por fim, ressalta-se que todos os experimentos foram executados de forma única 
     \caption{Trade-off entre Fidelidade Visual (PSNR) e Consumo de VRAM no regime de 10 vistas / por cena). O quadrante superior esquerdo representa a região ideal (alta qualidade, baixo custo).}
     \label{fig:scatter_tradeoff}
 \end{figure}
+
+
+\subsection{O Fenômeno do Scale Mismatch}
+
+\subsection{Catastrophic Forgetting}
 
 \newpage
 \section{Conclusões}

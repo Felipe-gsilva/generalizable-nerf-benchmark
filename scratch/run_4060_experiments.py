@@ -25,9 +25,6 @@ def run_experiment(model_name, views):
     )
     
     extra_args = []
-    if model_name == "nerfacto":
-        # Add distortion loss to Nerfacto to kill floaters in few-shot
-        extra_args = ["--pipeline.model.distortion-loss-mult", "0.01"]
         
     try:
         nerf_model = NerfModel(
