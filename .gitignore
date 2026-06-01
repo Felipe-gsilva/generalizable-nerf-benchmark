@@ -1,11 +1,22 @@
-docs/build
 
-
-# Added by cargo
-
-/target
-assets/data/baseline
+cs/build
 __pycache__
-assets/logs
-assets/data/nerf_checkpoints
-assets/pretrained
+# Virtual Environments
+.venv/
+# Caches
+.pytest_cache/
+.ruff_cache/
+# Data and Artifacts
+assets/data/
+assets/logs/
+assets/nerf_aug/
+assets/nerf_checkpoints/
+assets/pretrained/
+# Results
+results/
+results_correct/
+results_random_10/
+results_tta_1500/
+results_4060/
+# OS specific
+.DS_Store
