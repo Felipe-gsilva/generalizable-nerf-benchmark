@@ -1,13 +1,13 @@
 # Fdb version 4
-["bibtex build/main"] 1780353343.34133 "build/main.aux" "build/main.bbl" "build/main" 1780354203.57445 0
+["bibtex build/main"] 1780354664.92939 "build/main.aux" "build/main.bbl" "build/main" 1780354668.08396 0
   "./sbc-template.bib" 1780252023.2218 19958 9cde58b06de94bae4ef5546c3e6cc995 ""
   "./sbc.bst" 1774062402 21864 a668496cca21cfdd211f7fb5f0d57565 ""
-  "build/main.aux" 1780354203.49647 7874 0689cac43eba9ce2d762310fd080b4c0 "pdflatex"
+  "build/main.aux" 1780354668.00762 7874 5881b5bf97e8739516d94011c0b66ff6 "pdflatex"
   (generated)
   "build/main.bbl"
   "build/main.blg"
   (rewritten before read)
-["pdflatex"] 1780354203.01172 "main.tex" "build/main.pdf" "main" 1780354203.57459 0
+["pdflatex"] 1780354667.49868 "main.tex" "build/main.pdf" "main" 1780354668.0841 0
   "/usr/share/texmf-dist/fonts/enc/dvips/base/8r.enc" 1775415801 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/usr/share/texmf-dist/fonts/tfm/adobe/courier/pcrr8r.tfm" 1775415801 1292 bd42be2f344128bff6d35d98474adfe3 ""
   "/usr/share/texmf-dist/fonts/tfm/adobe/courier/pcrr8t.tfm" 1775415801 1384 4632f5e54900a7dadbb83f555bc61e56 ""
@@ -193,15 +193,15 @@
   "/usr/share/texmf-dist/web2c/texmf.cnf" 1775415801 43569 fd570f2fa160877d211e859f687312ba ""
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1780254454 325756 c3fa4413167de785cee2babc86728bf5 ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1775479938 2407018 433dd3f28482b49689898ea7544b3ac0 ""
-  "build/main.aux" 1780354203.49647 7874 0689cac43eba9ce2d762310fd080b4c0 "pdflatex"
-  "build/main.bbl" 1780353343.35486 4632 a19d8c85a07ce65549f7045d47e5bf51 "bibtex build/main"
+  "build/main.aux" 1780354668.00762 7874 5881b5bf97e8739516d94011c0b66ff6 "pdflatex"
+  "build/main.bbl" 1780354664.9418 4632 a19d8c85a07ce65549f7045d47e5bf51 "bibtex build/main"
   "img/gnt.png" 1780333607.54781 53537 2cebd681074d0de39b5258a9cfb976c9 ""
   "img/grafico_tradeoff.pdf" 1780352996.62212 23097 60a5a2e20b024aa3b52077e4e21dba1f ""
   "img/gt.jpg" 1780333607.55019 244377 cc4bf42a526aba085152d1d848842b43 ""
   "img/instant-ngp.png" 1780352068.01328 109698 4819630ae2c4570babb4afe29e21f8c7 ""
   "img/nerfacto.png" 1780349478.22691 96913 b087ab6d9d4a24fe343893c4b3d6c400 ""
   "img/pixel-nerf.png" 1780333607.54672 46004 7beff1442508e7aaabc4945206b339f0 ""
-  "main.tex" 1780354201.30682 44450 622ca62fd3fc0327475df4aea506a8cb ""
+  "main.tex" 1780354666.84368 44659 ea41e95eebc8eb43e708383ad1373f9d ""
   "sbc-template.sty" 1777396382.83662 6140 dfadbed77c1136f17bc7c5c8128d3c31 ""
   (generated)
   "build/main.aux"

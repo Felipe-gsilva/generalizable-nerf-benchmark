@@ -28,12 +28,12 @@ def main():
     num_views_options = [3, 6, 10]
 
     experiments_config = [
-        {"model": "instant-ngp", "regime": "per-scene"},
-        {"model": "nerfacto", "regime": "per-scene"},
+        #{"model": "instant-ngp", "regime": "per-scene"},
+        #{"model": "nerfacto", "regime": "per-scene"},
         #{"model": "pixel-nerf", "regime": "zero-shot"},
         #{"model": "gnt", "regime": "zero-shot"},
         {"model": "pixel-nerf", "regime": "tta"},
-        #{"model": "gnt", "regime": "tta"},
+        {"model": "gnt", "regime": "tta"},
     ]
 
     device_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
@@ -82,7 +82,7 @@ def main():
                             num_views=num_views,
                             llffhold=8,
                             regime=regime,
-                            tta_steps=500,
+                            tta_steps=2500,
                         )
                         current_downscale = 8
 

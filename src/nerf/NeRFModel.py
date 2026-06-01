@@ -888,9 +888,9 @@ class NerfModel:
                 "--mixed-precision",
                 "True",
                 "--pipeline.model.eval-num-rays-per-chunk",
-                "128",
+                "256",
                 "--pipeline.datamanager.train-num-rays-per-batch",
-                "128",
+                "512",
                 "--pipeline.datamanager.cache-images-type",
                 "uint8",
             ]
@@ -907,9 +907,9 @@ class NerfModel:
                 "--pipeline.model.netwidth",
                 "64",
                 "--pipeline.model.eval-num-rays-per-chunk",
-                "64",
+                "512",
                 "--pipeline.datamanager.train-num-rays-per-batch",
-                "64",
+                "512",
                 "--pipeline.datamanager.cache-images-type",
                 "uint8",
             ]
