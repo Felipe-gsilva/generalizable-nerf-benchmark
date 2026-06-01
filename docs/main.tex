@@ -54,7 +54,7 @@ Essa função recebe como entrada uma posição espacial $\mathbf{x} = (x, y, z)
 \[
   F_\theta : F_\theta\prime \circ \gamma(\mathbf{x}, d) \rightarrow (\sigma, \mathbf{c}) ,\ \ \sigma \in \mathbb{R}_{\geq0},\ c \in [0, 1]^3
 \]
-onde $\theta$ representa os pesos da rede neural e $\gamma$ um codificador posicional.
+onde $\theta$ representa os pesos da rede neural, sendo $F_\theta\prime$ o MLP original e $\gamma$ um codificador posicional.
 
 \subsection{Representações de Cena} Trabalhos subsequentes introduziram representações híbridas que desacoplam a estrutura espacial da rede neural, dado a viabilidade de alterar-se o \textit{positional encoding} via codificação de fourier por um sistema de \textit{hash encoding}. O Instant-NGP \cite{muller2022} propõe uma codificação por tabela de hash multiescala, que mapeia coordenadas espaciais em vetores de características de forma eficiente, reduzindo drasticamente o tempo de otimização por cena. O Nerfacto \cite{Tancik2023} estende essa ideia combinando múltiplas otimizações comprovadas da literatura focando no equilíbrio entre qualidade visual e tempo de renderização em tempo real.
 
@@ -137,7 +137,7 @@ As implementações foram guiadas pelas descrições metodológicas dos trabalho
 
 Os experimentos foram conduzidos sobre o dataset LLFF (\textit{Local Light Field Fusion}) \cite{mildenhall2019locallightfieldfusion}, composto por cenas de objetos reais capturadas com câmera em movimento frontal. A escolha pelo LLFF em detrimento de alternativas tradicionais como o DTU baseia-se diretamente nas severas restrições de hardware físico do presente estudo. Especificamente, o processamento dos volumes de custo tridimensionais (\textit{cost volumes}) exigidos pelo DTU em sua resolução original demanda um volume de memória gráfica que excede a capacidade de 6 GB de VRAM da GPU utilizada. Dessa forma, o LLFF apresenta-se como a única opção viável que concilia relevância científica com a limitação de recursos físicos, sendo compatível com o protocolo de avaliação clássico de \cite{niemeyer2022regnerf}. Reserva-se, portanto, para teste as imagens cujo índice é múltiplo de 8 (llffhold=8), totalizando entre 5 e 8 imagens de teste por cena. As N vistas de treinamento ($N \in {3, 6, 10}$) são amostradas uniformemente das imagens remanescentes.
 
-A seleção das vistas de treino foi realizada por duas estratégias distintas: (i) \textit{uniform}, em que as vistas são amostradas por interpolação linear sobre os índices do dataset, distribuindo-as uniformemente ao longo da trajetória da câmera; e (ii) \textit{random}, em que as vistas são sorteadas aleatoriamente com semente fixa, garantindo reprodutibilidade. A comparação entre as duas estratégias permite avaliar a sensibilidade dos modelos à distribuição espacial das vistas de entrada.
+A seleção das vistas de treino foi realizada por duas estratégias distintas: (i) \textit{uniform}, em que as vistas são amostradas por interpolação linear sobre os índices do dataset, distribuindo-as uniformemente ao longo da trajetória da câmera; e (ii) \textit{random}, em que as vistas são sorteadas aleatoriamente com semente fixa (42), garantindo reprodutibilidade. A comparação entre as duas estratégias permite avaliar a sensibilidade dos modelos à distribuição espacial das vistas de entrada.
 
 \begin{table}[H]
 \centering
@@ -168,7 +168,7 @@ A seleção das vistas de treino foi realizada por duas estratégias distintas: 
 }
 \end{table}
 
-As imagens restantes foram divididas proporcionalmente entre conjuntos de validação e teste, também com semente fixa, assegurando que as vistas de teste sejam idênticas entre todos os modelos e estratégias de split, eliminando variáveis de avaliação que poderiam comprometer a comparação. As métricas finais são reportadas exclusivamente sobre o conjunto de teste, sem sobreposição com as vistas de treino. Todos os experimentos foram executados em uma GPU NVIDIA GeForce GTX 1660 Super (6GB de VRAM), com CUDA 12.6 e driver 610.43.02.
+As imagens restantes foram divididas proporcionalmente entre conjuntos de validação e teste, também com semente fixa (42), assegurando que as vistas de teste sejam idênticas entre todos os modelos e estratégias de split, eliminando variáveis de avaliação que poderiam comprometer a comparação. As métricas finais são reportadas exclusivamente sobre o conjunto de teste, sem sobreposição com as vistas de treino. Todos os experimentos foram executados em uma GPU NVIDIA GeForce GTX 1660 Super (6GB de VRAM), com CUDA 12.6 e driver 610.43.02.
 Para garantir reprodutibilidade em diferentes arquiteturas, utilizou-se contêineres Docker com o runtime NVIDIA para garantir isolamento do ambiente e reprodutibilidade entre diferentes hosts com GPU compatível.
 
 
@@ -232,7 +232,7 @@ Todo o ambiente foi isolado via contêiner Docker com GPU reservada.}
 % ── Split details (centered under split = 5) ──
 \node[detailbox]        (unif) at (4.0, -1.7) {\textit{uniform}};
 \node[detailbox]        (rand) at (6, -1.7) {\textit{random}};
-\node[detailbox]        (seed) at (5.0, -2.7) {semente fixa};
+\node[detailbox]        (seed) at (5.0, -2.7) {semente fixa (42)};
 \draw[link] (unif.south) -- (seed.north -| unif.south);
 \draw[link] (rand.south) -- (seed.north -| rand.south);
 \draw[link] (split.south) -- (unif.north);
@@ -324,7 +324,7 @@ Como referência externa, a Tabela \ref{tab:nerfbaselines_llff} compila resultad
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lccccl}
 \toprule
-\textbf{Método} & \textbf{PSNR (dB) $\uparrow$} & \textbf{SSIM $\uparrow$} & \textbf{LPIPS (VGG) $\downarrow$} & \textbf{Time} & \textbf{GPU mem. (GB)} \\
+\textbf{Modelo} & \textbf{PSNR (dB) $\uparrow$} & \textbf{SSIM $\uparrow$} & \textbf{LPIPS (VGG) $\downarrow$} & \textbf{Time} & \textbf{GPU mem. (GB)} \\
 \midrule
 Mip-NeRF 360 & 26.59 & 0.846 & 0.168 & 9h 55m 23s & 104.98 \\
 TensoRF      & 26.68 & 0.834 & 0.202 & 31m 32s    & 20.38 \\
