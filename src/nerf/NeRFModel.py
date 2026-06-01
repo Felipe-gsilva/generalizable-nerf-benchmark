@@ -969,6 +969,10 @@ class NerfModel:
                     str(unzipped_path.resolve()),
                 ]
 
+        if extra_cmd_args:
+            cmd += extra_cmd_args
+            config.logger.info(f"➕ Appending extra CLI args: {extra_cmd_args}")
+
         cmd += [
             "nerfstudio-data",
             "--downscale-factor",
@@ -976,10 +980,6 @@ class NerfModel:
             "--eval-mode",
             "fraction",
         ]
-        
-        if extra_cmd_args:
-            cmd += extra_cmd_args
-            config.logger.info(f"➕ Appending extra CLI args: {extra_cmd_args}")
 
         process_env = os.environ.copy()
         process_env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
