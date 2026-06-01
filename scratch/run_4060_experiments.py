@@ -39,17 +39,20 @@ def run_experiment(model_name, views):
             regime="per-scene"
         )
         
-        print(f"  [Subprocess] 🏋️ Training with downscale 2...")
+        ds_factor = 4 if num_views_val == 0 else 2
+        
+        print(f"  [Subprocess] 🏋️ Training with downscale {ds_factor}...")
         nerf_model.train(
             data_path=dataset_obj.dataset_path, 
-            downscale_factor=2, 
+            downscale_factor=ds_factor, 
             num_imgs=num_views_val,
             extra_cmd_args=extra_args
         )
         
         ckpt_dir = nerf_model.get_output_path(dataset_obj.dataset_path)
         print(f"  [Subprocess] 🔍 Loading trained model from {ckpt_dir}...")
-        loaded = nerf_model.load_from_disk(ckpt_dir, mode="val", downscale_factor=2)
+        loaded = nerf_model.load_from_disk(ckpt_dir, mode="val", downscale_factor=ds_factor)
+
         
         if not loaded:
             print(f"  [Subprocess] ❌ Failed to load checkpoint after training for {display_name}")
@@ -65,7 +68,7 @@ def run_experiment(model_name, views):
         rendered_imgs = nerf_model.render(
             mode=RenderMode.PERSPECTIVE,
             save_path=save_dir,
-            downscale_factor=2,
+            downscale_factor=ds_factor,
         )
         elapsed_time = time.time() - start_time
         num_frames = len(rendered_imgs) if rendered_imgs else 0
@@ -76,7 +79,7 @@ def run_experiment(model_name, views):
         metrics = nerf_model.evaluate_all_metrics(
             mode=RenderMode.PERSPECTIVE,
             metrics=[AvailableMetrics.PSNR, AvailableMetrics.SSIM, AvailableMetrics.LPIPS],
-            downscale_factor=2
+            downscale_factor=ds_factor
         )
         
         if metrics:
@@ -107,9 +110,11 @@ def main():
         return
         
     experiments = [
+        {"model": "nerfacto", "views": "0"}, # 100% das vistas para o Upper Bound (downscale 4)
         {"model": "nerfacto", "views": "3"},
         {"model": "nerfacto", "views": "6"},
         {"model": "nerfacto", "views": "10"},
+        {"model": "instant-ngp", "views": "0"}, # 100% das vistas para o Upper Bound (downscale 4)
         {"model": "instant-ngp", "views": "3"},
         {"model": "instant-ngp", "views": "6"},
         {"model": "instant-ngp", "views": "10"},
