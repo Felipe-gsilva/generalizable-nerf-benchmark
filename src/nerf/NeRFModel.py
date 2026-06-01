@@ -800,7 +800,7 @@ class NerfModel:
             return [], None
 
     @profiler.time_function
-    def train(self, data_path: Path, downscale_factor: int = 1, num_imgs: int = 0):
+    def train(self, data_path: Path, downscale_factor: int = 1, num_imgs: int = 0, extra_cmd_args: list = []):
         """Prepares data and handles training/loading according to the selected regime."""
         if not self.process_data(data_path, num_imgs=num_imgs):
             config.logger.error(
@@ -976,6 +976,10 @@ class NerfModel:
             "--eval-mode",
             "fraction",
         ]
+        
+        if extra_cmd_args:
+            cmd += extra_cmd_args
+            config.logger.info(f"➕ Appending extra CLI args: {extra_cmd_args}")
 
         process_env = os.environ.copy()
         process_env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
