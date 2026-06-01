@@ -14,20 +14,21 @@
 \citation{wu2021cvt}
 \citation{t2023attentionnerfneeds}
 \citation{hedman2021bakingneuralradiancefields}
-\babel@aux{brazilian}{}
-\@writefile{toc}{\contentsline {section}{\numberline {1}Introdução}{1}{}\protected@file@percent }
-\newlabel{sec:intro}{{1}{1}{Introdução}{section.1}{}}
 \citation{wang2004image}
 \citation{zhang2018unreasonable}
 \citation{niemeyer2022regnerf}
 \citation{kim2023poserefinement}
+\citation{kulhanek2025nerfbaselinesconsistentreproducibleevaluation}
+\babel@aux{brazilian}{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introdução}{1}{}\protected@file@percent }
+\newlabel{sec:intro}{{1}{1}{Introdução}{section.1}{}}
 \citation{XUE2021101816}
-\citation{muller2022}
-\citation{Tancik2023}
 \@writefile{toc}{\contentsline {section}{\numberline {2}Fundamentação Teórica}{2}{}\protected@file@percent }
 \newlabel{sec:fund}{{2}{2}{Fundamentação Teórica}{section.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Conjuntos de Dados de Vistas Esparsas}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Campos de Radiância Neural}{2}{}\protected@file@percent }
+\citation{muller2022}
+\citation{Tancik2023}
 \citation{yu2021pixelnerfneuralradiancefields}
 \citation{t2023attentionnerfneeds}
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Representações de Cena}{3}{}\protected@file@percent }
@@ -42,36 +43,42 @@
 \newlabel{sec:metodology}{{3}{4}{Metodologia}{section.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Modelos Selecionados}{4}{}\protected@file@percent }
 \citation{Tancik2023}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Implementação no Nerfstudio}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Regimes Explorados}{5}{}\protected@file@percent }
+\newlabel{sec:reg}{{3.2}{5}{Regimes Explorados}{subsection.3.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Implementação no Nerfstudio}{5}{}\protected@file@percent }
 \citation{tinycudann}
 \citation{mildenhall2019locallightfieldfusion}
 \citation{niemeyer2022regnerf}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Protocolo Experimental}{6}{}\protected@file@percent }
-\newlabel{sec:stdin}{{3.3}{6}{Protocolo Experimental}{subsection.3.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Protocolo Experimental}{6}{}\protected@file@percent }
+\newlabel{sec:stdin}{{3.4}{6}{Protocolo Experimental}{subsection.3.4}{}}
 \citation{wang2004image}
 \citation{zhang2018unreasonable}
 \citation{niemeyer2022regnerf}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Impacto da estratégia de seleção de vistas de treino (\textit  {uniform} vs.\ \textit  {random}) sobre a qualidade visual média no dataset LLFF, avaliado no regime TTA com $N=10$ vistas. Resultados reportados como média sobre as 8 cenas do dataset.}}{7}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Impacto da estratégia de seleção de vistas de treino (\textit  {uniform} vs.\ \textit  {random}) sobre a qualidade visual média no dataset LLFF, avaliado no regime TTA com $N=10$ vistas. Resultados reportado sobre a cena \textit  {fern}.}}{7}{}\protected@file@percent }
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
 \newlabel{tab:split}{{1}{7}{Protocolo Experimental}{table.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Métricas de Avaliação}{7}{}\protected@file@percent }
-\newlabel{sec:metricas}{{3.4}{7}{Métricas de Avaliação}{subsection.3.4}{}}
-\citation{kulhanek2025nerfbaselinesconsistentreproducibleevaluation}
-\citation{kulhanek2025nerfbaselinesconsistentreproducibleevaluation}
-\citation{kulhanek2025nerfbaselinesconsistentreproducibleevaluation}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Métricas de Avaliação}{7}{}\protected@file@percent }
+\newlabel{sec:metricas}{{3.5}{7}{Métricas de Avaliação}{subsection.3.5}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {4}Experimentos e Resultados}{8}{}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Protocolo de execução experimental. As caixas superiores representam as etapas do pipeline; as ramificações inferiores detalham as variantes de configuração (estratégia de split, regime de treino) e as métricas coletadas. Todo o ambiente foi isolado via contêiner Docker com GPU reservada.}}{8}{}\protected@file@percent }
 \newlabel{fig:pipeline}{{1}{8}{Experimentos e Resultados}{figure.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Análise Quantitativa}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Análise Qualitativa}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Trade-offs Computacionais}{8}{}\protected@file@percent }
+\citation{kulhanek2025nerfbaselinesconsistentreproducibleevaluation}
+\citation{kulhanek2025nerfbaselinesconsistentreproducibleevaluation}
+\citation{kulhanek2025nerfbaselinesconsistentreproducibleevaluation}
 \@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Avaliação quantitativa da qualidade visual no dataset LLFF. As setas indicam se valores maiores ($\uparrow $) ou menores ($\downarrow $) representam desempenho superior. Negrito indica o melhor resultado dentro de cada regime; sublinhado indica o segundo melhor.}}{9}{}\protected@file@percent }
 \newlabel{tab:qualidade_visual}{{2}{9}{Análise Quantitativa}{table.2}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusões}{9}{}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Resultados no LLFF reportados pelo \textit  {NerfBaselines} \cite  {kulhanek2025nerfbaselinesconsistentreproducibleevaluation}. "Time" refere-se ao tempo total de treinamento reportado e "GPU mem." ao pico de memória alocada durante o treino.}}{10}{}\protected@file@percent }
-\newlabel{tab:nerfbaselines_llff}{{3}{10}{Análise Quantitativa}{table.3}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Comparação qualitativa no regime TTA (10 vistas) para a cena "Trex" do dataset LLFF. Destaca-se a perda de detalhes de alta frequência nos modelos generativos (PixelNeRF, GNT) em oposição aos ruídos de geometria apresentados pelos modelos per-scene (Instant-NGP, Nerfacto) sob escassez de dados.}}{10}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Resultados no LLFF reportados pelo \textit  {NerfBaselines} \cite  {kulhanek2025nerfbaselinesconsistentreproducibleevaluation}. "Time" refere-se ao tempo total de treinamento reportado e "GPU mem." ao pico de memória alocada durante o treino.}}{9}{}\protected@file@percent }
+\newlabel{tab:nerfbaselines_llff}{{3}{9}{Análise Quantitativa}{table.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Análise Qualitativa}{9}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Comparação qualitativa no regime TTA (10 vistas) para a cena "Fern" do dataset LLFF.}}{10}{}\protected@file@percent }
 \newlabel{fig:comparacao_qualitativa}{{2}{10}{Análise Qualitativa}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Trade-offs Computacionais}{10}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Comparativo de custo computacional e pegada de memória. O tempo de treinamento refere-se à convergência da cena (ou adaptação no caso TTA). O "Tamanho da Rede" indica o footprint estático alocado, enquanto o "Pico Torch" demonstra o pico real de memória na GPU aferido dinamicamente durante a inferência. A taxa de FPS foi medida na renderização do conjunto de teste.}}{10}{}\protected@file@percent }
+\newlabel{tab:custo_computacional}{{4}{10}{Trade-offs Computacionais}{table.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Trade-off entre Fidelidade Visual (PSNR) e Consumo de VRAM no regime de 10 vistas / por cena). O quadrante superior esquerdo representa a região ideal (alta qualidade, baixo custo).}}{11}{}\protected@file@percent }
+\newlabel{fig:scatter_tradeoff}{{3}{11}{Trade-offs Computacionais}{figure.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusões}{12}{}\protected@file@percent }
 \bibstyle{sbc}
 \bibdata{sbc-template}
 \bibcite{substance3dviewer}{{Adobe} 2025}
@@ -85,14 +92,10 @@
 \bibcite{niemeyer2022regnerf}{Niemeyer et~al. 2022}
 \bibcite{schwarz2021grafgenerativeradiancefields}{Schwarz et~al. 2021}
 \bibcite{Tancik2023}{Tancik et~al. 2023}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Comparativo de custo computacional e pegada de memória. O tempo de treinamento refere-se à convergência da cena (ou adaptação no caso TTA), e a VRAM indica o pico de alocação durante o treinamento. A taxa de FPS foi medida na renderização do conjunto de teste.}}{11}{}\protected@file@percent }
-\newlabel{tab:custo_computacional}{{4}{11}{Trade-offs Computacionais}{table.4}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Trade-off entre Fidelidade Visual (PSNR) e Consumo de VRAM no regime de 10 vistas. O quadrante superior esquerdo representa a região ideal (alta qualidade, baixo custo).}}{11}{}\protected@file@percent }
-\newlabel{fig:scatter_tradeoff}{{3}{11}{Trade-offs Computacionais}{figure.3}{}}
 \bibcite{wang2004image}{Wang et~al. 2004}
 \bibcite{t2023attentionnerfneeds}{Wang et~al. 2023}
 \bibcite{wu2021cvt}{Wu et~al. 2021}
 \bibcite{XUE2021101816}{Xue et~al. 2021}
 \bibcite{yu2021pixelnerfneuralradiancefields}{Yu et~al. 2021}
 \bibcite{zhang2018unreasonable}{Zhang et~al. 2018}
-\gdef \@abspage@last{12}
+\gdef \@abspage@last{15}

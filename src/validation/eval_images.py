@@ -91,10 +91,10 @@ def calculate_psnr_ssim_lpips(
     real_images, generated_images = real_images.to(device), generated_images.to(device)
     real_images, generated_images = align_image_tensors(real_images, generated_images)
 
-    # Ensure LPIPS model and inputs are always on the same device.
+    # Force LPIPS on CPU to prevent CUDA memory deadlocks/OOMs on 6GB VRAM GPUs
     if lpips_model is None:
         lpips_model = lpips.LPIPS(net="vgg")
-    lpips_model = lpips_model.to(device)
+    lpips_model = lpips_model.to("cpu")
     lpips_model.eval()
 
     psnr_scores: list[float] = []
@@ -113,9 +113,9 @@ def calculate_psnr_ssim_lpips(
                 psnr_scores.append(psnr(real_np[j], gen_np[j], data_range=255))
                 ssim_scores.append(ssim(real_np[j], gen_np[j], channel_axis=-1))
 
-            # LPIPS expects float in [-1, 1]
-            real_lpips = (real.float() / 127.5 - 1)
-            gen_lpips = (gen.float() / 127.5 - 1)
+            # LPIPS expects float in [-1, 1] on CPU
+            real_lpips = (real.float() / 127.5 - 1).cpu()
+            gen_lpips = (gen.float() / 127.5 - 1).cpu()
             lpips_scores.append(lpips_model(real_lpips, gen_lpips).mean().item())
 
     return (

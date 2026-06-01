@@ -8,3 +8,4 @@ assets/data/baseline
 __pycache__
 assets/logs
 assets/data/nerf_checkpoints
+assets/pretrained

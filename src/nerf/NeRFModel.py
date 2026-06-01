@@ -253,6 +253,21 @@ class NerfModel:
             )
         return out_json_path
 
+    def _get_eval_dataloader(self):
+        """Helper to get evaluation dataloader / datalist across different datamanagers."""
+        if hasattr(self.pipeline.datamanager, "fixed_indices_eval_dataloader"):
+            return self.pipeline.datamanager.fixed_indices_eval_dataloader
+        
+        # Fallback for VanillaDataManager / ParallelDataManager
+        eval_dataset = self.pipeline.datamanager.eval_dataset
+        cameras = eval_dataset.cameras
+        eval_dataloader = []
+        for i in range(len(eval_dataset)):
+            camera = cameras[i : i + 1]
+            data = eval_dataset[i]
+            eval_dataloader.append((camera, data))
+        return eval_dataloader
+
     def _get_latest_checkpoint(self, output_path: Path) -> Optional[Path]:
         """Finds the most recent checkpoint recursively in the output directory."""
         candidates = list(output_path.rglob("nerfstudio_models"))
@@ -274,6 +289,8 @@ class NerfModel:
         try:
             with config_path.open("r") as f:
                 content = f.read()
+
+            content = content.replace("/workspace/", "/home/felipe-gsilva/dev/cs/nerf-ann-paper/")
 
             if checkpoint_dir.name == "nerfstudio_models":
                 load_target = checkpoint_dir.parent
@@ -1123,7 +1140,7 @@ class NerfModel:
                 )
                 ray_bundle = self._generate_orthographic_rays(Plans.AXIAL, 0.0, cam)
             else:
-                eval_dataloader = self.pipeline.datamanager.fixed_indices_eval_dataloader
+                eval_dataloader = self._get_eval_dataloader()
                 outputs = next(iter(eval_dataloader))
                 camera = outputs[0]
                 camera = camera.to(device)
@@ -1187,7 +1204,7 @@ class NerfModel:
         return fps
 
     def get_perspective_test_metrics(
-        self, metrics: List[AvailableMetrics]
+        self, metrics: List[AvailableMetrics], downscale_factor: Optional[int] = None
     ) -> Dict[str, float]:
         """
         Review rendered images from the perspective test set and compute quality metrics against ground truth.
@@ -1200,8 +1217,7 @@ class NerfModel:
         self.model.eval()
         rendered_images = []
         gt_images = []
-
-        eval_dataloader = self.pipeline.datamanager.fixed_indices_eval_dataloader
+        eval_dataloader = self._get_eval_dataloader()
 
         config.logger.info(
             "🔍 Evaluating perspective test metrics against ground truth views... (This may take a while depending on the number of test views and image resolution.)"
@@ -1236,6 +1252,8 @@ class NerfModel:
 
             for outputs in eval_dataloader:
                 camera = outputs[0].to(self.pipeline.device)
+                if downscale_factor is not None and downscale_factor != 1:
+                    camera.rescale_output_resolution(1.0 / downscale_factor)
                 batch = outputs[1]
                 if model_metadata is not None:
                     ray_bundle = camera.generate_rays(camera_indices=0, keep_shape=True)
@@ -1257,9 +1275,8 @@ class NerfModel:
                 gt_rgb = batch["image"].cpu()
 
                 if target_h is None or target_w is None:
-                    # Initialize dimensions from first GT image assuming 3D format initially
-                    target_h = int(np.sqrt(gt_rgb.shape[0])) if gt_rgb.ndim == 2 else gt_rgb.shape[0]
-                    target_w = gt_rgb.shape[0] // target_h if gt_rgb.ndim == 2 else gt_rgb.shape[1]
+                    target_h = int(camera.height.item())
+                    target_w = int(camera.width.item())
 
                 rendered_rgb = ensure_3d_rgb(rendered_rgb, target_h, target_w)
                 gt_rgb = ensure_3d_rgb(gt_rgb, target_h, target_w)
@@ -1353,7 +1370,7 @@ class NerfModel:
             )
 
         else:
-            quality_metrics = self.get_perspective_test_metrics(metrics)
+            quality_metrics = self.get_perspective_test_metrics(metrics, downscale_factor=downscale_factor)
 
         if quality_metrics:
             results.update(quality_metrics)
@@ -1611,7 +1628,7 @@ class NerfModel:
                 output.append(rgb_uint8)
         return output
 
-    def render_perspective(self, save_path: Optional[Path]) -> List[np.ndarray]:
+    def render_perspective(self, save_path: Optional[Path], downscale_factor: Optional[int] = None) -> List[np.ndarray]:
         assert self.pipeline is not None, (
             "Pipeline must be loaded to render perspective views."
         )
@@ -1621,7 +1638,7 @@ class NerfModel:
             save_path.mkdir(parents=True, exist_ok=True)
 
         rendered_images = []
-        eval_dataloader = self.pipeline.datamanager.fixed_indices_eval_dataloader
+        eval_dataloader = self._get_eval_dataloader()
         with torch.no_grad():
             model_metadata = None
             if self.model_name in ["gnt", "pixel-nerf"]:
@@ -1633,8 +1650,10 @@ class NerfModel:
                 except Exception as e:
                     config.logger.warning(f"Failed to fetch metadata in perspective render for {self.model_name}: {e}")
 
-            for outputs in eval_dataloader:
+            for cam_idx, outputs in enumerate(eval_dataloader):
                 camera = outputs[0].to(self.pipeline.device)
+                if downscale_factor is not None and downscale_factor != 1:
+                    camera.rescale_output_resolution(1.0 / downscale_factor)
                 if model_metadata is not None:
                     ray_bundle = camera.generate_rays(camera_indices=0, keep_shape=True)
                     ray_bundle = ray_bundle.to(self.pipeline.device)
@@ -1649,14 +1668,13 @@ class NerfModel:
                 rendered_images.append(rendered_rgb)
 
                 if save_path is not None:
-                    for idx in range(rendered_rgb.shape[0]):
-                        img_uint8 = np.clip(rendered_rgb[idx], 0.0, 1.0)
-                        img_uint8 = (img_uint8 * 255.0).astype(np.uint8)
-                        png_out = save_path / f"perspective_view_{idx:03d}.png"
-                        Image.fromarray(img_uint8).save(png_out)
-                        logger.info(
-                            f"✅ Saved perspective rendered view {idx} → {png_out}"
-                        )
+                    img_uint8 = np.clip(rendered_rgb, 0.0, 1.0)
+                    img_uint8 = (img_uint8 * 255.0).astype(np.uint8)
+                    png_out = save_path / f"perspective_view_{cam_idx:03d}.png"
+                    Image.fromarray(img_uint8).save(png_out)
+                    logger.info(
+                        f"✅ Saved perspective rendered view {cam_idx} → {png_out}"
+                    )
         return rendered_images
 
     def render(
@@ -1699,7 +1717,7 @@ class NerfModel:
                 plan, slice_axis=0, num_slices=num_slices, save_path=save_path
             )
         elif mode == RenderMode.PERSPECTIVE:
-            return self.render_perspective(save_path=save_path)
+            return self.render_perspective(save_path=save_path, downscale_factor=downscale_factor)
 
 
 def download_pretrained_pixelnerf_weights(path: Path) -> Path:

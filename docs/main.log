@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.4.6)  31 MAY 2026 18:21
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.4.6)  1 JUN 2026 14:25
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -473,7 +473,14 @@ File: pgfmodulematrix.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 (/usr/share/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrary
 topaths.code.tex
 File: tikzlibrarytopaths.code.tex 2025-08-29 v3.1.11a (3.1.11a)
-)))
+))) (/usr/share/texmf-dist/tex/latex/float/float.sty
+Package: float 2001/11/08 v1.3d Float enhancements (AL)
+\c@float@type=\count320
+\float@exts=\toks35
+\float@box=\box65
+\@float@everytoks=\toks36
+\@floatcapt=\box66
+)
 (/usr/share/texmf-dist/tex/generic/pgf/libraries/pgflibraryarrows.meta.code.tex
 File: pgflibraryarrows.meta.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 \pgfarrowinset=\dimen293
@@ -500,35 +507,35 @@ File: tikzlibraryfit.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 (/usr/share/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrary
 backgrounds.code.tex
 File: tikzlibrarybackgrounds.code.tex 2025-08-29 v3.1.11a (3.1.11a)
-\pgf@layerbox@background=\box65
-\pgf@layerboxsaved@background=\box66
+\pgf@layerbox@background=\box67
+\pgf@layerboxsaved@background=\box68
 )
 (/usr/share/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrary
 calc.code.tex
 File: tikzlibrarycalc.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 ) (/usr/share/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
 File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
-\l__color_backend_stack_int=\count320
+\l__color_backend_stack_int=\count321
 ) (./main.aux
 Package babel Info: 'brazilian' activates 'portuges' shorthands.
-(babel)             Reported on input line 17.
+(babel)             Reported on input line 22.
 )
 \openout1 = `main.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 26.
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 26.
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 26.
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 26.
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 26.
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 26.
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 26.
-LaTeX Font Info:    ... okay on input line 26.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 27.
+LaTeX Font Info:    ... okay on input line 27.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 27.
+LaTeX Font Info:    ... okay on input line 27.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 27.
+LaTeX Font Info:    ... okay on input line 27.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 27.
+LaTeX Font Info:    ... okay on input line 27.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 27.
+LaTeX Font Info:    ... okay on input line 27.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 27.
+LaTeX Font Info:    ... okay on input line 27.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 27.
+LaTeX Font Info:    ... okay on input line 27.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -565,20 +572,21 @@ LaTeX Font Info:    ... okay on input line 26.
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
 Package caption Info: Begin \AtBeginDocument code.
+Package caption Info: float package is loaded.
 Package caption Info: End \AtBeginDocument code.
 (/usr/share/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count321
+\scratchcounter=\count322
 \scratchdimen=\dimen297
-\scratchbox=\box67
-\nofMPsegments=\count322
-\nofMParguments=\count323
-\everyMPshowfont=\toks35
-\MPscratchCnt=\count324
+\scratchbox=\box69
+\nofMPsegments=\count323
+\nofMParguments=\count324
+\everyMPshowfont=\toks37
+\MPscratchCnt=\count325
 \MPscratchDim=\dimen298
-\MPnumerator=\count325
-\makeMPintoPDFobject=\count326
-\everyMPtoPDFconversion=\toks36
+\MPnumerator=\count326
+\makeMPintoPDFobject=\count327
+\everyMPtoPDFconversion=\toks38
 ) (/usr/share/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
 Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
 Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
@@ -588,19 +596,19 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
-LaTeX Font Info:    Trying to load font information for U+msa on input line 27.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 28.
 
 
 (/usr/share/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 27.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 28.
 
 
 (/usr/share/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-LaTeX Font Info:    Trying to load font information for T1+pcr on input line 27
+LaTeX Font Info:    Trying to load font information for T1+pcr on input line 28
 .
 
 (/usr/share/texmf-dist/tex/latex/psnfss/t1pcr.fd
@@ -610,102 +618,119 @@ File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texmf-dist/fonts
 /enc/dvips/base/8r.enc}]
 [2] [3]
-LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 9
-1.
+LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 1
+00.
  (/usr/share/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 ) [4] [5]
-LaTeX Font Info:    Trying to load font information for T1+phv on input line 16
-0.
+LaTeX Font Info:    Trying to load font information for T1+phv on input line 14
+4.
 
 (/usr/share/texmf-dist/tex/latex/psnfss/t1phv.fd
 File: t1phv.fd 2020/03/25 scalable font definitions for T1/phv.
 )
 LaTeX Font Info:    Font shape `T1/phv/b/it' in size <10> not available
-(Font)              Font shape `T1/phv/b/sl' tried instead on input line 160.
+(Font)              Font shape `T1/phv/b/sl' tried instead on input line 144.
+ [6] [7]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-[6] [7]
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 349--349
+ [8]
+Underfull \hbox (badness 10000) in paragraph at lines 322--322
 [] \T1/phv/b/n/10 Ta-bela 3. |Re-sul-ta-dos no LLFF re-por-ta-dos pelo \T1/phv/
 b/sl/10 Nerf-Ba-se-li-nes
  []
 
 
-Underfull \hbox (badness 1478) in paragraph at lines 349--349
+Underfull \hbox (badness 1478) in paragraph at lines 322--322
 \T1/phv/b/n/10 [[]]. "Time"refere-se ao tempo to-tal de trei-
  []
 
 
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 374--374
+Underfull \hbox (badness 10000) in paragraph at lines 347--347
 [] |\T1/phv/b/n/8 Ground
  []
 
 
-Overfull \hbox (13.60777pt too wide) in paragraph at lines 374--374
+Overfull \hbox (13.60777pt too wide) in paragraph at lines 347--347
 \T1/phv/b/n/8 Truth| 
  []
 
+<img/gt.jpg, id=50, 1011.78pt x 758.835pt>
+File: img/gt.jpg Graphic file (type jpg)
+<use img/gt.jpg>
+Package pdftex.def Info: img/gt.jpg  used on input line 348.
+(pdftex.def)             Requested size: 81.09138pt x 60.81224pt.
 
-Underfull \hbox (badness 10000) in paragraph at lines 380--380
+Underfull \hbox (badness 10000) in paragraph at lines 353--353
 [] |\T1/phv/b/n/8 Pi-xel-
  []
 
 
-Overfull \hbox (14.69576pt too wide) in paragraph at lines 380--380
+Overfull \hbox (14.69576pt too wide) in paragraph at lines 353--353
 \T1/phv/b/n/8 NeRF| 
  []
 
+<img/pixel-nerf.png, id=51, 252.945pt x 189.70876pt>
+File: img/pixel-nerf.png Graphic file (type png)
+<use img/pixel-nerf.png>
+Package pdftex.def Info: img/pixel-nerf.png  used on input line 354.
+(pdftex.def)             Requested size: 81.09138pt x 60.81804pt.
+<img/gnt.png, id=52, 252.945pt x 189.70876pt>
+File: img/gnt.png Graphic file (type png)
+<use img/gnt.png>
+Package pdftex.def Info: img/gnt.png  used on input line 360.
+(pdftex.def)             Requested size: 81.09138pt x 60.81804pt.
 
-Underfull \hbox (badness 10000) in paragraph at lines 392--392
+Underfull \hbox (badness 10000) in paragraph at lines 365--365
 [] |\T1/phv/b/n/8 Instant-
  []
 
 
-Overfull \hbox (11.1437pt too wide) in paragraph at lines 392--392
+Overfull \hbox (11.1437pt too wide) in paragraph at lines 365--365
 \T1/phv/b/n/8 NGP| 
  []
 
+<img/instant-ngp.png, id=53, 252.945pt x 189.70876pt>
+File: img/instant-ngp.png Graphic file (type png)
+<use img/instant-ngp.png>
+Package pdftex.def Info: img/instant-ngp.png  used on input line 366.
+(pdftex.def)             Requested size: 81.09138pt x 60.81804pt.
+<img/nerfacto.png, id=54, 252.945pt x 189.70876pt>
+File: img/nerfacto.png Graphic file (type png)
+<use img/nerfacto.png>
+Package pdftex.def Info: img/nerfacto.png  used on input line 372.
+(pdftex.def)             Requested size: 81.09138pt x 60.81804pt.
+[9]
+<img/grafico_tradeoff.pdf, id=58, 578.16pt x 433.62pt>
+File: img/grafico_tradeoff.pdf Graphic file (type pdf)
+<use img/grafico_tradeoff.pdf>
+Package pdftex.def Info: img/grafico_tradeoff.pdf  used on input line 407.
+(pdftex.def)             Requested size: 341.43437pt x 256.07178pt.
 
-LaTeX Warning: `h' float specifier changed to `ht'.
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-Overfull \hbox (26.12093pt too wide) in paragraph at lines 412--428
- [][] 
- []
-
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-[8] [9] [10] (./main.bbl
+ [10 <./img/gt.jpg> <./img/pixel-nerf.png (PNG copy)> <./img/gnt.png (PNG copy)
+> <./img/instant-ngp.png (PNG copy)> <./img/nerfacto.png (PNG copy)>] [11 <./im
+g/grafico_tradeoff.pdf>] [12] [13] (./main.bbl
 Underfull \hbox (badness 10000) in paragraph at lines 35--39
 []\T1/ptm/m/n/12 Müller, T. (2021).  tiny-cuda-nn.  $\T1/pcr/m/n/12 https : / /
  github . com / NVlabs /
  []
 
-[11]) [12] (./main.aux)
+[14]) [15] (./main.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 18123 strings out of 469375
- 358144 string characters out of 5466623
- 771513 words of memory out of 5000000
- 46463 multiletter control sequences out of 15000+600000
- 687689 words of font info for 112 fonts, out of 8000000 for 9000
+ 18231 strings out of 469375
+ 360136 string characters out of 5466623
+ 763112 words of memory out of 5000000
+ 46566 multiletter control sequences out of 15000+600000
+ 690411 words of font info for 114 fonts, out of 8000000 for 9000
  64 hyphenation exceptions out of 8191
- 84i,12n,104p,1744b,1069s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 84i,13n,104p,1926b,1081s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/share/
 texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texmf-dist/fon
 ts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texmf-dist/fonts/type1/publi
@@ -721,10 +746,10 @@ pe1/urw/helvetic/uhvb8a.pfb></usr/share/texmf-dist/fonts/type1/urw/helvetic/uhv
 bo8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/te
 xmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/share/texmf-dist/fonts/type1/u
 rw/times/utmr8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (12 pages, 241802 bytes).
+Output written on main.pdf (15 pages, 611416 bytes).
 PDF statistics:
- 142 PDF objects out of 1000 (max. 8388607)
- 89 compressed objects within 1 object stream
+ 231 PDF objects out of 1000 (max. 8388607)
+ 113 compressed objects within 2 object streams
  0 named destinations out of 1000 (max. 500000)
- 13 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 43 words of extra memory for PDF output out of 10000 (max. 10000000)
 

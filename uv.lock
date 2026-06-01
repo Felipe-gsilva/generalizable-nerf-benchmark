@@ -28,9 +28,6 @@ resolution-markers = [
     "(python_full_version < '3.12' and platform_machine == 'arm64' and sys_platform == 'linux') or (python_full_version < '3.12' and platform_machine == 'arm64' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32') or (python_full_version < '3.12' and platform_machine == 'aarch64' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 
-[options]
-prerelease-mode = "allow"
-
 [[package]]
 name = "absl-py"
 version = "2.4.0"
@@ -1964,7 +1961,7 @@ name = "manifold3d"
 version = "3.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "python_full_version < '3.14'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b0/fd/4dfc246e076e3912c45a821764f4de8b6c8117fa36fc67f8e44bf9dfe59b/manifold3d-3.4.1.tar.gz", hash = "sha256:b517927e2c15dc52169fff0cd12e1949eceb4ca49f3a5b8c0568b1116a561ab1", size = 269275, upload-time = "2026-03-24T06:22:40.062Z" }
 wheels = [
@@ -2276,17 +2273,6 @@ wheels = [
 ]
 
 [[package]]
-name = "merf"
-version = "0.1.1"
-source = { git = "https://github.com/felipe-gsilva/merfstudio#f3ff303f961165e63f5ab072850238df322c40f5" }
-dependencies = [
-    { name = "absl-py" },
-    { name = "mpmath" },
-    { name = "nerfstudio" },
-    { name = "torch-dct" },
-]
-
-[[package]]
 name = "mistune"
 version = "3.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2509,7 +2495,6 @@ source = { virtual = "." }
 dependencies = [
     { name = "lpips" },
     { name = "matplotlib" },
-    { name = "merf" },
     { name = "nerfstudio" },
     { name = "nerfstudio-gnt" },
     { name = "nerfstudio-pixelnerf" },
@@ -2528,10 +2513,9 @@ dependencies = [
 requires-dist = [
     { name = "lpips", specifier = ">=0.1.4" },
     { name = "matplotlib", specifier = ">=3.10.8" },
-    { name = "merf", git = "https://github.com/felipe-gsilva/merfstudio" },
     { name = "nerfstudio", git = "https://github.com/felipe-gsilva/nerfstudio" },
-    { name = "nerfstudio-gnt" },
-    { name = "nerfstudio-pixelnerf" },
+    { name = "nerfstudio-gnt", specifier = "==0.0.25" },
+    { name = "nerfstudio-pixelnerf", specifier = "==0.0.15" },
     { name = "numpy", specifier = ">=2.2.6" },
     { name = "pillow", specifier = ">=12.2.0" },
     { name = "scikit-image", specifier = ">=0.25.2" },
@@ -2614,21 +2598,21 @@ dependencies = [
 
 [[package]]
 name = "nerfstudio-gnt"
-version = "0.0.22"
+version = "0.0.25"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "gdown" },
     { name = "lpips" },
     { name = "nerfstudio" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f9/e9/1bfb7651763d64f0b792f07e646b8acbfa25300d398353a89c7ba2e93b84/nerfstudio_gnt-0.0.22.tar.gz", hash = "sha256:76dcbe69012fbb2ee6efe77602b579962c48e78a427384d9f76db4f718301feb", size = 58469, upload-time = "2026-05-17T14:17:53.106Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/be/ae/983f69efdf41f0b7fc7f14ceeecac363d81737c2cb4fb8168e32bc923230/nerfstudio_gnt-0.0.25.tar.gz", hash = "sha256:1ad7c4d1ebc5f34741037bdce299b621a4bcc2acb140e7b1d5661e06c556d7ab", size = 58813, upload-time = "2026-05-29T19:18:31.695Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/13/7d/2e583339d1b51885a668ac0bb326aea8a45686bcd6c5bb0239f15c0b50bf/nerfstudio_gnt-0.0.22-py3-none-any.whl", hash = "sha256:d5b74360aac0aada8ecd6e13d88b6133ceecaf0adb5ca89147cdf0cfe202cd00", size = 81481, upload-time = "2026-05-17T14:17:51.266Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/57/86b97c8b60a06b1d572fcf5ccdb2278ffb767301ee41523e05ff258f46d7/nerfstudio_gnt-0.0.25-py3-none-any.whl", hash = "sha256:f86bda320381784a38512481c4080de5b407a3ceb81d19e614a2ddcc8e8c1b26", size = 81874, upload-time = "2026-05-29T19:18:30.539Z" },
 ]
 
 [[package]]
 name = "nerfstudio-pixelnerf"
-version = "0.0.10"
+version = "0.0.15"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dotmap" },
@@ -2637,9 +2621,9 @@ dependencies = [
     { name = "nerfstudio" },
     { name = "pyhocon" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/68/3e/93b346402fdcee0fb57447499d7c18ab5ec947b6e690692a5db25e14a281/nerfstudio_pixelnerf-0.0.10.tar.gz", hash = "sha256:6b0b4c2122203bf6fbb0f29afa771e8fa6047815eb319d286dc68f4028a6d91a", size = 1406730, upload-time = "2026-05-17T14:15:05.947Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/45/04/c0aa735a455d56f64b2421dc9e9f1658d6e2f945c3b3798ae724fe12a4db/nerfstudio_pixelnerf-0.0.15.tar.gz", hash = "sha256:ec0061814f96535b4f532f2dc366ad753419d7699bd2ec046de922e85475c413", size = 1407523, upload-time = "2026-05-30T14:24:22.843Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/41/f4/f66f9ea2161438d2ec6bedb8779dad22c80983ade1140a32c6a157a5f027/nerfstudio_pixelnerf-0.0.10-py3-none-any.whl", hash = "sha256:cb2d81ca3939c59ddb5e4188e1802412517f71011d31b89836c19af89806df15", size = 1436670, upload-time = "2026-05-17T14:15:08.588Z" },
+    { url = "https://files.pythonhosted.org/packages/31/40/14ecb447fe67823e2b7491bdc738ccc2fd08d1b775ac70619a8d1f3bb96c/nerfstudio_pixelnerf-0.0.15-py3-none-any.whl", hash = "sha256:f9edec2a39c4b6810f20965fb6269c77d084d9fed381520eaa6e6af8ebdab9b9", size = 1437262, upload-time = "2026-05-30T14:24:27.317Z" },
 ]
 
 [[package]]
@@ -3173,7 +3157,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess", marker = "platform_machine == 'aarch64' or platform_machine == 'arm64' or sys_platform != 'win32'" },
+    { name = "ptyprocess", marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and sys_platform == 'emscripten') or (sys_platform != 'emscripten' and sys_platform != 'win32')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [
@@ -4853,18 +4837,6 @@ wheels = [
     { url = "https://download-r2.pytorch.org/whl/cu124/torch-2.6.0%2Bcu124-cp313-cp313-linux_x86_64.whl", hash = "sha256:0f3bc53c988ce9568cd876a2a5316761e84a8704135ec8068f5f81b4417979cb", upload-time = "2025-01-30T00:59:14Z" },
     { url = "https://download-r2.pytorch.org/whl/cu124/torch-2.6.0%2Bcu124-cp313-cp313-win_amd64.whl", hash = "sha256:519330eef09534acad8110b6f423d2fe58c1d8e9ada999ed077a637a0021f908", upload-time = "2025-01-30T00:59:45Z" },
     { url = "https://download-r2.pytorch.org/whl/cu124/torch-2.6.0%2Bcu124-cp313-cp313t-linux_x86_64.whl", hash = "sha256:35cba404c0d742406cdcba1609085874bc60facdfbc50e910c47a92405fef44c", upload-time = "2025-01-30T01:01:25Z" },
-]
-
-[[package]]
-name = "torch-dct"
-version = "0.1.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "torch" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/2c/12/518883ae7a1f0bd1039ddbb0ab3934a8cc8b1d609b47b1b7645eda59c72b/torch-dct-0.1.6.tar.gz", hash = "sha256:87923c4b8430206e37f1ccaa80386b8600d4f65921741399cb99afdb61a3731a", size = 4781, upload-time = "2022-11-06T16:09:49.882Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/87/88/3eef09f85bc6f22d78d820d8af91e3823a448fbee41ef53a35087297ed63/torch_dct-0.1.6-py3-none-any.whl", hash = "sha256:6ab1a064e7f138b649148c01e06cf0f0d354cdb3418ef0e04c81576ce9ba656b", size = 5142, upload-time = "2022-11-06T16:09:47.809Z" },
 ]
 
 [[package]]
