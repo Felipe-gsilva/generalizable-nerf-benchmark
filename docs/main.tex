@@ -18,7 +18,7 @@
 \usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds, calc}
 \sloppy
 \title{Uma Análise Comparativa entre NeRFs Few-Shot e Per-Scene aplicadas em Conjuntos de Dados de Vistas Esparsas}
-\author{Felipe G. da Silva\inst{1}}
+\author{Felipe Gda Silva\inst{1}}
 \address{Departamento de Ciências da Computação e Estatística -- UNESP\\
   CEP: 15054-000 -- São José do Rio Preto -- SP -- Brazil
   \email{felipe-gomes.silva@unesp.br}
@@ -27,7 +27,7 @@
 \begin{document} 
 \maketitle
 \begin{abstract}
-This work compares Generalizable NeRFs and Fast Optimization Per-Scene trained models applied to sparse-view datasets, evaluating the impact of these feature extraction architectures on novel view synthesis performance. Through a quantitative analysis using visual fidelity (PSNR, SSIM, LPIPS) and computational efficiency metrics (convergence time, VRAM footprint, inference time), this study highlights the trade-offs between the global generalization of Transformers and the local processing efficiency of convolutions. Ultimately, it aims to guide the selection of 3D rendering models for practical scenarios often constrained by hardware limitations and data scarcity.
+This work compares Generalizable NeRFs and Fast Optimization Per-Scene trained models applied to sparse-view datasets, evaluating the impact of these feature extraction architectures on novel view synthesis performance. Through a quantitative analysis using visual fidelity (PSNR, SSIM, LPIPS) and computational efficiency metrics (convergence time, VRAM footprint, inference time), this study highlights the trade-offs between the global generalization of Transformers and the local processing efficiency of convolutions, as well as the critical impact of spatial scale mismatch in per-scene optimized models. Ultimately, it aims to guide the selection of 3D rendering models for practical scenarios often constrained by hardware limitations and data scarcity.
 \end{abstract}
 
 \begin{resumo}
@@ -49,7 +49,7 @@ Diante desta problemática, as contribuições deste trabalho são: (i) uma aval
 \textbf{Conjuntos de Dados de Vistas Esparsas.} Essa nomenclatura refere-se, neste trabalho, aos conjuntos de dados imagéticos que possuem pouca (ou nenhuma) redundância e/ou variabilidade de poses de câmera referentes ao mesmo objeto. Áreas como histologia, holotomografia e microscopia confocal de fluorescência ilustram bem esse problema: a aquisição de imagens multi-vista é fisicamente limitada, biologicamente invasiva e estruturalmente esparsa por natureza \cite{XUE2021101816}.
 
 
-\textbf{Campos de Radiância Neural.} Campos de Radiância Neural (\textit{Neural Radiance Fields}, NeRF) utilizam-se de redes neurais do tipo MLP (\textit{Multilayer Perceptron}) para aproximar uma função contínua no espaço 5D. 
+\textbf{Campos de Radiância Neural.} Campos de Radiância Neural (\textit{Neural Radiance Fields}, NeRF) utilizam-se de redes neurais do tipo MLP (\textit{Multilayer Perceptron}) para aproximar uma função contínua no espaço 5D \cite{mildenhall2020nerfrepresentingscenesneural}. 
 Essa função recebe como entrada uma posição espacial $\mathbf{x} = (x, y, z)$ e uma direção de visualização $d = (\theta, \phi)$, retornando a densidade volumétrica $\sigma(\mathbf{x})$ e a cor associada $\mathbf{c} = (r, g, b)$:
 \[
   F_\theta : F_\theta\prime \circ \gamma(\mathbf{x}, d) \rightarrow (\sigma, \mathbf{c}) ,\ \ \sigma \in \mathbb{R}_{\geq0},\ c \in [0, 1]^3
@@ -75,7 +75,7 @@ onde $T(t) = \exp\left(-\int_{t_n}^t \sigma(\mathbf{r}(s)) \, ds\right)$ denota 
 
 Esta seção contempla a metodologia adotada para a realização dos experimentos, incluindo a descrição dos conjuntos de dados utilizados, os modelos de NeRF selecionados para o estudo comparativo, as métricas de avaliação aplicadas e o ambiente computacional onde os testes foram conduzidos.
 
-Modelos sem integração nativa ao Nerfstudio (PixelNeRF e GNT) foram portados para o framework seguindo sua interface modular, viabilizar a sua respectiva comparação. A seguir, apresentam-se os modelos selecionados.
+  Modelos sem integração nativa ao Nerfstudio (PixelNeRF e GNT) foram portados para o framework seguindo sua interface modular, de modo a viabilizar a sua respectiva comparação. A seguir, apresentam-se os modelos selecionados.
 
 \subsection{Modelos Selecionados}
 Neste trabalho, são avaliados modelos representativos para reconstrução de campos de radiância neural em cenários de poucas vistas (\textit{few-shot}), contemplando diferentes paradigmas arquiteturais e estratégias de aprendizado. Especificamente, consideram-se: 
@@ -129,19 +129,19 @@ Os modelos foram implementados no framework \textit{Nerfstudio} \cite{Tancik2023
 \item infraestrutura de logging e exportação de métricas, incluindo salvamento de checkpoints e integração com \textit{Weights \& Biases}, que padroniza o registro dos experimentos entre os diferentes modelos.
 \end{enumerate}
 
-Dentre os modelos avaliados, o Instant-NGP e o Nerfacto encontram-se nativamente integrados ao \textit{Nerfstudio}, dispensando adaptações de implementação. Os demais modelos (PixelNeRF e GNT) foram portados para o framework a partir de suas implementações originais, com adaptações nos componentes de \textit{DataManager}, \textit{Pipeline} e \textit{model} para conformidade com a interface do \textit{Nerfstudio}, ambos utilizando-se do otimizador Adam (otimizado pelo tinycudann) com \textit{learning rate} $\eta = 1^{-3}$ e \textit{weight decay} = 0.0.
+Dentre os modelos avaliados, o Instant-NGP e o Nerfacto encontram-se nativamente integrados ao \textit{Nerfstudio}, dispensando adaptações de implementação. Os demais modelos (PixelNeRF e GNT) foram portados para o framework a partir de suas implementações originais, com adaptações nos componentes de \textit{DataManager}, \textit{Pipeline} e \textit{model} para conformidade com a interface do \textit{Nerfstudio}, ambos utilizando-se do otimizador Adam (otimizado pelo tinycudann) com \textit{learning rate} $\eta = 10^{-3}$ e \textit{weight decay} = 0.0. Cabe ressaltar que a literatura original do GNT e PixelNeRF sugere taxas de aprendizado menores (entre $10^{-4}$ e $5 \times 10^{-4}$). A adoção de $\eta = 10^{-3}$ neste trabalho visa puramente padronizar os hiperparâmetros de base entre todos os modelos avaliados, um critério que pode influenciar secundariamente a estabilidade do TTA.
 
 As implementações foram guiadas pelas descrições metodológicas dos trabalhos originais, mantendo equivalência funcional. A implementação completa encontra-se disponível em \url{https://github.com/felipe-gsilva/few-shot-nerfs}.
 
 \subsection{Protocolo Experimental}
 \label{sec:stdin}
 
-Os experimentos foram conduzidos sobre o dataset LLFF (\textit{Local Light Field Fusion}) \cite{mildenhall2019locallightfieldfusion}, composto por cenas de objetos reais capturadas com câmera em movimento frontal. A escolha pelo LLFF em detrimento de alternativas tradicionais como o DTU baseia-se diretamente nas severas restrições de hardware físico do presente estudo. Especificamente, o processamento dos volumes de custo tridimensionais (\textit{cost volumes}) exigidos pelo DTU em sua resolução original demanda um volume de memória gráfica que excede a capacidade de 6 GB de VRAM da GPU utilizada. Dessa forma, o LLFF apresenta-se como a única opção viável que concilia relevância científica com a limitação de recursos físicos, sendo compatível com o protocolo de avaliação clássico de \cite{niemeyer2022regnerf}. Reserva-se, portanto, para teste as imagens cujo índice é múltiplo de 8 (llffhold=8), totalizando entre 5 e 8 imagens de teste por cena. As N vistas de treinamento ($N \in {3, 6, 10}$) são amostradas uniformemente das imagens remanescentes.
+Os experimentos foram conduzidos sobre o dataset LLFF (\textit{Local Light Field Fusion}) \cite{mildenhall2019locallightfieldfusion}, \cite{mildenhall2020nerfrepresentingscenesneural}, composto por cenas de objetos reais capturadas com câmera em movimento frontal. A escolha pelo LLFF em detrimento de alternativas tradicionais como o DTU baseia-se diretamente nas severas restrições de hardware físico do presente estudo. Especificamente, o processamento dos volumes de custo tridimensionais (\textit{cost volumes}) exigidos pelo DTU em sua resolução original demanda um volume de memória gráfica que excede a capacidade de 6 GB de VRAM da GPU utilizada. Dessa forma, o LLFF apresenta-se como a única opção viável que concilia relevância científica com a limitação de recursos físicos, sendo compatível com o protocolo de avaliação clássico de \cite{niemeyer2022regnerf}. Reserva-se, portanto, para teste as imagens cujo índice é múltiplo de 8 (llffhold=8), totalizando entre 2 e 4 imagens de teste por cena.
 
-A seleção das vistas de treino foi realizada por duas estratégias distintas: (i) \textit{uniform}, em que as vistas são amostradas por interpolação linear sobre os índices do dataset, distribuindo-as uniformemente ao longo da trajetória da câmera; e (ii) \textit{random}, em que as vistas são sorteadas aleatoriamente com semente fixa (42), garantindo reprodutibilidade. A comparação entre as duas estratégias permite avaliar a sensibilidade dos modelos à distribuição espacial das vistas de entrada.
+A seleção das vistas de treino ($N \in {3, 6, 10}$) foi realizada por duas estratégias distintas: (i) \textit{uniform}, em que as vistas são amostradas por interpolação linear sobre os índices do dataset, distribuindo-as uniformemente ao longo da trajetória da câmera; e (ii) \textit{random}, em que as vistas são sorteadas aleatoriamente com semente fixa (42), garantindo reprodutibilidade. A comparação entre as duas estratégias permite avaliar a sensibilidade dos modelos à distribuição espacial das vistas de entrada.
 
 \begin{table}[H]
-\centering
+  \centering
 \caption{Impacto da estratégia de seleção de vistas de treino (\textit{uniform} vs.\ \textit{random}) sobre a qualidade visual média no dataset LLFF, avaliado no regime TTA com $N=10$ vistas. Resultados reportado sobre a cena \textit{fern}.}
 \label{tab:split}
 \resizebox{\textwidth}{!}{%
@@ -169,7 +169,7 @@ A seleção das vistas de treino foi realizada por duas estratégias distintas: 
 }
 \end{table}
 
-As imagens restantes foram divididas proporcionalmente entre conjuntos de validação e teste, também com semente fixa (42), assegurando que as vistas de teste sejam idênticas entre todos os modelos e estratégias de split, eliminando variáveis de avaliação que poderiam comprometer a comparação. As métricas finais são reportadas exclusivamente sobre o conjunto de teste, sem sobreposição com as vistas de treino. Todos os experimentos foram executados em uma GPU NVIDIA GeForce GTX 1660 Super (6GB de VRAM), com CUDA 12.6 e driver 610.43.02.
+As métricas finais são reportadas exclusivamente sobre o conjunto de teste, sem sobreposição com as vistas de treino. Todos os experimentos foram executados em uma GPU NVIDIA GeForce GTX 1660 Super (6GB de VRAM), com CUDA 12.6 e driver 610.43.02.
 Para garantir reprodutibilidade em diferentes arquiteturas, utilizou-se contêineres Docker com o runtime NVIDIA para garantir isolamento do ambiente e reprodutibilidade entre diferentes hosts com GPU compatível.
 
 
@@ -183,7 +183,7 @@ As avaliações de qualidade visual são realizadas sobre o conjunto de teste ge
 
 \section{Experimentos e Resultados}
 
-A seguir, destacam-se os principais resultados do treinamento, que levou, ao todo, cerca de 90 horas para ser completado. A Figura~\ref{fig:pipeline} ilustra o protocolo de execução adotado. Segmenta-se esta seção entre uma análise quantitativa, qualitativa e computacional, respectivamente.
+A seguir, destacam-se os principais resultados do treinamento, que levou, ao todo, cerca de 180 horas para ser completado. A Figura~\ref{fig:pipeline} ilustra o protocolo de execução adotado. Segmenta-se esta seção entre uma análise quantitativa, qualitativa e computacional, respectivamente.
 
 \begin{figure}[H]
 \centering
@@ -263,7 +263,7 @@ Todo o ambiente foi isolado via contêiner Docker com GPU reservada.}
           GPU reservada via Docker \textbar\
           NVIDIA GTX 1660 Super (6\,GB) \textbar\
           CUDA 12.6 \textbar\
-          ${\sim}$90\,h de execução total}] {};
+          ${\sim}$180\,h de execução total}] {};
 \end{scope}
 
 \end{tikzpicture}%
@@ -277,10 +277,7 @@ A análise quantitativa seguiu o protocolo experimental descrito na Seção \ref
 
 \begin{table}[H]
 \centering
-\caption{Avaliação quantitativa da qualidade visual no dataset LLFF.
-As setas indicam se valores maiores ($\uparrow$) ou menores ($\downarrow$)
-representam desempenho superior. Negrito indica o melhor resultado
-dentro de cada regime; sublinhado indica o segundo melhor.}
+\caption{Avaliação quantitativa da qualidade visual no dataset LLFF. As setas indicam se valores maiores ($\uparrow$) ou menores ($\downarrow$) representam desempenho superior. \textbf{Aviso:} Comparações cruzadas entre o bloco de Generalizáveis (avaliado em downscale 4) e o bloco Per-Scene (avaliado na resolução nativa) não são equitativas devido ao fenômeno de scale mismatch.}
 \label{tab:qualidade_visual}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{llccc}
@@ -289,6 +286,8 @@ dentro de cada regime; sublinhado indica o segundo melhor.}
   & \textbf{PSNR (dB) $\uparrow$}
   & \textbf{SSIM $\uparrow$}
   & \textbf{LPIPS $\downarrow$} \\
+\midrule
+\multicolumn{5}{c}{\textbf{Avaliação em downscale 4 (Generalizáveis e Per-Scene)}} \\
 \midrule
 \multirow{2}{*}{Zero-Shot}
   & PixelNeRF        & 5.75   & 0.065    & 0.850    \\
@@ -307,16 +306,20 @@ dentro de cada regime; sublinhado indica o segundo melhor.}
   & GNT              & \textbf{10.34}   & \textbf{0.179}    & \textbf{0.738}    \\
 \midrule
 \multirow{2}{*}{Per-Scene (100\%)}
-  & Instant-NGP      & 13.57\textsuperscript{*}   & 0.440\textsuperscript{*}    & 0.507\textsuperscript{*}    \\
-  & Nerfacto         & 12.04 / \textbf{26.25}\textsuperscript{*}   & 0.227 / \textbf{0.843}\textsuperscript{*}    & 0.809 / \textbf{0.205}\textsuperscript{*}    \\
+  & Instant-NGP      & n.e      & n.e        & n.e        \\
+  & Nerfacto         & 12.04  & 0.227    & 0.809    \\
+\midrule
+\multicolumn{5}{c}{\textbf{Avaliação em downscale 8 (Modelos Per-Scene na resolução nativa)}} \\
+\midrule
+\multirow{2}{*}{Per-Scene (100\%)}
+  & Instant-NGP      & 13.57   & 0.440    & 0.507    \\
+  & Nerfacto         & \textbf{26.25}   & \textbf{0.843}    & \textbf{0.205}    \\
 \bottomrule
 \end{tabular}
 }
-\smallskip
-\raggedright{\footnotesize \textsuperscript{*} Resultados avaliados no downscale 8 (resolução nativa de treino dos modelos \textit{per-scene}). Os demais resultados reportados referem-se ao downscale 4. Para o Nerfacto, reporta-se no formato: \textit{downscale 4} / \textit{downscale 8}.}
 \end{table}
 
-Como referência externa, a Tabela \ref{tab:nerfbaselines_llff} compila resultados reportados pelo \textit{NerfBaselines} \cite{kulhanek2025nerfbaselinesconsistentreproducibleevaluation} para o LLFF, um dataset predominantemente \textit{forward-facing} para o qual métodos NeRF costumam empregar parametrização em espaço NDC. Estes números são apresentados apenas como comparativo de literatura (protocolo/hardware podem divergir do presente estudo).
+Como referência externa, a Tabela \ref{tab:nerfbaselines_llff} compila resultados reportados pelo \textit{NerfBaselines} \cite{kulhanek2025nerfbaselinesconsistentreproducibleevaluation} para o LLFF, um dataset predominantemente \textit{forward-facing} para o qual métodos NeRF costumam empregar parametrização em espaço NDC. Estes números são apresentados apenas como comparativo de literatura para um limiar superior (protocolo/hardware podem divergir do presente estudo).
 
 \begin{table}[H]
 \centering
@@ -334,11 +337,11 @@ TensoRF      & 26.68 & 0.834 & 0.202 & 31m 32s    & 20.38 \\
 }
 \end{table}
 
-
+A tabela \ref{tab:nerfbaselines_llff} demonstra um bom limite certamente não alcançável com a tecnologia de vistas esparsas empregadas neste trabalho, visto que a natureza do treino se difere ao permitir que o dataset inteiro seja utilizado sem downscale algum. Entretanto, estas métricas são apresentadas apenas como referência de limite superior de qualidade possível.
 
 \subsection{Análise Qualitativa}
 
-A análise qualitativa seguiu as estruturas do split (\ref{sec:stdin}), sendo possiveis renderizações do volume em projeções tanto ortográficas quanto perspectivas. Para facilitar a identificação visual, optou-se por utilizar o acúmulo dos raios em projeção perspectiva, requerindo à rede tanto vistas já conhecidas (com os dados de câmera existentes) quanto novas vistas (o objeto de estudo deste trabalho). Destaca-se, a seguir, os principais resultados visuais:
+A análise qualitativa seguiu as estruturas do split (\ref{sec:stdin}), sendo possiveis renderizações do volume em projeções tanto ortográficas quanto perspectivas. Para facilitar a identificação visual, optou-se por utilizar o acúmulo dos raios em projeção perspectiva, requerindo à rede vistas já conhecidas (com os dados de câmera existentes do conjunto de teste). Destaca-se, a seguir, os principais resultados visuais:
 
 \begin{figure}[H]
     \centering
@@ -373,9 +376,11 @@ A análise qualitativa seguiu as estruturas do split (\ref{sec:stdin}), sendo po
         \includegraphics[width=\textwidth]{img/nerfacto.png}
     \end{subfigure}
 
-    \caption{Comparação qualitativa no regime TTA (10 vistas) e Per-Scene para a cena "Fern" do dataset LLFF.}
+    \caption{Comparação qualitativa para a cena "Fern" do dataset LLFF. PixelNeRF e GNT operam no regime TTA (10 vistas), enquanto Instant-NGP e Nerfacto operam no regime Per-Scene.}
     \label{fig:comparacao_qualitativa}
 \end{figure}
+
+Nota-se que o PixelNeRF produz renderizações com forte desfoque isotrópico, típico de falha de localização de características por projeção 2D em vistas esparsas. O GNT preserva contornos mais nítidos, mas apresenta artefatos de cor em regiões de baixa redundância entre vistas. O Instant-NGP per-scene exibe flutuações de densidade volumétrica em regiões não cobertas de modo denso, enquanto o Nerfacto per-scene produz a reconstrução mais fiel em sua resolução nativa.
 
 \subsection{Trade-offs Computacionais}
 
@@ -394,11 +399,13 @@ GNT         & Zero-Shot (0) & N/A (Pré-treinado) & 1.93 & 0.19 & 0.008 \\
 PixelNeRF   & TTA (10)      & 12 min 42 s        & 1.93 & 3.42 & 0.006 \\
 GNT         & TTA (10)      & 06 min 54 s        & 1.93 & 0.19 & 0.008 \\
 \midrule
-Instant-NGP & Per-Scene     & 41 min 02 s        & 1.30 & - & 0.214 \\
+Instant-NGP & Per-Scene     & 41 min 02 s        & 1.30 & n.d.\textsuperscript{**} & 0.214 \\
 Nerfacto    & Per-Scene     & 21 min 52 s        & 1.30 & 0.20 & 0.394 \\
 \bottomrule
 \end{tabular}%
 }
+\smallskip
+\raggedright{\footnotesize \textsuperscript{**} n.d. (não disponível): O pico real de memória do Instant-NGP não pôde ser aferido dinamicamente, pois o modelo utiliza alocação dinâmica de CUDA não interceptável de forma nativa pelo \textit{profiler} do framework.}
 \end{table}
 
 Por fim, ressalta-se que todos os experimentos foram executados de forma única e exclusiva sobre a cena \textit{fern} do conjunto de dados LLFF. Essa decisão metodológica justifica-se pelo elevado custo de processamento exigido pelos modelos sob regime de Test-Time Adaptation (TTA), bem como pelo longo tempo total necessário para a convergência das demais variantes. Dessa forma, a cena \textit{fern} foi adotada como um estudo de caso representativo para viabilizar a validação completa do pipeline sob as restrições práticas de hardware, servindo como base sólida antes de uma eventual expansão para as demais cenas do dataset.
@@ -406,14 +413,18 @@ Por fim, ressalta-se que todos os experimentos foram executados de forma única 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{img/grafico_tradeoff.pdf}
-    \caption{Trade-off entre Fidelidade Visual (PSNR) e Consumo de VRAM no regime de 10 vistas / por cena). O quadrante superior esquerdo representa a região ideal (alta qualidade, baixo custo).}
+    \caption{Trade-off entre Fidelidade Visual (PSNR) e Consumo de VRAM no regime de 10 vistas ou por cena). O quadrante superior esquerdo representa a região ideal (alta qualidade, baixo custo).}
     \label{fig:scatter_tradeoff}
 \end{figure}
 
 
 \subsection{O Fenômeno do Scale Mismatch}
 
-\subsection{Catastrophic Forgetting}
+O modelo Nerfacto obteve um desempenho notável de 26,25 dB de PSNR quando avaliado na sua resolução nativa de treinamento (downscale 8). No entanto, ao ser inferido em uma resolução superior (downscale 4), a sua qualidade visual degradou severamente para 12,04 dB. Este fenômeno de \textit{Scale Mismatch} (incompatibilidade de escala) evidencia uma vulnerabilidade inerente às arquiteturas \textit{per-scene} que empregam estruturas de dados espaciais explícitas. Diferentemente das redes neurais convolucionais (PixelNeRF) ou dos mecanismos de atenção global (GNT), as tabelas de hash multiescala são otimizadas para codificar a cena nas frequências espaciais presentes nas imagens de treino. Ao avaliar em resolução superior, o renderizador precisa reconstruir detalhes de alta frequência para os quais a tabela não possui entradas de granularidade adequada, resultando em degradação.
+
+\subsection{Catastrophic Forgetting e Inércia no TTA}
+
+A adaptação em tempo de teste (\textit{Test-Time Adaptation} - TTA) visa ajustar os pesos de um modelo generalizável previamente treinado para uma nova cena utilizando um número muito restrito de vistas. Observou-se, entretanto, um comportamento singular no GNT. O modelo GNT no regime Zero-Shot obteve exatos 10,34 dB de PSNR com 10 vistas, valor numericamente idêntico ao seu desempenho após o TTA. A equivalência numérica entre Zero-Shot e TTA ($N=10$) para o GNT sugere que as iterações de \textit{fine-tuning} não produzem adaptação significativa na cena avaliada. Esse comportamento é consistente com a hipótese de inércia induzida pelo \textit{prior} global do transformer — que, ao contrário das camadas convolucionais do PixelNeRF, resiste ao sobreajuste por distribuir a informação de cada cena de forma difusa ao longo de todos os cabeçotes de atenção. Uma análise ablativa comparando a norma dos gradientes durante o TTA de ambos os modelos permitiria discriminar entre inércia arquitetural e instabilidade de otimização; é imperativo reconhecer que o \textit{learning rate} adotado ($10^{-3}$) pode ter sido excessivo para as etapas de \textit{fine-tuning} do transformer em TTA. Em contraste, o PixelNeRF demonstrou maior plasticidade, elevando o desempenho de 5,75 dB (Zero-Shot) para 6,98 dB (TTA 10), confirmando que sua arquitetura híbrida com CNNs permite uma especialização \textit{per-scene} mais maleável, ainda que seu teto de qualidade visual se mantenha estruturalmente inferior ao GNT.
 
 \newpage
 \section{Conclusões}
@@ -424,7 +435,7 @@ No eixo de qualidade visual, os resultados corrigidos — obtidos após a identi
 
 Em contrapartida, os modelos \textit{per-scene} evidenciam uma forte dependência da escala de treinamento. Quando avaliado em sua resolução nativa de treino (downscale 8), o Nerfacto atinge a marca superior de $26{,}25$\,dB de PSNR e $0{,}843$ de SSIM. Contudo, sob downscale 4, seu desempenho sofre uma severa degradação, caindo para $12{,}04$\,dB de PSNR e $0{,}227$ de SSIM. Esse fenômeno realça a vulnerabilidade intrínseca de representações implícitas/híbridas otimizadas localmente (como as tabelas de hash multiescala), que não generalizam para escalas espaciais distintas daquelas vistas em treino, ao passo que os modelos generalizáveis providos de redes convolucionais e mecanismos de atenção global acomodam variações de resolução de maneira inerente.
 
-Contudo, a análise computacional revela um \textit{trade-off} não trivial. Os modelos generalizáveis dispensam otimização por cena no regime \textit{zero-shot} e requerem adaptação mínima no TTA (12\,min para PixelNeRF; $\sim$7\,min para GNT), enquanto os modelos \textit{per-scene} demandam tempos de convergência significativamente maiores ($\sim$22\,min para Nerfacto; $\sim$41\,min para Instant-NGP com 10 vistas). Em contrapartida, os modelos \textit{per-scene} apresentaram taxas de inferência superiores (0{,}35\,FPS para Nerfacto vs. 0{,}02\,FPS para PixelNeRF), com menor consumo de VRAM (1{,}30\,GB vs. 1{,}93\,GB). Esses resultados indicam que, em cenários onde a latência de inferência e o \textit{footprint} de memória são críticos, a exemplo de aplicações \textit{mobile} ou sistemas embarcados, os métodos \textit{per-scene} podem ser preferíveis mesmo com o custo adicional de treinamento.
+Contudo, a análise computacional revela um \textit{trade-off} não trivial. Os modelos generalizáveis dispensam otimização por cena no regime \textit{zero-shot} e requerem adaptação mínima no TTA (12\,min para PixelNeRF; 06 min 54 s\,min para GNT), enquanto os modelos \textit{per-scene} demandam tempos de convergência significativamente maiores ($\sim$22\,min para Nerfacto; $\sim$41\,min para Instant-NGP com 10 vistas). Em contrapartida, os modelos \textit{per-scene} apresentaram taxas de inferência superiores (0{,}394\,FPS para Nerfacto vs. 0{,}006\,FPS para PixelNeRF), com menor consumo de VRAM (1{,}30\,GB vs. 1{,}93\,GB). Esses resultados indicam que, em cenários onde a latência de inferência e o \textit{footprint} de memória são críticos, a exemplo de aplicações \textit{mobile} ou sistemas embarcados, os métodos \textit{per-scene} podem ser preferíveis mesmo com o custo adicional de treinamento.
 
 É necessário ressalvar que os resultados reportados são parciais, restritos à cena \textit{fern} do LLFF, e a generalização para o conjunto completo de 8 cenas requer execuções adicionais. O desempenho excepcionalmente baixo do PixelNeRF ($< 7{,}0$\,dB) indica limitações inerentes de sua arquitetura local baseada em projeção 2D de características em vistas extremamente esparsas sem modelagem atencional de contexto global. Além disso, a estabilidade das métricas de TTA do GNT revela a robustez inerente da sua agregação baseada em transformadores.
 
