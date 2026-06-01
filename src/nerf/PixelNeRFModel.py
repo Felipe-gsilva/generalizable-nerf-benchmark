@@ -333,6 +333,9 @@ class PixelNeRFModel(Model):
             # são avaliadas ao final em main.py injetando os metadados corretamente.
             image_height, image_width = camera_ray_bundle.origins.shape[:2]
             return {
+                "rgb_coarse": torch.zeros((image_height, image_width, 3), device=device),
+                "depth_coarse": torch.zeros((image_height, image_width, 1), device=device),
+                "weights_coarse": torch.zeros((image_height, image_width, 1), device=device),
                 "rgb": torch.zeros((image_height, image_width, 3), device=device),
                 "depth": torch.zeros((image_height, image_width, 1), device=device),
                 "accumulation": torch.zeros((image_height, image_width, 1), device=device),
