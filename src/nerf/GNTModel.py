@@ -114,6 +114,11 @@ class GNTModel(Model):
             self.config.pretrained_ckpt_path = ckpt
 
     def _load_pretrained(self, ckpt_path):
+        if not os.path.exists(ckpt_path) and "nerf-ann-paper" in ckpt_path:
+            # Map host absolute path to docker workspace path
+            rel_path = ckpt_path.split("nerf-ann-paper/")[-1]
+            ckpt_path = os.path.join("/workspace", rel_path)
+
         assert os.path.isfile(ckpt_path), (
             f"Checkpoint path {ckpt_path} does not exist or is not a file."
         )

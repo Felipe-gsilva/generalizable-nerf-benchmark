@@ -18,7 +18,7 @@ def main():
     ds = "fern"
     strategy = "uniform"
     num_views = 3
-    models_to_run = ["pixel-nerf", "gnt"]
+    models_to_run = ["gnt"]
     regime = "tta"
     # -----------------------------------
 
@@ -72,14 +72,14 @@ def main():
 
             start_time = time.time()
             
-            print(f">> Fase 1: Treinamento / Adaptação (TTA) para {model_name}")
-            nerf_model.train(
-                Path(dataset_obj.dataset_path),
-                downscale_factor=current_downscale,
-            )
+            # print(f">> Fase 1: Treinamento / Adaptação (TTA) para {model_name}")
+            # nerf_model.train(
+            #     Path(dataset_obj.dataset_path),
+            #     downscale_factor=current_downscale,
+            # )
             
             training_time = time.time() - start_time
-            print(f">> Fase 1 Concluída para {model_name}. Tempo de convergência: {training_time:.2f}s")
+            # print(f">> Fase 1 Concluída para {model_name}. Tempo de convergência: {training_time:.2f}s")
 
             print(f">> Fase 2: Avaliação de Métricas Finais para {model_name}")
             metrics = nerf_model.evaluate_all_metrics(
@@ -94,12 +94,12 @@ def main():
             else:
                 print(f"⚠️ Falha: O modelo {model_name} retornou métricas vazias.")
 
-            print(f">> Fase 3: Renderização de View de Teste para {model_name}")
-            nerf_model.render(
-                mode=RenderMode.PERSPECTIVE,
-                save_path=Path("results") / model_key / ds / f"scratch_{strategy}_{num_views}views",
-                downscale_factor=current_downscale,
-            )
+            # print(f">> Fase 3: Renderização de View de Teste para {model_name}")
+            # nerf_model.render(
+            #     mode=RenderMode.PERSPECTIVE,
+            #     save_path=Path("results") / model_key / ds / f"scratch_{strategy}_{num_views}views",
+            #     downscale_factor=current_downscale,
+            # )
 
         except Exception as e:
             import traceback

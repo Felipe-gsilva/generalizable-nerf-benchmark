@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.4.6)  1 JUN 2026 20:57
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.4.6)  1 JUN 2026 21:31
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -522,11 +522,11 @@ File: img/gt.jpg Graphic file (type jpg)
 <use img/gt.jpg>
 Package pdftex.def Info: img/gt.jpg  used on input line 364.
 (pdftex.def)             Requested size: 110.9634pt x 83.21736pt.
-<img/pixel-nerf.png, id=57, 252.945pt x 189.70876pt>
+<img/pixel-nerf.png, id=57, 63.23625pt x 47.17625pt>
 File: img/pixel-nerf.png Graphic file (type png)
 <use img/pixel-nerf.png>
 Package pdftex.def Info: img/pixel-nerf.png  used on input line 370.
-(pdftex.def)             Requested size: 110.9634pt x 83.22316pt.
+(pdftex.def)             Requested size: 110.9634pt x 82.78423pt.
 <img/gnt.png, id=58, 252.945pt x 189.70876pt>
 File: img/gnt.png Graphic file (type png)
 <use img/gnt.png>
@@ -568,7 +568,7 @@ Here is how much of TeX's memory you used:
  64 hyphenation exceptions out of 8191
  84i,12n,104p,1913b,1081s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texmf-dist/fonts/type1/urw/helvetic/uhvb8a.pfb></usr/share/texmf-dist/fonts/type1/urw/helvetic/uhvbo8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on build/main.pdf (16 pages, 817991 bytes).
+Output written on build/main.pdf (16 pages, 775630 bytes).
 PDF statistics:
  234 PDF objects out of 1000 (max. 8388607)
  115 compressed objects within 2 object streams
