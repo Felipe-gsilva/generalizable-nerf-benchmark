@@ -2514,8 +2514,8 @@ requires-dist = [
     { name = "lpips", specifier = ">=0.1.4" },
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "nerfstudio", git = "https://github.com/felipe-gsilva/nerfstudio" },
-    { name = "nerfstudio-gnt", specifier = "==0.0.25" },
-    { name = "nerfstudio-pixelnerf", specifier = "==0.0.15" },
+    { name = "nerfstudio-gnt", specifier = "==0.0.26" },
+    { name = "nerfstudio-pixelnerf", specifier = "==0.0.16" },
     { name = "numpy", specifier = ">=2.2.6" },
     { name = "pillow", specifier = ">=12.2.0" },
     { name = "scikit-image", specifier = ">=0.25.2" },
@@ -2598,21 +2598,21 @@ dependencies = [
 
 [[package]]
 name = "nerfstudio-gnt"
-version = "0.0.25"
+version = "0.0.26"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "gdown" },
     { name = "lpips" },
     { name = "nerfstudio" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/be/ae/983f69efdf41f0b7fc7f14ceeecac363d81737c2cb4fb8168e32bc923230/nerfstudio_gnt-0.0.25.tar.gz", hash = "sha256:1ad7c4d1ebc5f34741037bdce299b621a4bcc2acb140e7b1d5661e06c556d7ab", size = 58813, upload-time = "2026-05-29T19:18:31.695Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f1/de/e5bb8f46c2b048eab4d9c1791b4082fcf03af4fb4bf608efe31d1a813252/nerfstudio_gnt-0.0.26.tar.gz", hash = "sha256:77936ef6a788aa47a386fb03cf3aa5076b7b28ce29f95023fa6f9690f4d9c97d", size = 58912, upload-time = "2026-06-01T23:57:48.083Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/57/86b97c8b60a06b1d572fcf5ccdb2278ffb767301ee41523e05ff258f46d7/nerfstudio_gnt-0.0.25-py3-none-any.whl", hash = "sha256:f86bda320381784a38512481c4080de5b407a3ceb81d19e614a2ddcc8e8c1b26", size = 81874, upload-time = "2026-05-29T19:18:30.539Z" },
+    { url = "https://files.pythonhosted.org/packages/a9/bc/cb0d09087886a69b45032f8bd9e0ceb431b80ad0059f7727ed2291f00e9d/nerfstudio_gnt-0.0.26-py3-none-any.whl", hash = "sha256:0b1e3ac9b19598bc8529c2f3e42fccb4bee38568c40d1e942c04082832900deb", size = 81970, upload-time = "2026-06-01T23:57:49.537Z" },
 ]
 
 [[package]]
 name = "nerfstudio-pixelnerf"
-version = "0.0.15"
+version = "0.0.16"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dotmap" },
@@ -2621,9 +2621,9 @@ dependencies = [
     { name = "nerfstudio" },
     { name = "pyhocon" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/45/04/c0aa735a455d56f64b2421dc9e9f1658d6e2f945c3b3798ae724fe12a4db/nerfstudio_pixelnerf-0.0.15.tar.gz", hash = "sha256:ec0061814f96535b4f532f2dc366ad753419d7699bd2ec046de922e85475c413", size = 1407523, upload-time = "2026-05-30T14:24:22.843Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f8/72/b72ac46365bad46b249eb4ffbcee7fb4c1d6c7fe1b3e9db494fce53a4266/nerfstudio_pixelnerf-0.0.16.tar.gz", hash = "sha256:a619b66291cb3faab9c535a5ffa0637640326af609710b3c4b95c69537b493e9", size = 1408550, upload-time = "2026-06-01T23:59:58.901Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/40/14ecb447fe67823e2b7491bdc738ccc2fd08d1b775ac70619a8d1f3bb96c/nerfstudio_pixelnerf-0.0.15-py3-none-any.whl", hash = "sha256:f9edec2a39c4b6810f20965fb6269c77d084d9fed381520eaa6e6af8ebdab9b9", size = 1437262, upload-time = "2026-05-30T14:24:27.317Z" },
+    { url = "https://files.pythonhosted.org/packages/1c/cb/8325469416306fa5d7a78427be70262e71292e4a1f6e12d5a50c026e2665/nerfstudio_pixelnerf-0.0.16-py3-none-any.whl", hash = "sha256:e04a633779216604731241f8e20028b74f4bac669e9ce8121e39ab173b5cdff5", size = 1437877, upload-time = "2026-06-01T23:59:19.196Z" },
 ]
 
 [[package]]

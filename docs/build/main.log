@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.4.6)  1 JUN 2026 21:31
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.4.6)  1 JUN 2026 22:29
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -516,7 +516,10 @@ Underfull \hbox (badness 1478) in paragraph at lines 326--326
 \T1/phv/b/n/10 [[]]. "Time"refere-se ao tempo to-tal de trei-
  []
 
-[9] [10]
+[9]
+Underfull \vbox (badness 1924) has occurred while \output is active []
+
+ [10]
 <img/gt.jpg, id=56, 1011.78pt x 758.835pt>
 File: img/gt.jpg Graphic file (type jpg)
 <use img/gt.jpg>
@@ -542,6 +545,9 @@ File: img/nerfacto.png Graphic file (type png)
 <use img/nerfacto.png>
 Package pdftex.def Info: img/nerfacto.png  used on input line 388.
 (pdftex.def)             Requested size: 110.9634pt x 83.22316pt.
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
  [11 <./img/gt.jpg> <./img/pixel-nerf.png (PNG copy)> <./img/gnt.png (PNG copy)> <./img/instant-ngp.png (PNG copy)> <./img/nerfacto.png (PNG copy)>]
 <img/grafico_tradeoff.pdf, id=64, 578.16pt x 433.62pt>
 File: img/grafico_tradeoff.pdf Graphic file (type pdf)
@@ -560,15 +566,15 @@ L3 programming layer <2026-01-19>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 18234 strings out of 469375
- 360272 string characters out of 5466623
+ 18235 strings out of 469375
+ 360288 string characters out of 5466623
  762949 words of memory out of 5000000
- 46569 multiletter control sequences out of 15000+600000
+ 46570 multiletter control sequences out of 15000+600000
  687689 words of font info for 112 fonts, out of 8000000 for 9000
  64 hyphenation exceptions out of 8191
  84i,12n,104p,1913b,1081s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texmf-dist/fonts/type1/urw/helvetic/uhvb8a.pfb></usr/share/texmf-dist/fonts/type1/urw/helvetic/uhvbo8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on build/main.pdf (16 pages, 775630 bytes).
+Output written on build/main.pdf (16 pages, 776095 bytes).
 PDF statistics:
  234 PDF objects out of 1000 (max. 8388607)
  115 compressed objects within 2 object streams
