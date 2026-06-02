@@ -14,6 +14,15 @@ import gc
 def main():
     base_data_path = Path("assets/data/baseline/nerf_llff_data")
     
+    # Certifique-se de baixar o modelo pré-treinado do GNT se não existir
+    gnt_ckpt_path = Path("assets/pretrained/gnt_pretrained.pth")
+    if not gnt_ckpt_path.exists():
+        print(f"Baixando modelo pré-treinado do GNT para {gnt_ckpt_path}...")
+        gnt_ckpt_path.parent.mkdir(parents=True, exist_ok=True)
+        from src.nerf.GNTModel import download_pretrained_gnt_model
+        download_pretrained_gnt_model(str(gnt_ckpt_path.resolve()))
+        print("Download concluído.")
+    
     # --- Configuração Fixa (Scratch) ---
     ds = "fern"
     strategy = "uniform"
