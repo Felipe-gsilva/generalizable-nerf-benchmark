@@ -3,7 +3,7 @@ os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
 
 from pathlib import Path
 from src.dataset.ImageDataset import ImageDataset
-from src.nerf.NeRFModel import NerfModel
+from src.nerf.NerfModel import NerfModel
 from src.utils.metrics import MetricsLogger
 from src.utils.types import AvailableMetrics, RenderMode
 
@@ -16,13 +16,13 @@ def main():
     base_data_path = Path("assets/data/baseline/nerf_llff_data")
     llff_names = [
         "fern",
-        #"flower",
-        #"fortress",
-        #"horns",
-        #"leaves",
-        #"orchids",
-        #"room",
-        #"trex",
+        "flower",
+        "fortress",
+        "horns",
+        "leaves",
+        "orchids",
+        "room",
+        "trex",
     ]
     sampling_strategies = ["uniform"
                            ,
@@ -31,10 +31,10 @@ def main():
     num_views_options = [3, 6, 10]
 
     experiments_config = [
-        #{"model": "instant-ngp", "regime": "per-scene"},
-        #{"model": "nerfacto", "regime": "per-scene"},
-        #{"model": "pixel-nerf", "regime": "zero-shot"},
-        #{"model": "gnt", "regime": "zero-shot"},
+        {"model": "instant-ngp", "regime": "per-scene"},
+        {"model": "nerfacto", "regime": "per-scene"},
+        {"model": "pixel-nerf", "regime": "zero-shot"},
+        {"model": "gnt", "regime": "zero-shot"},
         {"model": "pixel-nerf", "regime": "tta"},
         {"model": "gnt", "regime": "tta"},
     ]

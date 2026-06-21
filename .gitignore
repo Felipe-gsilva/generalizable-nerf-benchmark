@@ -20,3 +20,4 @@ results_tta_1500/
 results_4060/
 # OS specific
 .DS_Store
+build
