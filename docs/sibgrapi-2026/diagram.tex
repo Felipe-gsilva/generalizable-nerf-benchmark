@@ -1,81 +1,92 @@
 \begin{figure}[!t]
 \centering
-% Color definitions
-\definecolor{mainborder}{rgb}{0.18, 0.24, 0.35}     % Sleek steel navy
-\definecolor{mainfill}{rgb}{0.94, 0.95, 0.97}       % Elegant light slate gray
-\definecolor{secborder}{rgb}{0.35, 0.43, 0.53}     % Soft slate/steel blue
-\definecolor{secfill}{rgb}{0.98, 0.98, 0.99}       % Premium off-white/very light gray
-
 \resizebox{\linewidth}{!}{%
 \begin{tikzpicture}[
-  >={Stealth[length=4pt]},
-  mainbox/.style={
-    rectangle, rounded corners=3pt, draw=mainborder, fill=mainfill,
-    minimum height=1cm, minimum width=2.4cm,
-    font=\small\bfseries, align=center, line width=0.8pt
+  >=stealth,
+  % Estilo dos blocos do pipeline (Cores suaves, design clean)
+  block/.style={
+    rectangle, draw=black!30, thick, fill=white,
+    minimum width=3.8cm, minimum height=0.9cm,
+    text centered, rounded corners=3pt, font=\scriptsize,
+    align=center
   },
-  detailbox/.style={
-    rectangle, rounded corners=2pt, draw=secborder, fill=secfill,
-    minimum height=0.7cm, minimum width=1.8cm,
-    font=\footnotesize, align=center, line width=0.5pt
-  },
-  metricbox/.style={
-    rectangle, rounded corners=2pt, draw=secborder, fill=secfill,
-    minimum height=0.7cm, minimum width=2.8cm,
-    font=\footnotesize, align=center, line width=0.5pt
-  },
-  arr/.style={->, thick, mainborder},
-  link/.style={-, secborder, line width=0.5pt}
+  % Estilo das setas de fluxo (Cinza médio para não pesar)
+  line/.style={draw, thick, black!40, ->, >=stealth, rounded corners=3pt}
 ]
 
-% ── Main pipeline (y = 0), compressed spacing for better scaling ──
-\node[mainbox] (data)    at (0,   0) {Dataset\\[-1pt]{\footnotesize LLFF}};
-\node[mainbox] (split)   at (3.2, 0) {Split\\[-1pt]Generation};
-\node[mainbox] (train)   at (6.4, 0) {Training /\\[-1pt]Adaptation};
-\node[mainbox] (eval)    at (9.6, 0) {Evaluation};
-\node[mainbox] (out)     at (12.8,0) {Metrics};
+% --- LEVEL 1 & 2: Dados Iniciais ---
+\node[block] (data) at (0, 0) {
+  \textbf{\faDatabase\ Dataset} \\[0.5mm] 
+  LLFF
+};
 
-\draw[arr] (data)  -- (split);
-\draw[arr] (split) -- (train);
-\draw[arr] (train) -- (eval);
-\draw[arr] (eval)  -- (out);
+\node[block] (split) at (0, -1.4) {
+  \textbf{\faProjectDiagram\ Split Generation} \\[0.5mm] 
+  Uniform \ \& \ Random (seed 42)
+};
+\draw[line] (data) -- (split);
 
-% ── Split details (centered under split = 3.2) ──
-\node[detailbox]        (unif) at (2.2, -1.7) {\textit{uniform}};
-\node[detailbox]        (rand) at (4.2, -1.7) {\textit{random}};
-\node[detailbox]        (seed) at (3.2, -2.7) {fixed seed (42)};
-\draw[link] (unif.south) -- (seed.north -| unif.south);
-\draw[link] (rand.south) -- (seed.north -| rand.south);
-\draw[link] (split.south) -- (unif.north);
-\draw[link] (split.south) -- (rand.north);
 
-% ── Regime details (stacked under train = 6.4) ──
-\node[detailbox] (zs)  at (6.4, -1.7) {Zero-Shot};
-\node[detailbox] (tta) at (6.4, -2.5) {TTA {\scriptsize ($N\!\in\!\{3,6,10\}$)}};
-\node[detailbox] (ps)  at (6.4, -3.3) {Per-Scene {\scriptsize (100\%)}};
-\draw[link] (train.south) -- (zs);
+% --- LEVEL 3: Bifurcação dos Modelos ---
+\node[block] (gen_models) at (-2.3, -3.0) {
+  \textbf{\faBrain\ Generalizable Models} \\[0.5mm] 
+  PixelNeRF $\cdot$ GNT
+};
 
-% ── Eval detail (centered under eval = 9.6) ──
-\node[detailbox] (loader) at (9.6, -1.7) {fixed\_indices};
-\draw[link] (eval.south) -- (loader);
+\node[block] (ps_models) at (2.3, -3.0) {
+  \textbf{\faCogs\ Per-Scene Models} \\[0.5mm] 
+  Instant-NGP $\cdot$ Nerfacto
+};
 
-% ── Metric details (centered under out = 12.8) ──
-\draw[link] (out.south) -- ++(0,-0.85);
-\node[metricbox] (m_qual) at (12.8, -1.7) {PSNR, SSIM, LPIPS};
-\node[metricbox] (m_eff)  at (12.8, -2.5) {FPS, VRAM};
+% Setas do Split para os Modelos
+\draw[line] (split.south) -- ++(0,-0.4) -| (gen_models.north);
+\draw[line] (split.south) -- ++(0,-0.4) -| (ps_models.north);
 
-% ── Environment annotation ──
+
+% --- LEVEL 4: Regimes de Treino ---
+\node[block] (gen_reg) at (-2.3, -4.4) {
+  \textbf{\faTasks\ Regimes} \\[0.5mm] 
+  Zero-Shot, TTA
+};
+
+\node[block] (ps_reg) at (2.3, -4.4) {
+  \textbf{\faTasks\ Regime} \\[0.5mm] 
+  Full Dataset
+};
+
+% Setas dos Modelos para os Regimes
+\draw[line] (gen_models) -- (gen_reg);
+\draw[line] (ps_models) -- (ps_reg);
+
+
+% --- LEVEL 5 & 6: Avaliação e Métricas ---
+\node[block] (eval) at (0, -5.8) {
+  \textbf{\faVial\ Evaluation} \\[0.5mm] 
+  Unified Protocol
+};
+
+% Setas dos Regimes convergindo para Avaliação
+\draw[line] (gen_reg.south) -- ++(0,-0.2) -| (eval.north);
+\draw[line] (ps_reg.south) -- ++(0,-0.2) -| (eval.north);
+
+\node[block] (metrics) at (0, -7.2) {
+  \textbf{\faChartBar\ Metrics} \\[0.5mm] 
+  \textbf{Qual:} PSNR, SSIM, LPIPS \ | \ \textbf{Perf:} FPS, VRAM
+};
+\draw[line] (eval) -- (metrics);
+
+
+% --- BACKGROUND (Ambiente Isolado) ---
 \begin{scope}[on background layer]
-  \node[draw=secborder!30, densely dashed, rounded corners=5pt,
-        fill=black!1, inner sep=12pt,
-        fit=(data)(split)(train)(eval)(out)(seed)(ps)(loader)(m_qual)(m_eff),
-        label={[font=\scriptsize\itshape, text=secborder!70]below:
-          Docker isolated GPU | NVIDIA GTX 1660 Super (6 GB) | CUDA 12.6 | $\sim$180h total execution}] {};
+  \node[draw=black!20, dashed, fill=black!2, rounded corners=5pt, 
+        inner xsep=12pt, inner ysep=15pt, 
+        fit=(data)(split)(gen_models)(ps_models)(gen_reg)(ps_reg)(eval)(metrics),
+        label={[anchor=south east, font=\scriptsize\color{black!60}]south east:
+        {\faDocker} Docker \ | \ NVIDIA GTX 1660S \ | \ CUDA 12.6}] (env) {};
 \end{scope}
 
 \end{tikzpicture}%
 }
-% Caption and Label go AFTER the graphic/tikzpicture in IEEE format
-\caption{Experimental execution protocol. The top boxes represent the pipeline stages; the bottom branches detail the configuration variants (split strategy, training regime) and the collected metrics. The entire environment was isolated via a Docker container with a reserved GPU.}
+\caption{Proposed methodology pipeline. The flowchart details the progression from data preparation to the bifurcated training paradigms, culminating in a unified evaluation protocol. The entire pipeline executes within an isolated containerized environment.}
 \label{fig:pipeline}
 \end{figure}
