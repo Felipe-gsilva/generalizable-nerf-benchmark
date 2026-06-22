@@ -1259,8 +1259,6 @@ class NerfModel:
 
             for outputs in eval_dataloader:
                 camera = outputs[0].to(self.pipeline.device)
-                if downscale_factor is not None and downscale_factor != 1:
-                    camera.rescale_output_resolution(1.0 / downscale_factor)
                 batch = outputs[1]
                 if model_metadata is not None:
                     ray_bundle = camera.generate_rays(camera_indices=0, keep_shape=True)
@@ -1659,8 +1657,6 @@ class NerfModel:
 
             for cam_idx, outputs in enumerate(eval_dataloader):
                 camera = outputs[0].to(self.pipeline.device)
-                if downscale_factor is not None and downscale_factor != 1:
-                    camera.rescale_output_resolution(1.0 / downscale_factor)
                 if model_metadata is not None:
                     ray_bundle = camera.generate_rays(camera_indices=0, keep_shape=True)
                     ray_bundle = ray_bundle.to(self.pipeline.device)
@@ -1705,7 +1701,7 @@ class NerfModel:
             return
         path = self.get_output_path(self.images.dataset_path)
         if self.pipeline is None:
-            loaded = self.load_from_disk(path, mode="inference", downscale_factor=downscale_factor)
+            loaded = self.load_from_disk(path, mode="test", downscale_factor=downscale_factor)
             if not loaded:
                 logger.error(f"❌ Failed to load pipeline for NeRF slicing at {path}")
                 return

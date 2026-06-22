@@ -50,6 +50,12 @@ def main():
                     regime = exp["regime"]
                     model_key = f"{model_name}_{regime}"
 
+                    import glob
+                    # Verifica se o experimento já foi concluído (se metrics.csv existe)
+                    if glob.glob(f"assets/logs/{model_key}/{ds}/*/{strategy}_{num_views}views/metrics.csv"):
+                        print(f"⏭️  Pulando: {model_key} | Dataset: {ds} | Visões: {num_views} | Estratégia: {strategy} (Já executado)")
+                        continue
+
                     print("\n" + "=" * 80)
                     print(
                         f"🚀 Iniciando: {model_name} | Dataset: {ds} | Visões: {num_views} | Estratégia: {strategy}"
@@ -128,7 +134,7 @@ def main():
 
                         nerf_model.render(
                             mode=RenderMode.PERSPECTIVE,
-                            save_path=Path("results")
+                            save_path=Path("assets/results")
                             / model_key
                             / ds
                             / f"{strategy}_{num_views}views",

@@ -56,7 +56,7 @@ def calculate_fid(
     real_images_cat: torch.Tensor,
     fake_images_cat: torch.Tensor,
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
-    batch_size: int = 32,
+    batch_size: int = 4,
 ) -> float:
     real_images_cat, fake_images_cat = real_images_cat.to(device), fake_images_cat.to(device)
     real_images_cat, fake_images_cat = align_image_tensors(real_images_cat, fake_images_cat)
@@ -84,7 +84,7 @@ def calculate_psnr_ssim_lpips(
     generated_images: torch.Tensor,
     lpips_model: "lpips.LPIPS | None" = None,
     device: str | torch.device = "cuda" if torch.cuda.is_available() else "cpu",
-    batch_size: int = 32,
+    batch_size: int = 4,
 ):
     device = torch.device(device)
 

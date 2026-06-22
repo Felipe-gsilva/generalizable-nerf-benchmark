@@ -37,10 +37,9 @@
 % When switching from latex to pdflatex and vice-versa, the compiler may
 % have to be run twice to clear warning/error messages.
 
-
-
-
-
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, backgrounds, fit}
 
 % *** CITATION PACKAGES ***
 %
@@ -194,6 +193,9 @@ This work compares Generalizable NeRFs and Fast Optimization Per-Scene trained m
 
 
 \input{intro.tex}
+\input{method.tex}
+\input{results.tex}
+\input{conclusion.tex}
 
 % An example of a floating figure using the graphicx package.
 % Note that \label must occur AFTER (or within) \caption.
@@ -288,18 +290,6 @@ This work compares Generalizable NeRFs and Fast Optimization Per-Scene trained m
 % Note that, LaTeX2e, unlike IEEE journals/conferences, places
 % footnotes above bottom floats. This can be corrected via the
 % \fnbelowfloat command of the stfloats package.
-
-\section{Materials and methods}
-
-
-\section{Results and Discussion}
-
-
-\section{Conclusion}
-The conclusion goes here.
-
-
-
 
 % conference papers do not normally have an appendix
 

@@ -75,5 +75,3 @@ RUN uv pip install -v git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=b
 # 8. Source Code (Place at the very end so code changes don't trigger recompilations)
 COPY . .
 RUN uv pip install -e .
-
-CMD ["python", "main.py"]
