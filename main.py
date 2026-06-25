@@ -15,12 +15,12 @@ import gc
 def main():
     base_data_path = Path("assets/data/baseline/nerf_llff_data")
     llff_names = [
-        "fern",
-        "flower",
-        "fortress",
-        "horns",
-        "leaves",
-        "orchids",
+        #"fern",
+        #"flower",
+        #"fortress",
+        #"horns",
+        #"leaves",
+        #"orchids",
         "room",
         "trex",
     ]
