@@ -1,12 +1,12 @@
 \section{Results and Discussion}
 \label{sec:results}
 
-This section presents the consolidated quantitative and computational analyses across the evaluated LLFF scenes. Table \ref{tab:super_results} summarizes the global averages for visual fidelity, temporal efficiency, and memory footprint. The results reveal critical trade-offs between generalization, optimization stability, and hardware constraints.
+This section presents the consolidated quantitative, computational and qualitative analyses across the evaluated LLFF scenes. Table \ref{tab:super_results} summarizes the global averages for visual fidelity, temporal efficiency, and memory footprint. The results reveal critical trade-offs between generalization, optimization stability, and hardware constraints.
 
 \subsection{Visual Fidelity and Architectural Inertia}
 The per-scene architectures demonstrated vastly superior visual reconstruction capabilities. Nerfacto established the performance upper bound, achieving a global average of 27.11 dB PSNR and 0.875 SSIM. In contrast, the generalizable models struggled significantly with the sparse constraints of the LLFF dataset. 
 
-A notable phenomenon observed in the consolidated data is the performance degradation during Test-Time Adaptation (TTA). Counterintuitively, fine-tuning the generalizable models on sparse views slightly decreased their PSNR compared to their Zero-Shot baselines. PixelNeRF dropped from 6.62 dB to 6.38 dB, while GNT decreased from 10.73 dB to 10.42 dB. This behavior suggests a representational collapse or "architectural inertia", where the lack of dense geometric priors and depth regularization during few-shot fine-tuning causes the networks to overfit the sparse inputs, actively destroying the generalized prior they possessed in the Zero-Shot regime.
+A notable phenomenon observed in the consolidated data is the performance degradation during Test-Time Adaptation (TTA). Counterintuitively, fine-tuning the generalizable models on sparse views slightly decreased their PSNR compared to their Zero-Shot baselines. PixelNeRF dropped from 6.62 dB to 6.38 dB, while GNT decreased from 10.73 dB to 10.42 dB. This behavior, even though really minor in value, but major on impact, suggests a representational collapse or "architectural inertia", where the lack of dense geometric priors and depth regularization during few-shot fine-tuning causes the networks to overfit the sparse inputs, actively destroying the generalized prior they possessed in the Zero-Shot regime.
 
 \subsection{Computational Trade-offs}
 From a systemic viability perspective, a severe dichotomy emerges between inference latency and training overhead. While generalizable models bypass extensive optimization (requiring only seconds for Zero-Shot inference or $\sim$7 minutes for TTA), their volumetric feature aggregation mechanisms result in catastrophic inference bottlenecks, yielding rendering speeds below 0.02 FPS. 
