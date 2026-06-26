@@ -113,11 +113,6 @@ def main():
             means.append(mean(vals))
         scene_data.append([scene] + means)
         
-    print("\n" + "="*80)
-    print("🎬 DADOS AGLOMERADOS POR CENA (Média de todos os modelos) 🎬")
-    print("="*80)
-    print_table(["Scene"] + headers, scene_data)
-    
     # Por Modelo
     models = set(row["Model"] for row in data)
     model_data = []
@@ -130,9 +125,41 @@ def main():
         model_data.append([model] + means)
         
     print("\n" + "="*80)
-    print("🤖 DADOS AGLOMERADOS POR MODELO (Média de todas as cenas) 🤖")
+    print("🤖 DADOS AGLOMERADOS POR MODELO (Tudo) 🤖")
     print("="*80)
     print_table(["Model"] + headers, model_data)
+
+    # ---------------------------------------------------------
+    # Split tables for article (Memory and Visual Quality)
+    # ---------------------------------------------------------
+    memory_headers = ["Model", "Train Time (s)", "Inference FPS", "VRAM Peak (MB)"]
+    memory_data = []
+    
+    quality_headers = ["Model", "PSNR", "SSIM", "LPIPS"]
+    quality_data = []
+
+    for row in model_data:
+        # row: [Model, PSNR, SSIM, LPIPS, Train Time, Inference FPS, VRAM]
+        model_name = row[0]
+        psnr = row[1]
+        ssim = row[2]
+        lpips = row[3]
+        train_time = row[4]
+        inf_fps = row[5]
+        vram = row[6]
+        
+        memory_data.append([model_name, train_time, inf_fps, vram])
+        quality_data.append([model_name, psnr, ssim, lpips])
+
+    print("\n" + "="*80)
+    print("🧠 TABELA DE DESEMPENHO E MEMÓRIA (Média por modelo) 🧠")
+    print("="*80)
+    print_table(memory_headers, memory_data)
+
+    print("\n" + "="*80)
+    print("👁️ TABELA DE QUALIDADE VISUAL (Média por modelo) 👁️")
+    print("="*80)
+    print_table(quality_headers, quality_data)
 
     # Export to CSV manually
     output_dir = Path("assets/results/aggregated_metrics")
@@ -153,7 +180,18 @@ def main():
         writer.writerow(["Model"] + headers)
         writer.writerows(model_data)
 
-    print(f"\n📁 Tabelas CSV exportadas para: {output_dir}/")
+    # Exporting separated tables
+    with open(output_dir / "memory_table.csv", "w", newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(memory_headers)
+        writer.writerows(memory_data)
+        
+    with open(output_dir / "visual_quality_table.csv", "w", newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(quality_headers)
+        writer.writerows(quality_data)
+
+    print(f"\n📁 Novas tabelas CSV separadas exportadas para: {output_dir}/")
 
 if __name__ == "__main__":
     main()
