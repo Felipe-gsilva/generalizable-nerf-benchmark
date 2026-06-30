@@ -1,5 +1,6 @@
 import os
 os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 from pathlib import Path
 from src.dataset.ImageDataset import ImageDataset
@@ -15,14 +16,7 @@ import gc
 def main():
     base_data_path = Path("assets/data/baseline/nerf_llff_data")
     llff_names = [
-        #"fern",
-        #"flower",
-        #"fortress",
-        #"horns",
-        #"leaves",
-        #"orchids",
-        "room",
-        "trex",
+        "fern",
     ]
     sampling_strategies = ["uniform"
                            ,
@@ -31,11 +25,7 @@ def main():
     num_views_options = [3, 6, 10]
 
     experiments_config = [
-        {"model": "instant-ngp", "regime": "per-scene"},
-        {"model": "nerfacto", "regime": "per-scene"},
-        {"model": "pixel-nerf", "regime": "zero-shot"},
         {"model": "gnt", "regime": "zero-shot"},
-        {"model": "pixel-nerf", "regime": "tta"},
         {"model": "gnt", "regime": "tta"},
     ]
 
@@ -52,9 +42,9 @@ def main():
 
                     import glob
                     # Verifica se o experimento já foi concluído (se metrics.csv existe)
-                    if glob.glob(f"assets/logs/{model_key}/{ds}/*/{strategy}_{num_views}views/metrics.csv"):
-                        print(f"⏭️  Pulando: {model_key} | Dataset: {ds} | Visões: {num_views} | Estratégia: {strategy} (Já executado)")
-                        continue
+                    # if glob.glob(f"assets/logs/{model_key}/{ds}/*/{strategy}_{num_views}views/metrics.csv"):
+                    #     print(f"⏭️  Pulando: {model_key} | Dataset: {ds} | Visões: {num_views} | Estratégia: {strategy} (Já executado)")
+                    #     continue
 
                     print("\n" + "=" * 80)
                     print(
@@ -110,7 +100,8 @@ def main():
                         except KeyboardInterrupt:
                             print(f"\n⚠️ Treinamento interrompido pelo usuário para {model_name}. Avaliando métricas parciais...")
                         except Exception as e:
-                            print(f"\n⚠️ Treinamento abortado com erro ({e}). Avaliando métricas a partir do último checkpoint salvo...")
+                            print(f"\n⚠️ Treinamento abortado com erro ({e}). Pulando avaliação para evitar reuso de checkpoints corrompidos.")
+                            continue
                         
                         training_time = time.time() - start_time
 

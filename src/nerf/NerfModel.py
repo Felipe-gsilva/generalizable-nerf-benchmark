@@ -910,9 +910,9 @@ class NerfModel:
                 "--pipeline.model.netwidth",
                 "64",
                 "--pipeline.model.eval-num-rays-per-chunk",
-                "512",
+                "1",
                 "--pipeline.datamanager.train-num-rays-per-batch",
-                "512",
+                "32",
                 "--pipeline.datamanager.cache-images-type",
                 "uint8",
             ]
@@ -956,7 +956,7 @@ class NerfModel:
 
                 cmd += [
                     "--pipeline.model.pretrained-ckpt-path",
-                    str(gnt_pretrained_path.resolve()),
+                    str(gnt_pretrained_path),
                 ]
 
             if self.model_name == "pixel-nerf":
@@ -969,7 +969,7 @@ class NerfModel:
                     "--pipeline.model.transfer-learning",
                     "True",
                     "--pipeline.model.pretrained-ckpt-path",
-                    str(unzipped_path.resolve()),
+                    str(unzipped_path),
                 ]
 
         if extra_cmd_args:

@@ -19,6 +19,7 @@
 % (uncomment the ones you want to load)
 
 
+
 % *** MISC UTILITY PACKAGES ***
 %
 %\usepackage{ifpdf}
@@ -190,7 +191,7 @@
 \maketitle
 
 \begin{abstract}
-This work compares Generalizable NeRFs and Fast Optimization Per-Scene trained models applied to sparse-view datasets, evaluating the impact of these feature extraction architectures on novel view synthesis performance. Through a quantitative analysis using visual fidelity (PSNR, SSIM, LPIPS) and computational efficiency metrics (convergence time, VRAM footprint, inference time), this study highlights the trade-offs between the global generalization of Transformers and the local processing efficiency of convolutions, as well as the critical impact of representational collapse in few-shot models. Ultimately, it aims to guide the selection of 3D rendering models for practical scenarios often constrained by hardware limitations and data scarcity, meanwhile %TODO talk about the development of the wrappers and put the correct numbers
+This work compares Generalizable NeRFs and Fast Optimization Per-Scene trained models applied to sparse-view datasets, evaluating the impact of these feature extraction architectures on novel view synthesis performance. Through a quantitative analysis using visual fidelity (PSNR, SSIM, LPIPS) and computational efficiency metrics (convergence time, VRAM footprint, inference time), this study highlights the trade-offs between the global generalization of Transformers and the local processing efficiency of convolutions, as well as the critical impact of representational collapse in few-shot models. Ultimately, it aims to guide the selection of 3D rendering models for practical scenarios often constrained by hardware limitations and data scarcity.
 \end{abstract}
 
 % For peerreview papers, this IEEEtran command inserts a page break and
@@ -202,6 +203,21 @@ This work compares Generalizable NeRFs and Fast Optimization Per-Scene trained m
 %\input{theorical.tex}
 \input{method.tex}
 \input{results.tex}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{img/plot_radar.png}
+\caption{Radar chart comparing overall architecture balance.}
+\label{fig:radar_chart}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{img/plot_boxplot.png}
+\caption{Performance variance across evaluated scenes.}
+\label{fig:boxplot}
+\end{figure}
+
 \input{conclusion.tex}
 \input{acknowledgment.tex}
 
