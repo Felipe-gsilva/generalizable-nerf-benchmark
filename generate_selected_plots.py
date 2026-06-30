@@ -1,5 +1,4 @@
 import csv
-import sys
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
@@ -94,7 +93,7 @@ def plot_radar(data, output_dir):
     angles = [n / float(N) * 2 * np.pi for n in range(N)]
     angles += angles[:1]
     
-    fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(polar=True))
+    _, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(polar=True))
     colors = list(mcolors.TABLEAU_COLORS.values())
     
     for i, m in enumerate(raw_avgs):
