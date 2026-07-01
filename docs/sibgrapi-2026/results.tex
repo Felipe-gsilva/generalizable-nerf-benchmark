@@ -3,53 +3,23 @@
 
 This section presents the consolidated quantitative, computational and qualitative analyses across the evaluated LLFF scenes. Table \ref{tab:super_results} summarizes the global averages for visual fidelity, temporal efficiency, and memory footprint. The results reveal critical trade-offs between generalization, optimization stability, and hardware constraints.
 
-\subsection{Visual Fidelity and the TTA Degradation Phenomenon}
-The per-scene architectures demonstrated vastly superior visual reconstruction capabilities. Nerfacto established the performance upper bound, achieving a global average of 27.11 dB PSNR and 0.875 SSIM. In contrast, the generalizable models struggled significantly with the sparse constraints of the LLFF dataset. 
+\subsection{Visual Fidelity}
+The per-scene architectures demonstrated vastly superior visual reconstruction capabilities. Nerfacto established the performance upper bound, achieving a global average of 27.11 dB PSNR and 0.875 SSIM (Table \ref{tab:super_results}). In contrast, the generalizable models struggled significantly with the sparse constraints of the LLFF dataset.
 
-A notable phenomenon observed in the consolidated data is the performance degradation during Test-Time Adaptation (TTA). Counterintuitively, fine-tuning the generalizable models on sparse views slightly decreased their PSNR compared to their Zero-Shot baselines. PixelNeRF dropped from 6.62 dB to 6.38 dB, while GNT decreased from 10.73 dB to 10.42 dB. Although numerically modest, this degradation has substantial interpretive impact, suggesting a representational collapse or "architectural inertia", where the lack of dense geometric priors and depth regularization during few-shot fine-tuning causes the networks to overfit the sparse inputs, actively destroying the generalized prior they possessed in the Zero-Shot regime.
+PixelNeRF failed to converge on any LLFF scene (§II-A), a behavior attributable to its reliance on dense multi-view spatial coverage for accurate 2D-to-3D feature projection. The purely local 2D feature projection via the frozen CNN encoder failed to triangulate depth accurately under extreme sparsity, resulting in severe isotropic blurring and a complete failure to reconstruct the underlying geometry. GNT, on the other hand, could accomplish better results considering its fast training and constraints on time and hardware. Although not able to converge to the final scene's minor details, the PSNR values ranged from 10.32 to 11.8, as observed in Table \ref{tab:ablation_lr}. This demonstrates that GNT, as complex as it is and despite its more robust cross-attention volumetric aggregation, still faces significant representation bottlenecks under strict few-shot regimes. The inability to fully capture high-frequency, in-the-wild textures highlights the limitations of keeping the feature extraction network frozen during adaptation, forcing the model to rely on generalized priors that ultimately struggle to resolve out-of-distribution geometric complexities.
 
-\begin{table}[htb]
-\centering
-\caption{Visual Quality on the \textit{fern} scene.}
-\label{tab:fern_vq}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{llccc}
-\toprule
-\textbf{Regime} & \textbf{Model} & \textbf{PSNR (dB) $\uparrow$} & \textbf{SSIM $\uparrow$} & \textbf{LPIPS $\downarrow$} \\
-\midrule
-Zero-Shot & GNT & 10.26 & 0.290 & 0.732 \\
-TTA       & GNT & 10.26 & 0.290 & 0.732 \\
-Zero-Shot & PixelNeRF & 5.74 & 0.093 & 0.832 \\
-TTA       & PixelNeRF & 6.07 & 0.058 & 0.812 \\
-Per-Scene & Instant-NGP & 13.41 & 0.433 & 0.497 \\
-Per-Scene & Nerfacto & 25.75 & 0.850 & 0.184 \\
-\bottomrule
-\end{tabular}%
-}
-\end{table}
-
-\begin{table}[htb]
-\centering
-\caption{Impact of the number of training views ($N$) on PSNR (dB) for generalizable models on the \textit{fern} scene.}
-\label{tab:fern_n_views}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{lccc}
-\toprule
-\textbf{Model} & \textbf{N = 3} & \textbf{N = 6} & \textbf{N = 10} \\
-\midrule
-GNT (Zero-Shot) & 10.33 & 10.19 & 10.26 \\
-GNT (TTA)       & 10.33 & 10.19 & 10.26 \\
-PixelNeRF (Zero-Shot) & 5.68 & 5.76 & 5.79 \\
-PixelNeRF (TTA) & 6.07 & 6.05 & 6.09 \\
-\bottomrule
-\end{tabular}%
-}
-\end{table}
 
 \subsection{Computational Trade-offs}
-From a systemic viability perspective, a clear dichotomy emerges between inference latency and training overhead. While generalizable models bypass extensive optimization (requiring only seconds for Zero-Shot inference or $\sim$7 minutes for TTA), their volumetric feature aggregation mechanisms result in catastrophic inference bottlenecks, yielding rendering speeds below 0.02 FPS. 
+From a systemic viability perspective, a clear dichotomy emerges between inference latency and training overhead. While generalizable models bypass extensive optimization (requiring only seconds for Zero-Shot inference or $\sim$7 minutes for TTA), their volumetric feature aggregation mechanisms result in catastrophic inference bottlenecks, yielding rendering speeds below 0.02 FPS. This behavior is better observed at Fig. \ref{fig:boxplot}, exposing the trend.
 
-Conversely, the explicit multiscale hash representations of the per-scene models proved vastly more efficient during runtime. Despite requiring lengthier convergence periods (from $\sim$9 minutes for Nerfacto up to $\sim$32 minutes for Instant-NGP), they achieve inference rates on worst cases up to $97\times$ faster than generalizable approaches (0.388 FPS) in a edge case when comparing the best Nerfacto result to the worst PixelNeRF one. Furthermore, the hash-based models exhibit a highly optimized dynamic memory footprint, with Instant-NGP operating at just 1.09 GB of VRAM during inference, solidifying per-scene methods as the most viable path for hardware-constrained deployments despite the initial training cost.
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{img/plot_boxplot.png}
+\caption{Performance variance across evaluated scenes.}
+\label{fig:boxplot}
+\end{figure}
+
+Conversely, the explicit multiscale hash representations of the per-scene models proved vastly more efficient during runtime. Despite requiring lengthier convergence periods (from $\sim$9 minutes for Nerfacto up to $\sim$32 minutes for Instant-NGP), they achieve inference rates on best per-scene cases up to $97\times$ faster than the worst generalizable approaches (0.388 FPS) in a edge case when comparing the best Nerfacto result to the worst PixelNeRF one. Furthermore, the hash-based models exhibit a highly optimized dynamic memory footprint, with Instant-NGP operating at just 1.09 GB of VRAM during inference, solidifying per-scene methods as the most viable path for hardware-constrained deployments despite the initial training cost.
 
 \begin{table}[!t]
 \centering
@@ -58,27 +28,21 @@ Conversely, the explicit multiscale hash representations of the per-scene models
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{llccc}
 \toprule
-\textbf{Regime} & \textbf{Model} & \textbf{Train Time (s) $\downarrow$} & \textbf{Inference (FPS) $\uparrow$} & \textbf{VRAM Peak (MB) $\downarrow$} \\
+\textbf{Regime} & \textbf{Model} & \textbf{Train Time (s) $\downarrow$} & \textbf{Inference (FPS) $\uparrow$} & \textbf{VRAM Peak (GB) $\downarrow$} \\
 \midrule
-Zero-Shot & GNT & 8.77 & 0.007 & 1974.22 \\
-TTA       & GNT & 392.15 & 0.008 & 1974.22 \\
-Zero-Shot & PixelNeRF & 39.02 & 0.003 & 1605.10 \\
-TTA       & PixelNeRF & 496.82 & 0.006 & 1924.02 \\
-Per-Scene & Instant-NGP & 1707.91 & 0.183 & 764.74 \\
-Per-Scene & Nerfacto & 423.45 & 0.371 & 1101.83 \\
+Zero-Shot & GNT & 8.77 & 0.007 & 1.97 \\
+TTA       & GNT & 392.15 & 0.008 & 1.97 \\
+Zero-Shot & PixelNeRF & 39.02 & 0.003 & 1.60 \\
+TTA       & PixelNeRF & 496.82 & 0.006 & 1.92 \\
+Per-Scene & Instant-NGP & 1707.91 & 0.183 & 7.64 \\
+Per-Scene & Nerfacto & 423.45 & 0.371 & 1.10 \\
 \bottomrule
 \end{tabular}%
 }
 \end{table}
 
 
-\begin{figure}[!t]
-\centering
-% Lembre-se de ajustar o caminho da imagem se necessário
-\includegraphics[width=\linewidth]{img/vram_vs_psnr_all_runs_plot.png}
-\caption{Trade-off between visual fidelity (PSNR) and computational cost (Peak VRAM) across all evaluated scenes and regimes. The top-left quadrant represents the ideal operational region (high quality, low memory footprint), which is heavily dominated by per-scene hash-based architectures.}
-\label{fig:vram_vs_psnr}
-\end{figure}
+
 \begin{table*}[!t]
 \centering
 \caption{Consolidated quantitative results across the LLFF dataset. Metrics represent the global average. Training time reflects the fine-tuning phase for TTA and full convergence for Per-Scene models. VRAM Peak denotes dynamic memory allocation during inference.}
@@ -113,9 +77,9 @@ Per-Scene & Nerfacto & 423.45 & 0.371 & 1101.83 \\
 
 The qualitative assessment visually corroborates the quantitative metrics, specifically illustrating the boundaries of each architectural paradigm. For visual clarity, we synthesized novel views matching the exact poses from the test set using perspective projection.
 
-Figure \ref{fig:comparacao_qualitativa} highlights the severe disparities in reconstruction quality on the highly detailed \textit{fern} scene. As visually evident, neither PixelNeRF nor GNT achieved proper convergence. PixelNeRF produced renderings with intense isotropic blurring, a typical artifact indicating the network's failure to accurately localize 2D projected features across extremely sparse views. GNT, on the other hand, demonstrated a complete generalization failure regarding the \textit{in-the-wild} characteristics of the scene. This resulted in a representational visual collapse, heavily distorting the volumetric geometry into noise—which persisted even after the 10-view Test-Time Adaptation (TTA).
+Fig. \ref{fig:comparacao_qualitativa} highlights the severe disparities in reconstruction quality on the highly detailed \textit{fern} scene. As visually evident, neither PixelNeRF nor GNT achieved proper convergence. PixelNeRF produced renderings with intense isotropic blurring, a typical artifact indicating the network's failure to accurately localize 2D projected features across extremely sparse views. GNT, on the other hand, demonstrated a complete generalization failure regarding the \textit{in-the-wild} characteristics of the scene. This resulted in a representational visual collapse, heavily distorting the volumetric geometry into noise—which persisted even after the 10-view Test-Time Adaptation (TTA). 
 
-Conversely, the per-scene architectures successfully captured the intricate foliage geometry. While Instant-NGP exhibited minor volumetric density fluctuations (floaters) in sparsely covered peripheral regions, Nerfacto produced a highly faithful reconstruction, preserving high-frequency details directly matching the native resolution of the Ground Truth.
+Conversely, the per-scene architectures successfully captured the intricate foliage geometry. While Instant-NGP exhibited minor volumetric density fluctuations (floaters) in sparsely covered peripheral regions, Nerfacto achieved the highest perceptual fidelity across all scenes (PSNR 27.11 dB, SSIM 0.875, LPIPS 0.171), recovering fine-grained foliage details consistent with the ground truth resolution (Fig. \ref{fig:comparacao_qualitativa}, bottom right).
 
 \begin{figure}[!t]
     \centering

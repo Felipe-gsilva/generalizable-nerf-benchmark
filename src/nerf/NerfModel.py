@@ -290,7 +290,8 @@ class NerfModel:
             with config_path.open("r") as f:
                 content = f.read()
 
-            content = content.replace("/workspace/", "/home/felipe-gsilva/dev/cs/nerf-ann-paper/")
+            project_root = str(Path(__file__).resolve().parents[2])
+            content = content.replace("/workspace", project_root)
 
             if checkpoint_dir.name == "nerfstudio_models":
                 load_target = checkpoint_dir.parent
@@ -330,8 +331,8 @@ class NerfModel:
                     content,
                 )
             
-            # Patch absolute paths to /workspace/ (especially for GNT pretrained ckpt path inside docker)
-            content = re.sub(r"(/[a-zA-Z0-9_\-\.]+)+/nerf-ann-paper", "/workspace", content)
+            # Patch absolute paths to the current project root (especially for GNT pretrained ckpt path)
+            content = re.sub(r"(/[a-zA-Z0-9_\-\.]+)+/nerf-ann-paper", project_root, content)
 
             temp_config = tempfile.NamedTemporaryFile(
                 mode="w", suffix=".yml", delete=False
