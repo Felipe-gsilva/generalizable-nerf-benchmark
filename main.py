@@ -105,10 +105,22 @@ def main():
                         
                         training_time = time.time() - start_time
 
+                        # Render perspective views first and save them to disk
+                        rendered_views = nerf_model.render(
+                            mode=RenderMode.PERSPECTIVE,
+                            save_path=Path("assets/results")
+                            / model_key
+                            / ds
+                            / f"{strategy}_{num_views}views",
+                            downscale_factor=current_downscale,
+                        )
+
                         # Avaliação de Métricas de Qualidade Visual e Perceptual (PSNR, SSIM, LPIPS)
                         metrics = nerf_model.evaluate_all_metrics(
-                            mode=RenderMode.PERSPECTIVE, metrics=list(AvailableMetrics),
-                            downscale_factor=current_downscale
+                            mode=RenderMode.PERSPECTIVE,
+                            metrics=list(AvailableMetrics),
+                            already_rendered_images=rendered_views,
+                            downscale_factor=current_downscale,
                         )
 
                         if metrics:
@@ -122,15 +134,6 @@ def main():
                             print(
                                 f"⚠️ Falha: O modelo {model_name} retornou métricas vazias."
                             )
-
-                        nerf_model.render(
-                            mode=RenderMode.PERSPECTIVE,
-                            save_path=Path("assets/results")
-                            / model_key
-                            / ds
-                            / f"{strategy}_{num_views}views",
-                            downscale_factor=current_downscale,
-                        )
 
                     except Exception as e:
                         import traceback

@@ -1212,7 +1212,10 @@ class NerfModel:
         return fps
 
     def get_perspective_test_metrics(
-        self, metrics: List[AvailableMetrics], downscale_factor: Optional[int] = None
+        self,
+        metrics: List[AvailableMetrics],
+        already_rendered_images: Optional[List[np.ndarray]] = None,
+        downscale_factor: Optional[int] = None,
     ) -> Dict[str, float]:
         """
         Review rendered images from the perspective test set and compute quality metrics against ground truth.
@@ -1249,7 +1252,7 @@ class NerfModel:
         target_h, target_w = None, None
         with torch.no_grad():
             model_metadata = None
-            if self.model_name in ["gnt", "pixel-nerf"]:
+            if self.model_name in ["gnt", "pixel-nerf"] and already_rendered_images is None:
                 try:
                     eval_ray_bundle, eval_batch = self.pipeline.datamanager.next_eval(step=0)
                     if self.model_name == "gnt":
@@ -1258,26 +1261,31 @@ class NerfModel:
                 except Exception as e:
                     config.logger.warning(f"Failed to fetch metadata in perspective eval for {self.model_name}: {e}")
 
-            for outputs in eval_dataloader:
+            for idx, outputs in enumerate(eval_dataloader):
                 camera = outputs[0].to(self.pipeline.device)
                 batch = outputs[1]
-                if model_metadata is not None:
-                    ray_bundle = camera.generate_rays(camera_indices=0, keep_shape=True)
-                    ray_bundle = ray_bundle.to(self.pipeline.device)
-                    for k, v in model_metadata.items():
-                        if isinstance(v, torch.Tensor):
-                            v = v.to(self.pipeline.device)
-                        elif isinstance(v, dict):
-                            v = {
-                                kk: (vv.to(self.pipeline.device) if isinstance(vv, torch.Tensor) else vv)
-                                for kk, vv in v.items()
-                            }
-                        ray_bundle.metadata[k] = v
-                    outputs = self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
+                
+                if already_rendered_images is not None:
+                    # Skip model forward pass and reuse the pre-rendered image
+                    rendered_rgb = torch.from_numpy(already_rendered_images[idx]).cpu()
                 else:
-                    outputs = self.pipeline.model.get_outputs_for_camera(camera)
-                # Extract RGB and GT images, move to CPU for metric calculations
-                rendered_rgb = outputs["rgb"].cpu()
+                    if model_metadata is not None:
+                        ray_bundle = camera.generate_rays(camera_indices=0, keep_shape=True)
+                        ray_bundle = ray_bundle.to(self.pipeline.device)
+                        for k, v in model_metadata.items():
+                            if isinstance(v, torch.Tensor):
+                                v = v.to(self.pipeline.device)
+                            elif isinstance(v, dict):
+                                v = {
+                                    kk: (vv.to(self.pipeline.device) if isinstance(vv, torch.Tensor) else vv)
+                                    for kk, vv in v.items()
+                                }
+                            ray_bundle.metadata[k] = v
+                        outputs = self.pipeline.model.get_outputs_for_camera_ray_bundle(ray_bundle)
+                    else:
+                        outputs = self.pipeline.model.get_outputs_for_camera(camera)
+                    # Extract RGB and GT images, move to CPU for metric calculations
+                    rendered_rgb = outputs["rgb"].cpu()
                 gt_rgb = batch["image"].cpu()
 
                 if target_h is None or target_w is None:
@@ -1327,6 +1335,7 @@ class NerfModel:
         mode: RenderMode,
         metrics: List[AvailableMetrics],
         already_rendered_slices: Optional[List[np.ndarray]] = None,
+        already_rendered_images: Optional[List[np.ndarray]] = None,
         downscale_factor: Optional[int] = None,
     ) -> Dict[str, float]:
         """
@@ -1376,7 +1385,11 @@ class NerfModel:
             )
 
         else:
-            quality_metrics = self.get_perspective_test_metrics(metrics, downscale_factor=downscale_factor)
+            quality_metrics = self.get_perspective_test_metrics(
+                metrics,
+                already_rendered_images=already_rendered_images,
+                downscale_factor=downscale_factor
+            )
 
         if quality_metrics:
             results.update(quality_metrics)
