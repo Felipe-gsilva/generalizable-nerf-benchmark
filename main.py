@@ -85,6 +85,20 @@ def main():
                         )
                         current_downscale = 8
 
+                        extra_args = []
+                        if regime == "tta":
+                            lr_val = 5e-4
+                            if model_name == "gnt":
+                                extra_args += [
+                                    "--optimizers.network.optimizer.lr", str(lr_val),
+                                    "--optimizers.feature-net.optimizer.lr", str(lr_val),
+                                ]
+                            elif model_name == "pixel-nerf":
+                                extra_args += [
+                                    "--optimizers.encoder.optimizer.lr", str(lr_val),
+                                    "--optimizers.nerf.optimizer.lr", str(lr_val),
+                                ]
+
                         if dataset_obj.dataset_path is None:
                             print(
                                 f"⚠️ Aviso: O dataset {ds} não foi encontrado. Pulando esta configuração."
@@ -96,6 +110,7 @@ def main():
                             nerf_model.train(
                                 Path(dataset_obj.dataset_path),
                                 downscale_factor=current_downscale,
+                                extra_cmd_args=extra_args
                             )
                         except KeyboardInterrupt:
                             print(f"\n⚠️ Treinamento interrompido pelo usuário para {model_name}. Avaliando métricas parciais...")

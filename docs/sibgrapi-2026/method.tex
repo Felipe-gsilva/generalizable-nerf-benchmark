@@ -71,26 +71,30 @@ PixelNeRF (TTA) & 7.24 & 7.26 & 7.13 \\
 \end{table}
 
 
-To ensure a strictly equitable evaluation protocol, all models were unified under the \textit{Nerfstudio} framework \cite{Tancik2023}. Instant-NGP and Nerfacto are natively supported by the framework. Conversely, integration wrappers were developed for PixelNeRF and GNT, porting their original DataManager and Pipeline components to comply with Nerfstudio's modular interface. This unified environment leverages \textit{tiny-cuda-nn} \cite{tinycudann} for GPU acceleration and standardizes the logging infrastructure. 
+To ensure a strictly equitable evaluation protocol, all models were unified under the \textit{Nerfstudio} framework \cite{Tancik2023}. Instant-NGP and Nerfacto are natively supported by the framework. Conversely,  custom integration wrappers for PixelNeRF and GNT were developed and publicly released, manually porting their original DataManager, Pipeline, and Model components to comply with Nerfstudio's modular interface without altering their native inference logic. This unified environment leverages \textit{tiny-cuda-nn} \cite{tinycudann} for GPU acceleration and standardizes the logging infrastructure. 
 
-For consistency across the evaluation, all models were optimized using Adam with a standard learning rate of $\eta = 10^{-3}$, zero weight decay, 512 rays per batch in training and 128 in evaluation step. While the original GNT and PixelNeRF literature suggests slightly lower learning rates (between $10^{-4}$ and $5 \times 10^{-4}$), adopting $\eta = 10^{-3}$ strictly standardizes the hyperparameter baseline across all architectures and introduces little to no noise in results, as observed in Table \ref{tab:ablation_lr}. This criterion factors into the subsequent TTA stability analysis, as can be seen in Table \ref{tab:hyperparams}. 
+For consistency across the evaluation, all models were optimized using Adam with a standard learning rate of $\eta = 10^{-3}$, zero weight decay, 512 rays per batch in training and 128 in evaluation step. While the original GNT and PixelNeRF literature suggests slightly lower learning rates (between $10^{-4}$ and $5 \times 10^{-4}$), an empirical ablation (Table \ref{tab:ablation_lr}) indicates that the variation in visual fidelity (PSNR) when adopting $10^{-3}$ was not substantial enough to preclude its use as a universal baseline, keeping models from suffering a complete representational collapse. Therefore, adopting $\eta = 10^{-3}$ strictly standardizes the hyperparameter baseline across all architectures (including per-scene models), preventing training variations from obfuscating the architectural differences. This criterion factors into the subsequent TTA stability analysis, as can be seen in Table \ref{tab:hyperparams}. 
 
 \begin{table}[!t]
 \centering
 \caption{Training and optimization with recommended range values of learning rate}
 \label{tab:ablation_lr}
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{llccc}
+\begin{tabular}{llcc}
 \toprule
 \textbf{Model} & \textbf{Regime} & \textbf{Learning Rate ($\eta$)} & \textbf{PSNR (dB) $\uparrow$}  \\
 \midrule
-\multirow{2}{*}{PixelNeRF} 
-               & TTA         & $10^{-3}$ & ok \\
-               & Zero-Shot   & N/A   & ok \\
+\multirow{4}{*}{PixelNeRF} 
+               & TTA         & $10^{-4}$ & 11.19 \\
+               & TTA         & $5 \times 10^{-4}$ & 12.23 \\
+               & TTA         & $10^{-3}$ & 9.42 \\
+               & Zero-Shot   & N/A         & 6.64 \\
 \midrule
-\multirow{2}{*}{GNT}
-               & TTA         & $10^{-3}$ & ok\\
-               & Zero-Shot   & N/A       & ok \\
+\multirow{4}{*}{GNT}
+               & TTA         & $10^{-4}$ & 12.96\\
+               & TTA         & $5 \times 10^{-4}$ & 12.96\\
+               & TTA         & $10^{-3}$ & 12.85\\
+               & Zero-Shot   & N/A         & 10.73 \\
 \bottomrule
 \end{tabular}%
 }
