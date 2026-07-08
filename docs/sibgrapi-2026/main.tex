@@ -141,8 +141,8 @@
 \fi
 
 \begin{document}
-\title{A Comparative Analysis of Few-Shot and Per-Scene NeRF models on Sparse-View Datasets}
-
+%\title{A Comparative Analysis of Few-Shot and Per-Scene NeRF models on Sparse-View Datasets}
+\title{Generalizable and Per-Scene NeRF Architectures under Sparse-View Conditions: A Systematic Benchmarking Methodology}
 
 % author names and affiliations
 % use a multiple column layout for up to two different
@@ -191,7 +191,7 @@
 \maketitle
 
 \begin{abstract}
-This work compares Generalizable NeRFs and Fast Optimization Per-Scene trained models applied to sparse-view datasets, evaluating the impact of these feature extraction architectures on novel view synthesis performance. Through a quantitative analysis using visual fidelity (PSNR, SSIM, LPIPS) and computational efficiency metrics (convergence time, VRAM footprint, inference time), this study highlights the trade-offs between the global generalization of Transformers and the local processing efficiency of convolutions, as well as the critical impact of representational collapse in few-shot models. Ultimately, it aims to guide the selection of 3D rendering models for practical scenarios often constrained by hardware limitations and data scarcity.
+This work proposes a methodology for systematically evaluating the trade-offs between computational performance and reconstruction fidelity of neural radiance field (NeRF) architectures under sparse-view conditions. Four representative architectures are evaluated using visual fidelity metrics, including Peak Signal-to-Noise Ratio (PSNR), Structural Similarity Index Measure (SSIM), and Learned Perceptual Image Patch Similarity (LPIPS), together with computational performance metrics, including training convergence time, Video Random Access Memory (VRAM) footprint, and inference latency. The experimental results reveal a clear trade-off between reconstruction fidelity and computational efficiency. Per-Scene architectures consistently outperform Generalizable models in visual quality, achieving up to 27.11 dB PSNR, 0.875 SSIM, and 0.171 LPIPS, while also providing significantly higher inference throughput and lower memory consumption. In contrast, generalizable models offer greater flexibility for acquisition-constrained scenarios but exhibit limited reconstruction fidelity and unstable optimization under severe sparse-view conditions. The proposed methodology and the resulting quantitative analyses establish a standardized and reproducible framework for benchmarking heterogeneous neural rendering architectures, enabling systematic model selection according to computational and acquisition constraints.
 \end{abstract}
 
 % For peerreview papers, this IEEEtran command inserts a page break and
