@@ -1,13 +1,13 @@
 \begin{figure}[!t]
 \centering
-\resizebox{0.8\linewidth}{!}{%
+\resizebox{0.9\linewidth}{!}{%
 \begin{tikzpicture}[
   >=stealth,
   % Estilo dos blocos do pipeline (Cores suaves, design clean)
   block/.style={
     rectangle, draw=black!30, thick, fill=white,
-    minimum width=3.8cm, minimum height=0.9cm,
-    text centered, rounded corners=3pt, font=\scriptsize,
+    minimum width=4cm, minimum height=1cm,
+    text centered, rounded corners=3pt, font=\tiny,
     align=center
   },
   % Estilo das setas de fluxo (Cinza médio para não pesar)
@@ -46,7 +46,7 @@
 % --- LEVEL 4: Regimes de Treino ---
 \node[block] (gen_reg) at (-2.3, -4.4) {
   \textbf{\faTasks\ Regimes} \\[0.5mm] 
-  Zero-Shot, TTA
+  Zero-Shot, Fine-Tuning
 };
 
 \node[block] (ps_reg) at (2.3, -4.4) {

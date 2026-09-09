@@ -1,43 +1,9 @@
-%==========================================
-%
-% SIBGRAPI 2026 paper template
-% Example of IEEEtran.cls
-%
-%==========================================
+\documentclass[12pt]{article}
 
-% *** Authors should verify (and, if needed, correct) their LaTeX system  ***
-% *** with the testflow diagnostic prior to trusting their LaTeX platform ***
-% *** with production work. The IEEE's font choices and paper sizes can   ***
-% *** trigger bugs that do not appear when using other class files.       ***                          ***
-% The testflow support page is at:
-% http://www.michaelshell.org/tex/testflow/
-
-\documentclass[10pt,conference]{IEEEtran}
-
-
-% Some very useful LaTeX packages include:
-% (uncomment the ones you want to load)
-
-
-
-% *** MISC UTILITY PACKAGES ***
-%
-%\usepackage{ifpdf}
-% Heiko Oberdiek's ifpdf.sty is very useful if you need conditional
-% compilation based on whether the output is pdf or dvi.
-% usage:
-% \ifpdf
-%   % pdf code
-% \else
-%   % dvi code
-% \fi
-% The latest version of ifpdf.sty can be obtained from:
-% http://www.ctan.org/pkg/ifpdf
-% Also, note that IEEEtran.cls V1.7 and later provides a builtin
-% \ifCLASSINFOpdf conditional that works the same way.
-% When switching from latex to pdflatex and vice-versa, the compiler may
-% have to be run twice to clear warning/error messages.
-
+\usepackage{sbc-template}
+\usepackage{graphicx,url}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
 \usepackage{subcaption}
 \usepackage{xcolor}
 \usepackage{tikz}
@@ -47,130 +13,43 @@
 \usepackage{multirow}
 \usepackage{amssymb}
 \usetikzlibrary{positioning, fit, arrows.meta, backgrounds}
-
-% *** CITATION PACKAGES ***
-%
 \usepackage{cite}
-% cite.sty was written by Donald Arseneau
-% V1.6 and later of IEEEtran pre-defines the format of the cite.sty package
-% \cite{} output to follow that of the IEEE. Loading the cite package will
-% result in citation numbers being automatically sorted and properly
-% "compressed/ranged". e.g., [1], [9], [2], [7], [5], [6] without using
-% cite.sty will become [1], [2], [5]--[7], [9] using cite.sty. cite.sty's
-% \cite will automatically add leading space, if needed. Use cite.sty's
-% noadjust option (cite.sty V3.8 and later) if you want to turn this off
-% such as if a citation ever needs to be enclosed in parenthesis.
-% cite.sty is already installed on most LaTeX systems. Be sure and use
-% version 5.0 (2009-03-20) and later if using hyperref.sty.
-% The latest version can be obtained at:
-% http://www.ctan.org/pkg/cite
-% The documentation is contained in the cite.sty file itself.
-
-
-% *** GRAPHICS RELATED PACKAGES ***
-%
-\ifCLASSINFOpdf
-   \usepackage{graphicx}
-  % declare the path(s) where your graphic files are
-   \graphicspath{{img/}}
-  % and their extensions so you won't have to specify these with
-  % every instance of \includegraphics
-   \DeclareGraphicsExtensions{.pdf,.jpeg,.png}
-\else
-  % or other class option (dvipsone, dvipdf, if not using dvips). graphicx
-  % will default to the driver specified in the system graphics.cfg if no
-  % driver is specified.
-   \usepackage[dvips]{graphicx}
-  % declare the path(s) where your graphic files are
-   \graphicspath{{../img/}}
-  % and their extensions so you won't have to specify these with
-  % every instance of \includegraphics
-   \DeclareGraphicsExtensions{.eps}
-\fi
-
-% *** MATH PACKAGES ***
-%
 \usepackage[cmex10]{amsmath}
-% A popular package from the American Mathematical Society that provides
-% many useful and powerful commands for dealing with mathematics.
-%
-% Note that the amsmath package sets \interdisplaylinepenalty to 10000
-% thus preventing page breaks from occurring within multiline equations. Use:
 \interdisplaylinepenalty=2500
-% after loading amsmath to restore such page breaks as IEEEtran.cls normally
-% does. amsmath.sty is already installed on most LaTeX systems. The latest
-% version and documentation can be obtained at:
-% http://www.ctan.org/pkg/amsmath
 \usepackage{amsthm}
 \newtheorem{definition}{Definition}
-
-% *** SPECIALIZED LIST PACKAGES ***
-%
 \usepackage{algorithmic}
-
-% *** ALIGNMENT PACKAGES ***
-%
 \usepackage{array}
-% *** SUBFIGURE PACKAGES ***
-\ifCLASSOPTIONcompsoc
-  \usepackage[caption=false,font=normalsize,labelfont=sf,textfont=sf]{subfig}
-\else
-  \usepackage[caption=false,font=footnotesize]{subfig}
-\fi
-
 \usepackage{stfloats}
 
-% *** PDF, URL AND HYPERLINK PACKAGES ***
-%
-\usepackage{url}
 
-% correct bad hyphenation here
-\hyphenation{op-tical net-works semi-conduc-tor}
+\sloppy
 
-%------------------------------------------------------------------------- 
-% change the % on next lines to produce the final camera-ready version 
-\newif\iffinal
-\finalfalse
-%\finaltrue
-\newcommand{\cmtid}{99999}
-%------------------------------------------------------------------------- 
-
-\iffinal
-\else
-\usepackage[switch]{lineno}
-\fi
-
-\begin{document}
 \title{Generalizable and Per-Scene NeRF Architectures under Sparse-View Conditions: A Systematic Benchmarking Methodology}
 
-% author names and affiliations
-% use a multiple column layout for up to two different
-% affiliations
+\author{
+Felipe G. Silva\inst{1},
+Leandro A. Neves\inst{1},
+Guilherme F. Roberto\inst{1},
+Thiago Pozati\inst{1},\\
+Domingos Oliveira\inst{2}\textsuperscript{,}\inst{3},
+Adriano B. Silva\inst{3},
+Tha\'ina A. A. Tosta\inst{4} and\\
+Marcelo Z. do Nascimento\inst{3}
+}
 
 
-% for over three affiliations, or if they all won't fit within the width
-% of the page, use this alternative format: 
-%\author{\IEEEauthorblockN{
-%Felipe Gomes da Silva\IEEEauthorrefmark{1},
-%Leandro A. Neves\IEEEauthorrefmark{1},
-%Guilherme F. Roberto\IEEEauthorrefmark{1},
-%Oliveira\IEEEauthorrefmark{2}\textsuperscript{,}\IEEEauthorrefmark{3},\\
-%Adriano B. Silva\IEEEauthorrefmark{3}, 
-%Tha\'ina A. A. Tosta\IEEEauthorrefmark{4},
-%Marcelo Z. do Nascimento\IEEEauthorrefmark{3} and
-%Thiago Pozati\IEEEauthorrefmark{1}}
+\address{Department of Computer Science and Statistics (DCCE).\\  São Paulo State University (UNESP), São José do Rio Preto, SP, Brazil.
+  \nextinstitute
+  Federal Institute of Education, Science and Technology of São Paulo (IFSP),\\ São Paulo, SP, Brazil.
+  \nextinstitute  
+  Faculty of Computer Science (FACOM), Uberlândia Federal University (UFU), \\ Uberlândia, MG, Brazil.
+  \nextinstitute
+  Department of Computing and Mathematics, University of São Paulo (USP),\\ Ribeirão Preto, SP, Brazil 
+  \email{felipe.gomes-silva@unesp.br}
+  }
 
-%\IEEEauthorblockA{\IEEEauthorrefmark{1}Department of Computer Science and Statistics (DCCE)\\ São Paulo State University (UNESP), São José do Rio Preto, SP, Brazil\\ Email: felipe.gomes-silva@unesp.br, leandro.neves@unesp.br}
-
-%\IEEEauthorblockA{\IEEEauthorrefmark{2}Federal Institute of Education, Science and Technology of São Paulo (IFSP)\\ São Paulo, SP, Brazil\\ Email: domingos.oliveira@ifsp.edu.br}
-
-%\IEEEauthorblockA{\IEEEauthorrefmark{3}Faculty of Computer Science (FACOM)\\ Federal University of Uberlândia (UFU), Uberlândia, MG, Brazil\\ Email: adriano.barbosa@ufu.br, marcelo.nascimento@ufu.br}
-
-%\IEEEauthorblockA{\IEEEauthorrefmark{4}Department of Computing and Mathematics\\ University of São Paulo (USP), Ribeirão Preto, SP, Brazil\\ Email: tosta.thaina@usp.br}
-%}
-
-
-
+\begin{document}
 
 % make the title area
 \maketitle
@@ -179,9 +58,6 @@
 This work proposes a methodology for systematically evaluating the trade-offs between computational performance and reconstruction fidelity of Neural Radiance Field (NeRF) architectures under sparse-view conditions. Four representative methods are evaluated using visual fidelity metrics, including Peak Signal-to-Noise Ratio (PSNR), Structural Similarity Index Measure (SSIM), and Learned Perceptual Image Patch Similarity (LPIPS), together with computational performance metrics, including training convergence time, Video Random Access Memory (VRAM) footprint, and inference latency. The experimental results reveal a clear trade-off between reconstruction fidelity and computational efficiency. Per-Scene models consistently outperform Generalizable models in visual quality, achieving up to 27.11 dB PSNR, 0.875 SSIM, and 0.171 LPIPS, while also providing significantly higher inference throughput and lower memory consumption. In contrast, generalizable models offer greater flexibility for acquisition-constrained scenarios but exhibit limited reconstruction fidelity and unstable optimization under severe sparse-view conditions. The proposed methodology and the resulting quantitative analyses establish a standardized and reproducible framework for benchmarking heterogeneous neural rendering architectures, enabling systematic model selection according to computational and acquisition constraints.
 \end{abstract}
 
-% For peerreview papers, this IEEEtran command inserts a page break and
-% creates the second title. It will be ignored for other modes.
-\IEEEpeerreviewmaketitle
 
 
 \input{intro.tex}
@@ -192,15 +68,7 @@ This work proposes a methodology for systematically evaluating the trade-offs be
 \input{conclusion.tex}
 \input{acknowledgment.tex}
 
-% references section
-
-% can use a bibliography generated by BibTeX as a .bbl file
-% BibTeX documentation can be easily obtained at:
-% http://mirror.ctan.org/biblio/bibtex/contrib/doc/
-% The IEEEtran BibTeX style support page is at:
-% http://www.michaelshell.org/tex/ieeetran/bibtex/
-\bibliographystyle{IEEEtran}
-% argument is your BibTeX string definitions and bibliography database(s)
+\bibliographystyle{sbc}
 \bibliography{example}
 
 \end{document}
