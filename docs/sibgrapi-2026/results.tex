@@ -44,7 +44,7 @@ Furthermore, the stability of these visual results across different scenes is il
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth]{img/plot_boxplot_fix.png}
+\includegraphics[width=0.8\linewidth]{img/plot_boxplot_fix.png}
 \caption{Visual performance variance (PSNR) across all evaluated LLFF scenes.}
 \label{fig:boxplot}
 \end{figure}
@@ -86,7 +86,7 @@ Nerfacto & N=10 & 423.45 & \textbf{0.371} & 1.10 \\
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.8\linewidth]{img/plot_radar_fix.png}
+\includegraphics[width=0.7\linewidth]{img/plot_radar_fix.png}
 \caption{Multidimensional trade-offs under sparse-view constraints ($N=10$). Metrics are max-normalized (outer perimeter = optimal), utilizing $1/\text{LPIPS}$ and $1/\text{Train Time}$ for uniform directionality. Per-scene models dominate fidelity and inference speed, whereas generalizable methods strictly excel in optimization efficiency.}
 \label{fig:radar_chart}
 \end{figure}
@@ -102,22 +102,22 @@ Conversely, the per-scene architectures successfully captured the intricate foli
 
 \begin{figure}[H]
     \centering
-    \begin{subfigure}[b]{0.49\linewidth}
+    \begin{subfigure}[b]{0.4\linewidth}
         \centering
         \includegraphics[width=\linewidth]{img/gt.jpg}
         \caption*{Ground Truth}
-    \end{subfigure}\hfill
-    \begin{subfigure}[b]{0.49\linewidth}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.4\linewidth}
         \centering
         \includegraphics[width=\linewidth]{img/pixel-nerf.png}
         \caption*{PixelNeRF}
     \end{subfigure}
-    \begin{subfigure}[b]{0.49\linewidth}
+    \begin{subfigure}[b]{0.4\linewidth}
         \centering
         \includegraphics[width=\linewidth]{img/gnt.png}
         \caption*{GNT (FT 10)}
-    \end{subfigure}\hfill
-    \begin{subfigure}[b]{0.49\linewidth}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.4\linewidth}
         \centering
         \includegraphics[width=\linewidth]{img/nerfacto.png}
         \caption*{Nerfacto}
