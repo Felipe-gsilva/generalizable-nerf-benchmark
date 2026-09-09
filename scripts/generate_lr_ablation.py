@@ -51,8 +51,11 @@ def main():
     parser.add_argument("--log-dir", type=str, default="assets/logs", help="Directory containing the ablation logs (metrics.csv files)")
     args = parser.parse_args()
     
+    repo_root = Path(__file__).resolve().parent.parent
     log_dir = Path(args.log_dir)
-    if not log_dir.exists():
+    if not log_dir.exists() and (repo_root / args.log_dir).exists():
+        log_dir = repo_root / args.log_dir
+    elif not log_dir.exists():
         print(f"Error: Directory {log_dir} does not exist.")
         return
         

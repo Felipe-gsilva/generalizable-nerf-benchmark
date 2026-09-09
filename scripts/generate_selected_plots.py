@@ -20,7 +20,8 @@ def format_model_name(name):
     return mapping.get(name, name)
 
 def load_data():
-    log_dir = Path("assets/logs")
+    repo_root = Path(__file__).resolve().parent.parent
+    log_dir = Path("assets/logs") if Path("assets/logs").exists() else repo_root / "assets" / "logs"
     metrics_files = list(log_dir.rglob("metrics.csv"))
     
     data = []

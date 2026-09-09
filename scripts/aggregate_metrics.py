@@ -32,7 +32,8 @@ def print_table(headers, data):
         print(format_row(formatted_row, widths))
 
 def main():
-    log_dir = Path("assets/logs")
+    repo_root = Path(__file__).resolve().parent.parent
+    log_dir = Path("assets/logs") if Path("assets/logs").exists() else repo_root / "assets" / "logs"
     if not log_dir.exists():
         print(f"O diretório {log_dir} não existe.")
         return

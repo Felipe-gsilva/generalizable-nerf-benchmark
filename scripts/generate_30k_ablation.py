@@ -4,7 +4,8 @@ from pathlib import Path
 from collections import defaultdict
 
 def main():
-    log_dir = Path("assets/logs")
+    repo_root = Path(__file__).resolve().parent.parent
+    log_dir = Path("assets/logs") if Path("assets/logs").exists() else repo_root / "assets" / "logs"
     models = ["pixel-nerf", "gnt"]
     regimes = ["per-scene", "tta"]
     views = [3, 6, 10]
