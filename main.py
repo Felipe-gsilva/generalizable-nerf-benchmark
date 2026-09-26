@@ -17,16 +17,22 @@ def main():
     base_data_path = Path("assets/data/baseline/nerf_llff_data")
     llff_names = [
         "fern",
+        "flower",
+        "fortress",
+        "horns",
+        "leaves",
+        "orchids",
+        "room",
+        "trex",
     ]
-    sampling_strategies = ["uniform"
-                           ,
-                           #"random"
+    sampling_strategies = ["uniform", #"random"
                            ]
     num_views_options = [3, 6, 10]
 
     experiments_config = [
-        {"model": "gnt", "regime": "zero-shot"},
-        {"model": "gnt", "regime": "tta"},
+        {"model": "splatfacto", "regime": "per-scene"},
+        # integrate regnerf into nerfstudio
+        # integrate somewhat reconfusion into nerfstudio
     ]
 
     device_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
