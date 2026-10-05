@@ -24,13 +24,15 @@ def create_zip(output_filename: str = "benchmark_code.zip"):
         "docs",  # Documentação latex não é necessária para execução no servidor
     }
 
-    # Subpastas de assets que contém gigabytes de dados/logs e devem ser ignoradas
+    # Subpastas de assets que contém gigabytes de dados/logs/pesos e devem ser ignoradas
     EXCLUDED_ASSET_SUBDIRS = {
         os.path.join("assets", "data"),
         os.path.join("assets", "logs"),
         os.path.join("assets", "nerf_checkpoints"),
         os.path.join("assets", "results"),
         os.path.join("assets", "nerf_aug"),
+        os.path.join("assets", "pretrained"),
+        os.path.join("assets", "reports"),
     }
 
     # Extensões pesadas de pesos binários (são baixados sob demanda pelo NerfModel)
@@ -71,6 +73,7 @@ def create_zip(output_filename: str = "benchmark_code.zip"):
                 d
                 for d in dirs
                 if d not in EXCLUDED_DIRS
+                and not d.endswith(".egg-info")
                 and os.path.join(rel_root, d) not in EXCLUDED_ASSET_SUBDIRS
             ]
 

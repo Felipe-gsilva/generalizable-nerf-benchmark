@@ -25,4 +25,3 @@ results_4060/
 build
 *.egg-info/
 assets/reports/
-!assets/pretrained/nerfbusters/shapenet.yaml
