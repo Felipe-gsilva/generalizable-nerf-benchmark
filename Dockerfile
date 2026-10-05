@@ -8,46 +8,46 @@ ENV IS_DOCKER=1
 
 # 2. System Dependencies (Removed apt 'colmap' to avoid binary conflicts)
 RUN apt-get update && apt-get install -y \
-    intel-mkl \
-    libceres-dev \
-    libsuitesparse-dev \
-    libboost-all-dev \
-    libgflags-dev \
-    libgoogle-glog-dev \
-    libfreeimage-dev \
-    liblz4-dev \
-    libmetis-dev \
-    libeigen3-dev \
-    libflann-dev \
-    libsqlite3-dev \
-    libglew-dev \
-    libcgal-dev \
-    qt6-base-dev \
-    ffmpeg xvfb \
-    git build-essential cmake ninja-build \
-    libgl1 libglib2.0-0 \
-    libsm6 libxext6 libxrender1 \
-    curl ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+     intel-mkl \
+     libceres-dev \
+     libsuitesparse-dev \
+     libboost-all-dev \
+     libgflags-dev \
+     libgoogle-glog-dev \
+     libfreeimage-dev \
+     liblz4-dev \
+     libmetis-dev \
+     libeigen3-dev \
+     libflann-dev \
+     libsqlite3-dev \
+     libglew-dev \
+     libcgal-dev \
+     qt6-base-dev \
+     ffmpeg xvfb \
+     git build-essential cmake ninja-build \
+     libgl1 libglib2.0-0 \
+     libsm6 libxext6 libxrender1 \
+     curl ca-certificates \
+     && rm -rf /var/lib/apt/lists/*
 
 ARG GPU_ARCH="86"
 RUN git clone --depth 1 --branch 3.10 \
-      https://github.com/colmap/colmap.git /tmp/colmap \
- && cmake \
-      -S /tmp/colmap \
-      -B /tmp/colmap/build \
-      -GNinja \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_CUDA_ARCHITECTURES=${GPU_ARCH} \
-      -DCUDA_ENABLED=ON \
-      -DGUI_ENABLED=OFF \
-      -DTESTS_ENABLED=OFF \
-      -DUSE_OPENMP=ON \
-      -DFETCHCONTENT_FULLY_DISCONNECTED=OFF \
-      -DOPENIMAGEIO_ENABLED=OFF \
- && cmake --build /tmp/colmap/build --target install -- -j2 \
- && rm -rf /tmp/colmap \
- && ldconfig
+     https://github.com/colmap/colmap.git /tmp/colmap \
+     && cmake \
+     -S /tmp/colmap \
+     -B /tmp/colmap/build \
+     -GNinja \
+     -DCMAKE_BUILD_TYPE=Release \
+     -DCMAKE_CUDA_ARCHITECTURES=${GPU_ARCH} \
+     -DCUDA_ENABLED=ON \
+     -DGUI_ENABLED=OFF \
+     -DTESTS_ENABLED=OFF \
+     -DUSE_OPENMP=ON \
+     -DFETCHCONTENT_FULLY_DISCONNECTED=OFF \
+     -DOPENIMAGEIO_ENABLED=OFF \
+     && cmake --build /tmp/colmap/build --target install -- -j2 \
+     && rm -rf /tmp/colmap \
+     && ldconfig
 
 # 4. Install uv via Docker
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
@@ -66,7 +66,6 @@ ENV LD_LIBRARY_PATH="/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}"
 # 6. Project Dependencies (Cache Layer)
 COPY pyproject.toml ./
 RUN uv sync --prerelease=allow --no-install-project --upgrade-package=nerfstudio-gnt --upgrade-package=nerfstudio-pixelnerf
-RUN uv pip install --no-deps git+https://github.com/maturk/dn-splatter
 
 # 7. Tiny-CUDA-NN (Heavy Compilation)
 ENV TCNN_CUDA_ARCHITECTURES=$GPU_ARCH

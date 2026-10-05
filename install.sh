@@ -255,10 +255,6 @@ uv sync --prerelease=allow --no-install-project \
     --upgrade-package=nerfstudio-gnt \
     --upgrade-package=nerfstudio-pixelnerf
 
-log_info "📦 Installing DN-Splatter..."
-uv pip install --no-deps git+https://github.com/maturk/dn-splatter
-log_success "DN-Splatter installed."
-
 # ------------------------------------------------------------------------------
 # 8. Tiny-CUDA-NN Build & Install (Exact Dockerfile Step 7)
 # ------------------------------------------------------------------------------
