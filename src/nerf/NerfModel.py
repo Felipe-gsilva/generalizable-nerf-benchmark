@@ -51,8 +51,14 @@ from src.validation.eval_images import calculate_fid, calculate_psnr_ssim_lpips
 from src.dataset.ImageDataset import ImageDataset, _llffhold_indices
 from src.utils.config import config
 from src.utils.types import AvailableMetrics, Plans, GenerateCameraConfig, RenderMode
+
+# Pre-import method_configs to prevent circular dependency when external plugins are discovered
+try:
+    import nerfstudio.configs.method_configs  # noqa: F401
+except Exception:
+    pass
+
 from nerfstudio.cameras.cameras import Cameras, CameraType
-from nerfstudio.utils.eval_utils import eval_setup
 from nerfstudio.utils import profiler
 from pathlib import Path
 from nerfstudio.cameras.rays import RayBundle
@@ -400,6 +406,8 @@ class NerfModel:
 
             # Patch the config to handle moved checkpoints or "dirty" names
             temp_config_path = self._patch_config_yaml(config_path, Path(c_path), downscale_factor=downscale_factor)
+
+            from nerfstudio.utils.eval_utils import eval_setup
 
             _, pipeline, _, _ = eval_setup(
                 config_path=temp_config_path,
@@ -858,9 +866,13 @@ class NerfModel:
         base_output_dir = Path("assets/data/nerf_checkpoints")
         experiment_name = f"{clean_dataset}/{clean_target}"
 
+        method_cli_name = self.model_name
+        if self.model_name in ["dn-splatter", "dn_splatter"]:
+            method_cli_name = "dn_splatter"
+
         cmd = [
             "ns-train",
-            self.model_name,
+            method_cli_name,
             "--output-dir",
             str(base_output_dir),
             "--experiment-name",
@@ -983,19 +995,12 @@ class NerfModel:
                 "--pipeline.model.camera-optimizer.mode",
                 "off",
             ]
-        elif self.model_name in ["nerfbusters"]:
-            shapenet_config, diffusion_weights = download_pretrained_nerfbusters_weights()
+        elif self.model_name in ["dn-splatter", "dn_splatter"]:
             cmd += [
-                "--pipeline.diffusioncube-config-path",
-                str(shapenet_config),
-                "--pipeline.diffusioncube-ckpt-path",
-                str(diffusion_weights),
-                "--pipeline.model.eval-num-rays-per-chunk",
-                "512",
-                "--pipeline.datamanager.train-num-rays-per-batch",
-                "512",
                 "--pipeline.model.camera-optimizer.mode",
                 "off",
+                "--pipeline.model.normal-supervision",
+                "depth",
             ]
 
         if self.regime in ["tta", "zero-shot"] and self.model_name in ["pixel-nerf", "gnt"]:
@@ -1825,25 +1830,3 @@ def download_pretrained_gnt_model(path):
     if not os.path.exists(output):
         download(id="1YvOJXa5eGpKgoMYcxC2ma7prB1n5UwRn", output=str(output.resolve()), quiet=False)
         print(f"Pretrained GNT model downloaded to {output}")
-
-
-def download_pretrained_nerfbusters_weights(
-    weights_path: Path = Path("assets/pretrained/nerfbusters/nerfbusters-diffusion-cube-weights.ckpt"),
-    config_path: Path = Path("assets/pretrained/nerfbusters/shapenet.yaml"),
-) -> Tuple[Path, Path]:
-    """Ensures that the Nerfbusters 3D diffusion model weights and shapenet.yaml config are present."""
-    import gdown
-    weights_path.parent.mkdir(parents=True, exist_ok=True)
-    if not weights_path.exists():
-        print(f"Downloading pretrained Nerfbusters diffusion cube weights to {weights_path}...")
-        gdown.download(id="19NkX_FXLMnD4Mzv5efxESLrSln5TN1ZB", output=str(weights_path.resolve()), quiet=False)
-    else:
-        print(f"Pretrained Nerfbusters diffusion weights already present at {weights_path}.")
-
-    if not config_path.exists():
-        import urllib.request
-        config_url = "https://raw.githubusercontent.com/ethanweber/nerfbusters/main/config/shapenet.yaml"
-        print(f"Downloading shapenet.yaml to {config_path}...")
-        urllib.request.urlretrieve(config_url, str(config_path.resolve()))
-
-    return config_path.resolve(), weights_path.resolve()

@@ -66,6 +66,7 @@ ENV LD_LIBRARY_PATH="/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}"
 # 6. Project Dependencies (Cache Layer)
 COPY pyproject.toml ./
 RUN uv sync --prerelease=allow --no-install-project --upgrade-package=nerfstudio-gnt --upgrade-package=nerfstudio-pixelnerf
+RUN uv pip install --no-deps git+https://github.com/maturk/dn-splatter
 
 # 7. Tiny-CUDA-NN (Heavy Compilation)
 ENV TCNN_CUDA_ARCHITECTURES=$GPU_ARCH

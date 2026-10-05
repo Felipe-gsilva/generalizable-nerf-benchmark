@@ -255,6 +255,10 @@ uv sync --prerelease=allow --no-install-project \
     --upgrade-package=nerfstudio-gnt \
     --upgrade-package=nerfstudio-pixelnerf
 
+log_info "📦 Installing DN-Splatter..."
+uv pip install --no-deps git+https://github.com/maturk/dn-splatter
+log_success "DN-Splatter installed."
+
 # ------------------------------------------------------------------------------
 # 8. Tiny-CUDA-NN Build & Install (Exact Dockerfile Step 7)
 # ------------------------------------------------------------------------------
@@ -274,45 +278,7 @@ uv pip install --no-deps -e .
 log_success "Project installed in editable mode."
 
 # ------------------------------------------------------------------------------
-# 10. Ensure Pretrained Directory & Configs
-# ------------------------------------------------------------------------------
-mkdir -p assets/pretrained/nerfbusters
-if [ ! -f assets/pretrained/nerfbusters/shapenet.yaml ]; then
-    log_info "Writing default shapenet.yaml for Nerfbusters..."
-    cat << 'EOF' > assets/pretrained/nerfbusters/shapenet.yaml
-dataset: cubes
-scene: shapenet
-cubes_filename: "data/ShapeNetCore.v2"
-train_len: 9984
-batch_size: 32
-val_batch_size: 32
-val_len: 96
-val_cubes_filename: "data/ShapeNetCore.v2"
-
-noise_scheduler: "ddpm"
-num_train_timesteps: 1000
-num_inference_steps: 1000
-beta_start: 0.0015
-beta_end: 0.05
-
-save_images_locally: False
-
-use_ema: False
-
-model_channels: 32
-num_res_blocks: 1
-channel_mult: [1, 2, 4]
-attention_resolutions: [4]
-
-architecture: "unet3d"
-condition_on_scale: True
-guidance_weight : 1
-diffusion_loss : "loss_dsds_unguided"
-EOF
-fi
-
-# ------------------------------------------------------------------------------
-# 11. Optional: Dataset Download
+# 10. Optional: Dataset Download
 # ------------------------------------------------------------------------------
 if [ -t 0 ]; then
     echo ""

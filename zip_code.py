@@ -7,7 +7,7 @@ def create_zip(output_filename: str = "benchmark_code.zip"):
     """
     Cria um pacote ZIP compacto contendo todo o código-fonte, scripts e
     arquivos de configuração necessários para rodar o benchmark em servidores remotos,
-    garantindo que todas as configs (inclusive do Nerfbusters/Splatfacto) sejam empacotadas
+    garantindo que todas as configs (inclusive do Splatfacto/DN-Splatter) sejam empacotadas
     e excluindo pastas pesadas de dados, logs e pesos baixados dinamicamente.
     """
     print(f"📦 Criando pacote ZIP: {output_filename}...")

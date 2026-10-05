@@ -55,10 +55,10 @@ def main():
     ]
     num_views_options = [3, 6, 10]
 
-    # Benchmark expandido com Splatfacto (Gaussian Splatting) e Nerfbusters
+    # Benchmark expandido com Splatfacto e DN-Splatter (Gaussian Splatting com regularização)
     experiments_config = [
         {"model": "splatfacto", "regime": "per-scene"},
-        {"model": "nerfbusters", "regime": "per-scene"},
+        {"model": "dn_splatter", "regime": "per-scene"},
         # Modelos de referência do benchmark anterior (descomente conforme necessário):
         # {"model": "nerfacto", "regime": "per-scene"},
         # {"model": "instant-ngp", "regime": "per-scene"},
@@ -146,7 +146,7 @@ def main():
                                     "--optimizers.nerf.optimizer.lr", str(lr_val),
                                 ]
                         elif regime == "per-scene":
-                            if model_name in ["splatfacto", "nerfbusters", "nerfacto"]:
+                            if model_name in ["splatfacto", "nerfacto", "dn_splatter", "dn-splatter"]:
                                 # Em condições de sparse views (N <= 10), desativar o otimizador de câmera evita colapso da pose
                                 extra_args += ["--pipeline.model.camera-optimizer.mode", "off"]
 
