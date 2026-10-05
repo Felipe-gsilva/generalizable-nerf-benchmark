@@ -59,7 +59,9 @@ ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 ENV VIRTUAL_ENV=/opt/venv
 RUN uv python install 3.11
 RUN uv venv --python 3.11 $VIRTUAL_ENV
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH="/usr/local/cuda/bin:$VIRTUAL_ENV/bin:$PATH"
+ENV LD_LIBRARY_PATH="/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}"
 
 # 6. Project Dependencies (Cache Layer)
 COPY pyproject.toml ./
@@ -74,4 +76,4 @@ RUN uv pip install -v git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=b
 
 # 8. Source Code (Place at the very end so code changes don't trigger recompilations)
 COPY . .
-RUN uv pip install -e .
+RUN uv pip install --no-deps -e .

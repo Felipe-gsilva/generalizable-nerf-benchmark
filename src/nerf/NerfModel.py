@@ -1,18 +1,48 @@
 import os
 os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
 import yaml
+# pyrefly: ignore [missing-import]
 import torch
 import subprocess
 import multiprocessing
-import os
 import json
 import time
 import sys
 import shutil
 import numpy as np
+# pyrefly: ignore [missing-import]
 import matplotlib
 import tempfile
 import re
+from pathlib import Path
+
+
+def setup_cuda_env():
+    """Auto-detect CUDA toolkit and setup CUDA_HOME and PATH if needed."""
+    if "CUDA_HOME" not in os.environ:
+        nvcc_path = shutil.which("nvcc")
+        if nvcc_path:
+            cuda_dir = str(Path(nvcc_path).resolve().parent.parent)
+            os.environ["CUDA_HOME"] = cuda_dir
+        else:
+            for candidate in ["/usr/local/cuda", "/usr/local/cuda-12.6", "/usr/local/cuda-12", "/opt/cuda"]:
+                if os.path.exists(candidate):
+                    os.environ["CUDA_HOME"] = candidate
+                    break
+
+    if "CUDA_HOME" in os.environ:
+        cuda_home = os.environ["CUDA_HOME"]
+        cuda_bin = f"{cuda_home}/bin"
+        cuda_lib = f"{cuda_home}/lib64"
+        current_path = os.environ.get("PATH", "")
+        if cuda_bin not in current_path.split(":"):
+            os.environ["PATH"] = f"{cuda_bin}:{current_path}"
+        current_ld = os.environ.get("LD_LIBRARY_PATH", "")
+        if cuda_lib not in current_ld.split(":"):
+            os.environ["LD_LIBRARY_PATH"] = f"{cuda_lib}:{current_ld}"
+
+
+setup_cuda_env()
 
 from typing import Dict, List, Literal, Optional, Tuple
 from PIL import Image
@@ -271,7 +301,10 @@ class NerfModel:
     def _get_latest_checkpoint(self, output_path: Path) -> Optional[Path]:
         """Finds the most recent checkpoint recursively in the output directory."""
         candidates = list(output_path.rglob("nerfstudio_models"))
-        valid_candidates = [c for c in candidates if self.model_name in c.parts]
+        valid_candidates = [
+            c for c in candidates 
+            if self.model_name in c.parts and any(c.glob("*.ckpt"))
+        ]
 
         if not valid_candidates:
             return None
@@ -945,6 +978,25 @@ class NerfModel:
                 "--mixed-precision",
                 "True",
             ]
+        elif self.model_name in ["splatfacto"]:
+            cmd += [
+                "--pipeline.model.camera-optimizer.mode",
+                "off",
+            ]
+        elif self.model_name in ["nerfbusters"]:
+            shapenet_config, diffusion_weights = download_pretrained_nerfbusters_weights()
+            cmd += [
+                "--pipeline.diffusioncube-config-path",
+                str(shapenet_config),
+                "--pipeline.diffusioncube-ckpt-path",
+                str(diffusion_weights),
+                "--pipeline.model.eval-num-rays-per-chunk",
+                "512",
+                "--pipeline.datamanager.train-num-rays-per-batch",
+                "512",
+                "--pipeline.model.camera-optimizer.mode",
+                "off",
+            ]
 
         if self.regime in ["tta", "zero-shot"] and self.model_name in ["pixel-nerf", "gnt"]:
             cmd += [
@@ -1023,9 +1075,11 @@ class NerfModel:
             config.logger.info(
                 f"✅ Success training/adapting {self.model_name} on {data_path} via {self.regime}"
             )
+            return True
 
         except subprocess.CalledProcessError as e:
-            config.logger.error(f"❌ Subprocess failed. Exit code: {e.returncode}")
+            config.logger.error(f"❌ Subprocess failed for {self.model_name}. Exit code: {e.returncode}")
+            raise e
         except KeyboardInterrupt:
             config.logger.info("\n🛑 User Interruption.")
             raise KeyboardInterrupt
@@ -1771,3 +1825,25 @@ def download_pretrained_gnt_model(path):
     if not os.path.exists(output):
         download(id="1YvOJXa5eGpKgoMYcxC2ma7prB1n5UwRn", output=str(output.resolve()), quiet=False)
         print(f"Pretrained GNT model downloaded to {output}")
+
+
+def download_pretrained_nerfbusters_weights(
+    weights_path: Path = Path("assets/pretrained/nerfbusters/nerfbusters-diffusion-cube-weights.ckpt"),
+    config_path: Path = Path("assets/pretrained/nerfbusters/shapenet.yaml"),
+) -> Tuple[Path, Path]:
+    """Ensures that the Nerfbusters 3D diffusion model weights and shapenet.yaml config are present."""
+    import gdown
+    weights_path.parent.mkdir(parents=True, exist_ok=True)
+    if not weights_path.exists():
+        print(f"Downloading pretrained Nerfbusters diffusion cube weights to {weights_path}...")
+        gdown.download(id="19NkX_FXLMnD4Mzv5efxESLrSln5TN1ZB", output=str(weights_path.resolve()), quiet=False)
+    else:
+        print(f"Pretrained Nerfbusters diffusion weights already present at {weights_path}.")
+
+    if not config_path.exists():
+        import urllib.request
+        config_url = "https://raw.githubusercontent.com/ethanweber/nerfbusters/main/config/shapenet.yaml"
+        print(f"Downloading shapenet.yaml to {config_path}...")
+        urllib.request.urlretrieve(config_url, str(config_path.resolve()))
+
+    return config_path.resolve(), weights_path.resolve()

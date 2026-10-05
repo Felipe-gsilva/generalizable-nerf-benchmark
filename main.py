@@ -1,16 +1,41 @@
 import os
+import shutil
+import time
+import glob
+import gc
+from pathlib import Path
+
+# Configurações do ambiente para evitar bloqueios do PyTorch e otimizar VRAM
 os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-from pathlib import Path
+# Auto-detecção do CUDA toolkit para compilações JIT e extensões (gsplat / tiny-cuda-nn)
+if "CUDA_HOME" not in os.environ:
+    nvcc_path = shutil.which("nvcc")
+    if nvcc_path:
+        os.environ["CUDA_HOME"] = str(Path(nvcc_path).resolve().parent.parent)
+    else:
+        for candidate in ["/usr/local/cuda", "/usr/local/cuda-12.6", "/usr/local/cuda-12", "/opt/cuda"]:
+            if os.path.exists(candidate):
+                os.environ["CUDA_HOME"] = candidate
+                break
+
+if "CUDA_HOME" in os.environ:
+    cuda_home = os.environ["CUDA_HOME"]
+    cuda_bin = f"{cuda_home}/bin"
+    cuda_lib = f"{cuda_home}/lib64"
+    current_path = os.environ.get("PATH", "")
+    if cuda_bin not in current_path.split(":"):
+        os.environ["PATH"] = f"{cuda_bin}:{current_path}"
+    current_ld = os.environ.get("LD_LIBRARY_PATH", "")
+    if cuda_lib not in current_ld.split(":"):
+        os.environ["LD_LIBRARY_PATH"] = f"{cuda_lib}:{current_ld}"
+
+import torch
 from src.dataset.ImageDataset import ImageDataset
 from src.nerf.NerfModel import NerfModel
 from src.utils.metrics import MetricsLogger
 from src.utils.types import AvailableMetrics, RenderMode
-
-import time
-import torch
-import gc
 
 
 def main():
@@ -25,15 +50,26 @@ def main():
         "room",
         "trex",
     ]
-    sampling_strategies = ["uniform", #"random"
-                           ]
+    sampling_strategies = [
+        "uniform",  # "random"
+    ]
     num_views_options = [3, 6, 10]
 
+    # Benchmark expandido com Splatfacto (Gaussian Splatting) e Nerfbusters
     experiments_config = [
         {"model": "splatfacto", "regime": "per-scene"},
-        # integrate regnerf into nerfstudio
-        # integrate somewhat reconfusion into nerfstudio
+        {"model": "nerfbusters", "regime": "per-scene"},
+        # Modelos de referência do benchmark anterior (descomente conforme necessário):
+        # {"model": "nerfacto", "regime": "per-scene"},
+        # {"model": "instant-ngp", "regime": "per-scene"},
+        # {"model": "gnt", "regime": "zero-shot"},
+        # {"model": "gnt", "regime": "tta"},
+        # {"model": "pixel-nerf", "regime": "zero-shot"},
+        # {"model": "pixel-nerf", "regime": "tta"},
     ]
+
+    # Pular experimentos já concluídos com sucesso (metrics.csv existente e não-vazio)
+    skip_existing = True
 
     device_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
 
@@ -46,11 +82,16 @@ def main():
                     regime = exp["regime"]
                     model_key = f"{model_name}_{regime}"
 
-                    import glob
-                    # Verifica se o experimento já foi concluído (se metrics.csv existe)
-                    # if glob.glob(f"assets/logs/{model_key}/{ds}/*/{strategy}_{num_views}views/metrics.csv"):
-                    #     print(f"⏭️  Pulando: {model_key} | Dataset: {ds} | Visões: {num_views} | Estratégia: {strategy} (Já executado)")
-                    #     continue
+                    # Verifica se o experimento já foi concluído anteriormente
+                    if skip_existing:
+                        existing_logs = glob.glob(
+                            f"assets/logs/{model_key}/{ds}/*/{strategy}_{num_views}views/metrics.csv"
+                        )
+                        if any(os.path.getsize(f) > 0 for f in existing_logs):
+                            print(
+                                f"⏭️  Pulando: {model_key} | Dataset: {ds} | Visões: {num_views} | Estratégia: {strategy} (Já executado)"
+                            )
+                            continue
 
                     print("\n" + "=" * 80)
                     print(
@@ -104,12 +145,17 @@ def main():
                                     "--optimizers.encoder.optimizer.lr", str(lr_val),
                                     "--optimizers.nerf.optimizer.lr", str(lr_val),
                                 ]
+                        elif regime == "per-scene":
+                            if model_name in ["splatfacto", "nerfbusters", "nerfacto"]:
+                                # Em condições de sparse views (N <= 10), desativar o otimizador de câmera evita colapso da pose
+                                extra_args += ["--pipeline.model.camera-optimizer.mode", "off"]
 
                         if dataset_obj.dataset_path is None:
                             print(
                                 f"⚠️ Aviso: O dataset {ds} não foi encontrado. Pulando esta configuração."
                             )
                             continue
+
                         # Medição rigorosa de tempo de convergência / preparação
                         start_time = time.time()
                         try:
@@ -121,12 +167,12 @@ def main():
                         except KeyboardInterrupt:
                             print(f"\n⚠️ Treinamento interrompido pelo usuário para {model_name}. Avaliando métricas parciais...")
                         except Exception as e:
-                            print(f"\n⚠️ Treinamento abortado com erro ({e}). Pulando avaliação para evitar reuso de checkpoints corrompidos.")
+                            print(f"\n❌ Treinamento abortado com erro para {model_name} ({e}). Pulando avaliação para evitar reuso de checkpoints corrompidos.")
                             continue
-                        
+
                         training_time = time.time() - start_time
 
-                        # Render perspective views first and save them to disk
+                        # Renderização de visões em perspectiva (salvas em disco)
                         rendered_views = nerf_model.render(
                             mode=RenderMode.PERSPECTIVE,
                             save_path=Path("assets/results")
