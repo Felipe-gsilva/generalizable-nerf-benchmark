@@ -15,6 +15,7 @@ import matplotlib
 import tempfile
 import re
 from pathlib import Path
+from typing import Union
 
 
 def setup_cuda_env():
@@ -131,6 +132,11 @@ class NerfModel:
     image_priority: str
     images: Optional[ImageDataset]
 
+    adaptation_strategy: Optional[str]
+    lora_rank: int
+    lora_alpha: float
+    lora_target_modules: Optional[Union[str, List[str]]]
+
     def __init__(
         self,
         model_name: str,
@@ -139,7 +145,11 @@ class NerfModel:
         split: List[float] = [0.7, 0.15, 0.15],
         split_strategy: str = "uniform",  # "uniform" ou "random"
         llffhold: Optional[int] = None,
-        regime: Literal["per-scene", "zero-shot", "tta"] = "per-scene",
+        regime: str = "per-scene",
+        adaptation_strategy: Optional[str] = None,
+        lora_rank: int = 4,
+        lora_alpha: float = 8.0,
+        lora_target_modules: Optional[Union[str, List[str]]] = None,
         tta_steps: int = 500,
     ) -> None:
         self.model_name = model_name
@@ -153,8 +163,45 @@ class NerfModel:
         self.dataset_name = images.name if images else "unknown"
         self.images = images
         self.dataset_path = images.dataset_path if images else None
-        self.regime = regime
         self.tta_steps = tta_steps
+
+        # Suporte unificado à taxonomia formal de adaptação / fine-tuning
+        VALID_ADAPTATION_STRATEGIES = [
+            "zero-shot",
+            "full-ft",
+            "pft-decoder",
+            "pft-backbone",
+            "bitfit",
+            "peft-lora",
+        ]
+
+        if adaptation_strategy:
+            self.adaptation_strategy = adaptation_strategy
+            if self.adaptation_strategy == "zero-shot":
+                self.regime = "zero-shot"
+            elif self.model_name in ["pixel-nerf", "gnt"]:
+                self.regime = "tta"
+            else:
+                self.regime = regime
+        elif regime in VALID_ADAPTATION_STRATEGIES:
+            self.adaptation_strategy = regime
+            self.regime = "zero-shot" if regime == "zero-shot" else "tta"
+        elif regime == "tta":
+            self.adaptation_strategy = "full-ft"
+            self.regime = "tta"
+        elif regime == "zero-shot":
+            self.adaptation_strategy = "zero-shot"
+            self.regime = "zero-shot"
+        elif regime == "per-scene":
+            self.adaptation_strategy = None
+            self.regime = "per-scene"
+        else:
+            self.adaptation_strategy = None
+            self.regime = regime
+
+        self.lora_rank = lora_rank
+        self.lora_alpha = lora_alpha
+        self.lora_target_modules = lora_target_modules
 
         # Parâmetros do Paper
         self.num_views = num_views
@@ -883,9 +930,9 @@ class NerfModel:
             str(split_json_path),
         ]
 
-        if self.regime == "tta":
+        if self.regime in ["tta", "full-ft", "pft-decoder", "pft-backbone", "bitfit", "peft-lora"]:
             config.logger.info(
-                f"🔧 TTA regime enabled. Limiting adaptation to {self.tta_steps} steps."
+                f"🔧 Adaptation regime ({self.adaptation_strategy or self.regime}) enabled. Limiting adaptation to {self.tta_steps} steps."
             )
             cmd += [
                 "--max-num-iterations",
@@ -929,7 +976,7 @@ class NerfModel:
                     downscale_factor = saved_downscale
         else:
             raise ValueError(
-                f"Unsupported regime '{self.regime}'. Expected one of: per-scene, zero-shot, tta."
+                f"Unsupported regime '{self.regime}'. Expected one of: per-scene, zero-shot, tta, or formal adaptation strategies."
             )
 
         if self.model_name == "pixel-nerf":
@@ -937,9 +984,9 @@ class NerfModel:
                 "--mixed-precision",
                 "True",
                 "--pipeline.model.eval-num-rays-per-chunk",
-                "256",
+                "128",
                 "--pipeline.datamanager.train-num-rays-per-batch",
-                "512",
+                "256",
                 "--pipeline.datamanager.cache-images-type",
                 "uint8",
             ]
@@ -1003,21 +1050,41 @@ class NerfModel:
                 "depth",
             ]
 
-        if self.regime in ["tta", "zero-shot"] and self.model_name in ["pixel-nerf", "gnt"]:
+        if (
+            self.regime in ["tta", "zero-shot", "full-ft", "pft-decoder", "pft-backbone", "bitfit", "peft-lora"]
+            or self.adaptation_strategy is not None
+        ) and self.model_name in ["pixel-nerf", "gnt"]:
+            strategy = self.adaptation_strategy or ("zero-shot" if self.regime == "zero-shot" else "full-ft")
             cmd += [
-                "--pipeline.model.transfer-learning",
-                "True",
+                "--pipeline.model.adaptation-strategy",
+                strategy,
             ]
+
+            if strategy == "peft-lora":
+                cmd += [
+                    "--pipeline.model.lora-rank",
+                    str(self.lora_rank),
+                    "--pipeline.model.lora-alpha",
+                    str(self.lora_alpha),
+                ]
+                if self.lora_target_modules:
+                    if isinstance(self.lora_target_modules, list):
+                        cmd += ["--pipeline.model.lora-target-modules"] + [str(m) for m in self.lora_target_modules]
+                    else:
+                        cmd += ["--pipeline.model.lora-target-modules", str(self.lora_target_modules)]
+
             if self.model_name == "gnt":
                 gnt_pretrained_path = Path("assets/pretrained/gnt_pretrained.pth")
                 download_pretrained_gnt_model(gnt_pretrained_path)
 
                 cmd += [
+                    "--pipeline.model.transfer-learning",
+                    "True",
                     "--pipeline.model.pretrained-ckpt-path",
                     str(gnt_pretrained_path),
                 ]
 
-            if self.model_name == "pixel-nerf":
+            elif self.model_name == "pixel-nerf":
                 pixelnerf_pretrained_zip = Path(
                     "assets/pretrained/pixelnerf_pretrained.zip"
                 )
@@ -1053,8 +1120,9 @@ class NerfModel:
         log_dir = Path("assets/logs") / self.model_name
         log_dir.mkdir(parents=True, exist_ok=True)
         timestamp = time.strftime("%Y%m%d_%H%M%S")
+        strat_tag = self.adaptation_strategy or self.regime
         log_file = (
-            log_dir / f"{clean_dataset}_{clean_target}_{self.regime}_{timestamp}.log"
+            log_dir / f"{clean_dataset}_{clean_target}_{strat_tag}_{timestamp}.log"
         )
 
         try:

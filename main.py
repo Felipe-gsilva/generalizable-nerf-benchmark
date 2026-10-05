@@ -32,6 +32,7 @@ if "CUDA_HOME" in os.environ:
         os.environ["LD_LIBRARY_PATH"] = f"{cuda_lib}:{current_ld}"
 
 import torch
+from adaptation import FineTuningStrategy
 from src.dataset.ImageDataset import ImageDataset
 from src.nerf.NerfModel import NerfModel
 from src.utils.metrics import MetricsLogger
@@ -55,17 +56,29 @@ def main():
     ]
     num_views_options = [3, 6, 10]
 
-    # Benchmark expandido com Splatfacto e DN-Splatter (Gaussian Splatting com regularização)
+    # Benchmark expandido com métodos base e novas estratégias de Test-Time Adaptation (TTA)
     experiments_config = [
         {"model": "splatfacto", "regime": "per-scene"},
         {"model": "dn_splatter", "regime": "per-scene"},
-        # Modelos de referência do benchmark anterior (descomente conforme necessário):
-        # {"model": "nerfacto", "regime": "per-scene"},
-        # {"model": "instant-ngp", "regime": "per-scene"},
-        # {"model": "gnt", "regime": "zero-shot"},
-        # {"model": "gnt", "regime": "tta"},
-        # {"model": "pixel-nerf", "regime": "zero-shot"},
-        # {"model": "pixel-nerf", "regime": "tta"},
+        # Modelos generalizáveis com a nova taxonomia formal de fine-tuning / TTA:
+        # 1. Zero-shot (inferência pura sem gradientes)
+        # {"model": "gnt", "regime": "zero-shot", "adaptation_strategy": FineTuningStrategy.ZERO_SHOT.value},
+        # {"model": "pixel-nerf", "regime": "zero-shot", "adaptation_strategy": FineTuningStrategy.ZERO_SHOT.value},
+        # 2. Full Fine-Tuning (FFT)
+        # {"model": "gnt", "regime": "tta", "adaptation_strategy": FineTuningStrategy.FULL_FT.value, "lr": 5e-4},
+        # {"model": "pixel-nerf", "regime": "tta", "adaptation_strategy": FineTuningStrategy.FULL_FT.value, "lr": 5e-4},
+        # 3. Partial Fine-Tuning Decoder-only (congelar feature extractor)
+        # {"model": "gnt", "regime": "tta", "adaptation_strategy": FineTuningStrategy.PFT_DECODER_ONLY.value, "lr": 5e-4},
+        # {"model": "pixel-nerf", "regime": "tta", "adaptation_strategy": FineTuningStrategy.PFT_DECODER_ONLY.value, "lr": 5e-4},
+        # 4. Partial Fine-Tuning Backbone-only (congelar neural renderer)
+        # {"model": "gnt", "regime": "tta", "adaptation_strategy": FineTuningStrategy.PFT_BACKBONE_ONLY.value, "lr": 5e-4},
+        # {"model": "pixel-nerf", "regime": "tta", "adaptation_strategy": FineTuningStrategy.PFT_BACKBONE_ONLY.value, "lr": 5e-4},
+        # 5. BitFit (apenas bias treináveis)
+        # {"model": "gnt", "regime": "tta", "adaptation_strategy": FineTuningStrategy.BITFIT.value, "lr": 1e-3},
+        # {"model": "pixel-nerf", "regime": "tta", "adaptation_strategy": FineTuningStrategy.BITFIT.value, "lr": 1e-3},
+        # 6. Parameter-Efficient Fine-Tuning via LoRA
+        # {"model": "gnt", "regime": "tta", "adaptation_strategy": FineTuningStrategy.PEFT_LORA.value, "lora_rank": 4, "lora_alpha": 8.0, "lr": 5e-4},
+        # {"model": "pixel-nerf", "regime": "tta", "adaptation_strategy": FineTuningStrategy.PEFT_LORA.value, "lora_rank": 4, "lora_alpha": 8.0, "lr": 5e-4},
     ]
 
     # Pular experimentos já concluídos com sucesso (metrics.csv existente e não-vazio)
@@ -79,8 +92,15 @@ def main():
             for exp in experiments_config:
                 for num_views in num_views_options:
                     model_name = exp["model"]
-                    regime = exp["regime"]
-                    model_key = f"{model_name}_{regime}"
+                    regime = exp.get("regime", "per-scene")
+                    adaptation_strategy = exp.get("adaptation_strategy")
+                    lora_rank = exp.get("lora_rank", 4)
+                    lora_alpha = exp.get("lora_alpha", 8.0)
+                    lora_target_modules = exp.get("lora_target_modules")
+                    lr_val = exp.get("lr", 5e-4)
+
+                    strategy_tag = adaptation_strategy or regime
+                    model_key = f"{model_name}_{strategy_tag}"
 
                     # Verifica se o experimento já foi concluído anteriormente
                     if skip_existing:
@@ -95,7 +115,7 @@ def main():
 
                     print("\n" + "=" * 80)
                     print(
-                        f"🚀 Iniciando: {model_name} | Dataset: {ds} | Visões: {num_views} | Estratégia: {strategy}"
+                        f"🚀 Iniciando: {model_key} | Dataset: {ds} | Visões: {num_views} | Estratégia: {strategy}"
                     )
                     print("=" * 80)
 
@@ -116,6 +136,10 @@ def main():
                             "num_views": num_views,
                             "dataset": ds,
                             "regime": regime,
+                            "adaptation_strategy": adaptation_strategy,
+                            "lora_rank": lora_rank if adaptation_strategy == "peft-lora" else None,
+                            "lora_alpha": lora_alpha if adaptation_strategy == "peft-lora" else None,
+                            "learning_rate": lr_val if regime != "zero-shot" else None,
                             "device": device_name,
                         },
                     )
@@ -128,13 +152,16 @@ def main():
                             num_views=num_views,
                             llffhold=8,
                             regime=regime,
+                            adaptation_strategy=adaptation_strategy,
+                            lora_rank=lora_rank,
+                            lora_alpha=lora_alpha,
+                            lora_target_modules=lora_target_modules,
                             tta_steps=2500,
                         )
                         current_downscale = 8
 
                         extra_args = []
-                        if regime == "tta":
-                            lr_val = 5e-4
+                        if regime in ["tta", "full-ft", "pft-decoder", "pft-backbone", "bitfit", "peft-lora"] or (adaptation_strategy and adaptation_strategy != "zero-shot"):
                             if model_name == "gnt":
                                 extra_args += [
                                     "--optimizers.network.optimizer.lr", str(lr_val),

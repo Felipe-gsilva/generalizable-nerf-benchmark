@@ -18,8 +18,8 @@ dependencies = [
     "tqdm>=4.67.3",
     "pillow>=12.2.0",
     # models
-    "nerfstudio-gnt==0.0.26",
-    "nerfstudio-pixelnerf==0.0.16",
+    "nerfstudio-gnt>=0.0.30",
+    "nerfstudio-pixelnerf>=0.0.22",
     "natsort",
 ]
 
