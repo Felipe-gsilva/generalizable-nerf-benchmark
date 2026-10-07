@@ -5,7 +5,7 @@ from dataclasses import dataclass
 Hyperparams: TypeAlias = Dict[str, Any]
 
 
-class AvailableMetrics(enum.Enum):
+class AvailableMetrics(str, enum.Enum):
     PSNR = "psnr"
     SSIM = "ssim"
     LPIPS = "lpips"
@@ -16,13 +16,13 @@ class AvailableMetrics(enum.Enum):
 Metrics: TypeAlias = Dict[AvailableMetrics | str, float]
 
 
-class Plans(enum.Enum):
+class Plans(str, enum.Enum):
     AXIAL = "axial"
     SAGITAL = "sagital"
     CORONAL = "coronal"
 
 
-class RenderMode(enum.Enum):
+class RenderMode(str, enum.Enum):
     ORTHOGRAPHIC = "orthographic"
     PERSPECTIVE = "perspective"
 

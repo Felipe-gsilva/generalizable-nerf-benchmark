@@ -420,6 +420,13 @@ class NerfModel:
             # Patch absolute paths to the current project root (especially for GNT pretrained ckpt path)
             content = re.sub(r"(/[a-zA-Z0-9_\-\.]+)+/nerf-ann-paper", project_root, content)
 
+            # Ensure eval_num_rays_per_chunk is not stuck at 1 (from legacy configs)
+            content = re.sub(
+                r"eval_num_rays_per_chunk:\s*1\b",
+                "eval_num_rays_per_chunk: 1024",
+                content,
+            )
+
             temp_config = tempfile.NamedTemporaryFile(
                 mode="w", suffix=".yml", delete=False
             )
@@ -464,6 +471,14 @@ class NerfModel:
             self.pipeline = pipeline
             self.model = pipeline._model
             self.model.eval()
+
+            # Prevent single-ray bottleneck on loaded GNT or legacy configs
+            if hasattr(self.pipeline.model, "config") and hasattr(
+                self.pipeline.model.config, "eval_num_rays_per_chunk"
+            ):
+                if getattr(self.pipeline.model.config, "eval_num_rays_per_chunk", 0) <= 1:
+                    self.pipeline.model.config.eval_num_rays_per_chunk = 1024
+
             config.logger.info(f"✅ Pipeline loaded successfully from {path}")
             return True
 
@@ -1003,7 +1018,7 @@ class NerfModel:
                 "--pipeline.model.netwidth",
                 "64",
                 "--pipeline.model.eval-num-rays-per-chunk",
-                "1",
+                "1024",
                 "--pipeline.datamanager.train-num-rays-per-batch",
                 "32",
                 "--pipeline.datamanager.cache-images-type",
@@ -1177,23 +1192,30 @@ class NerfModel:
         images using metrics such as FID, PSNR, SSIM, and LPIPS.
         """
         results = {}
-        if AvailableMetrics.FID in metrics:
+        if AvailableMetrics.FID in metrics or "fid" in metrics:
             fid_score = calculate_fid(rendered_images, ground_truth_images)
             results["fid"] = fid_score
+            results[AvailableMetrics.FID] = fid_score
         if (
             AvailableMetrics.PSNR in metrics
+            or "psnr" in metrics
             or AvailableMetrics.SSIM in metrics
+            or "ssim" in metrics
             or AvailableMetrics.LPIPS in metrics
+            or "lpips" in metrics
         ):
             psnr_score, ssim_score, lpips_score = calculate_psnr_ssim_lpips(
                 rendered_images, ground_truth_images
             )
-            if AvailableMetrics.PSNR in metrics:
+            if AvailableMetrics.PSNR in metrics or "psnr" in metrics:
                 results["psnr"] = psnr_score
-            if AvailableMetrics.SSIM in metrics:
+                results[AvailableMetrics.PSNR] = psnr_score
+            if AvailableMetrics.SSIM in metrics or "ssim" in metrics:
                 results["ssim"] = ssim_score
-            if AvailableMetrics.LPIPS in metrics:
+                results[AvailableMetrics.SSIM] = ssim_score
+            if AvailableMetrics.LPIPS in metrics or "lpips" in metrics:
                 results["lpips"] = lpips_score
+                results[AvailableMetrics.LPIPS] = lpips_score
 
         return results
 
@@ -1451,11 +1473,19 @@ class NerfModel:
                 rendered_images.append(rendered_rgb)
                 gt_images.append(gt_rgb)
 
+        config.logger.info(
+            f"🔍 Computing metrics (PSNR, SSIM, LPIPS) across {len(rendered_images)} test images..."
+        )
         rendered_tensor = (torch.stack(rendered_images).permute(0, 3, 1, 2) * 255).to(
             torch.uint8
         )
         gt_tensor = (torch.stack(gt_images).permute(0, 3, 1, 2) * 255).to(torch.uint8)
-        return self.compare_images_quality(rendered_tensor, gt_tensor, metrics)
+        results = self.compare_images_quality(rendered_tensor, gt_tensor, metrics)
+        config.logger.info(
+            f"✅ Test quality metrics: PSNR={results.get('psnr', 0.0):.2f} dB | "
+            f"SSIM={results.get('ssim', 0.0):.4f} | LPIPS={results.get('lpips', 1.0):.4f}"
+        )
+        return results
 
     def evaluate_all_metrics(
         self,
@@ -1464,6 +1494,7 @@ class NerfModel:
         already_rendered_slices: Optional[List[np.ndarray]] = None,
         already_rendered_images: Optional[List[np.ndarray]] = None,
         downscale_factor: Optional[int] = None,
+        measure_fps: bool = False,
     ) -> Dict[str, float]:
         """
         Returns a comprehensive dictionary of evaluation results, including:
@@ -1491,7 +1522,10 @@ class NerfModel:
         param_size, cuda_mem = self.get_memory_footprint()
         results["memory_footprint_bytes"] = param_size
         results["cuda_memory_usage_bytes"] = cuda_mem
-        results["inference_fps"] = self.measure_inference_fps(mode)
+        if measure_fps:
+            results["inference_fps"] = self.measure_inference_fps(mode)
+        else:
+            results["inference_fps"] = 0.0
 
         # visual quality metrics depends on the rendering mode and available data
         if mode == RenderMode.ORTHOGRAPHIC:
@@ -1796,7 +1830,12 @@ class NerfModel:
                 except Exception as e:
                     config.logger.warning(f"Failed to fetch metadata in perspective render for {self.model_name}: {e}")
 
+            total_cams = len(eval_dataloader)
+            config.logger.info(
+                f"🎬 Rendering {total_cams} perspective test views (downscale={downscale_factor or 1})..."
+            )
             for cam_idx, outputs in enumerate(eval_dataloader):
+                t_cam0 = time.time()
                 camera = outputs[0].to(self.pipeline.device)
                 if model_metadata is not None:
                     ray_bundle = camera.generate_rays(camera_indices=0, keep_shape=True)
@@ -1810,6 +1849,10 @@ class NerfModel:
                     outputs = self.pipeline.model.get_outputs_for_camera(camera)
                 rendered_rgb = outputs["rgb"].cpu().numpy()
                 rendered_images.append(rendered_rgb)
+                cam_elapsed = time.time() - t_cam0
+                config.logger.info(
+                    f"  📸 View {cam_idx + 1}/{total_cams} rendered in {cam_elapsed:.2f}s"
+                )
 
                 if save_path is not None:
                     img_uint8 = np.clip(rendered_rgb, 0.0, 1.0)

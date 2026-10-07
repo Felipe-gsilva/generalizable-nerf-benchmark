@@ -113,6 +113,7 @@ def run_single_evaluation(
     seed: int,
     num_views: int,
     tta_steps: int,
+    downscale: int,
     base_data_path: Path,
 ) -> Dict[str, float]:
     """Runs adaptation/training and test evaluation on a single scene, returning PSNR, SSIM, LPIPS."""
@@ -153,7 +154,6 @@ def run_single_evaluation(
                 "--optimizers.nerf.optimizer.lr", str(lr),
             ]
 
-    downscale = 1 if tta_steps <= 10 else 8
     success = nerf_model.train(
         data_path=data_path,
         downscale_factor=downscale,
@@ -177,12 +177,23 @@ def run_single_evaluation(
             metrics=[AvailableMetrics.PSNR, AvailableMetrics.SSIM, AvailableMetrics.LPIPS],
             already_rendered_images=rendered_views,
             downscale_factor=downscale,
+            measure_fps=False,
         ) or {}
 
+    def _get_metric(m: Dict[Any, Any], key: Any, default: float) -> float:
+        val = m.get(key)
+        if val is None and hasattr(key, "value"):
+            val = m.get(key.value)
+        if val is None and isinstance(key, str):
+            for k, v in m.items():
+                if str(k).lower() == key.lower():
+                    return float(v)
+        return float(val) if val is not None else default
+
     return {
-        "psnr": float(metrics.get(AvailableMetrics.PSNR, 0.0)),
-        "ssim": float(metrics.get(AvailableMetrics.SSIM, 0.0)),
-        "lpips": float(metrics.get(AvailableMetrics.LPIPS, 1.0)),
+        "psnr": _get_metric(metrics, AvailableMetrics.PSNR, 0.0),
+        "ssim": _get_metric(metrics, AvailableMetrics.SSIM, 0.0),
+        "lpips": _get_metric(metrics, AvailableMetrics.LPIPS, 1.0),
     }
 
 
@@ -244,9 +255,16 @@ def main():
         help="Number of TTA adaptation iterations (default: 500)",
     )
     parser.add_argument(
+        "--downscale",
+        type=int,
+        default=8,
+        choices=[1, 2, 4, 8],
+        help="LLFF image downscale factor (default: 8)",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Run in fast dry-run validation mode (5 steps, 1 scene, 1 seed)",
+        help="Run in fast dry-run validation mode (5 steps, 1 scene, 1 seed, downscale=8)",
     )
     parser.add_argument(
         "--output-dir",
@@ -274,20 +292,43 @@ def main():
         folds[0]["val_scenes"] = folds[0]["val_scenes"][:1]
 
     detailed_records: List[Dict[str, Any]] = []
+    detailed_csv = output_dir / "kfold_grid_search_detailed.csv"
+    csv_fieldnames = [
+        "fold_id",
+        "scene",
+        "model",
+        "strategy",
+        "seed",
+        "lr",
+        "lora_rank",
+        "lora_alpha",
+        "num_views",
+        "psnr",
+        "ssim",
+        "lpips",
+        "time_sec",
+    ]
 
-    print("=" * 80)
-    print(f"📊 Starting Stratified K-Fold Grid Search ({args.k_folds} folds)")
-    print(f"   Models:       {args.models}")
-    print(f"   Strategies:   {args.strategies}")
-    print(f"   LR Levels:    {args.lrs}")
-    print(f"   Seeds (n={len(args.seeds)}):    {args.seeds}")
-    print(f"   TTA Steps:    {args.tta_steps}")
-    print("=" * 80)
+    # Initialize CSV header if file is empty/non-existent
+    if not detailed_csv.exists() or detailed_csv.stat().st_size == 0:
+        with open(detailed_csv, "w", newline="", encoding="utf-8") as fp:
+            writer = csv.DictWriter(fp, fieldnames=csv_fieldnames)
+            writer.writeheader()
+
+    print("=" * 80, flush=True)
+    print(f"📊 Starting Stratified K-Fold Grid Search ({args.k_folds} folds)", flush=True)
+    print(f"   Models:       {args.models}", flush=True)
+    print(f"   Strategies:   {args.strategies}", flush=True)
+    print(f"   LR Levels:    {args.lrs}", flush=True)
+    print(f"   Seeds (n={len(args.seeds)}):    {args.seeds}", flush=True)
+    print(f"   TTA Steps:    {args.tta_steps}", flush=True)
+    print(f"   Downscale:    {args.downscale}x", flush=True)
+    print("=" * 80, flush=True)
 
     for fold in folds:
         fold_id = fold["fold_id"]
         val_scenes = fold["val_scenes"]
-        print(f"\n📂 [Fold {fold_id + 1}/{len(folds)}] Validation Scenes: {val_scenes}")
+        print(f"\n📂 [Fold {fold_id + 1}/{len(folds)}] Validation Scenes: {val_scenes}", flush=True)
 
         for scene in val_scenes:
             for model_name in args.models:
@@ -303,7 +344,8 @@ def main():
                             for seed in args.seeds:
                                 print(
                                     f"  ▶️ Fold {fold_id} | {model_name} | {strategy} | "
-                                    f"Scene: {scene} | Seed: {seed} | LR: {lr} | LoRA Rank: {lora_rank}"
+                                    f"Scene: {scene} | Seed: {seed} | LR: {lr} | LoRA Rank: {lora_rank}",
+                                    flush=True,
                                 )
 
                                 t0 = time.time()
@@ -317,6 +359,7 @@ def main():
                                     seed=seed,
                                     num_views=args.views,
                                     tta_steps=args.tta_steps,
+                                    downscale=args.downscale,
                                     base_data_path=base_data_path,
                                 )
                                 elapsed = time.time() - t0
@@ -337,21 +380,21 @@ def main():
                                     "time_sec": round(elapsed, 2),
                                 }
                                 detailed_records.append(rec)
+
+                                # Incremental write to CSV
+                                with open(detailed_csv, "a", newline="", encoding="utf-8") as fp:
+                                    writer = csv.DictWriter(fp, fieldnames=csv_fieldnames)
+                                    writer.writerow(rec)
+                                    fp.flush()
+
                                 print(
                                     f"    ✅ PSNR: {metrics['psnr']:.2f} | "
                                     f"SSIM: {metrics['ssim']:.4f} | "
-                                    f"LPIPS: {metrics['lpips']:.4f} ({elapsed:.1f}s)"
+                                    f"LPIPS: {metrics['lpips']:.4f} ({elapsed:.1f}s)",
+                                    flush=True,
                                 )
 
-    # Save detailed CSV
-    detailed_csv = output_dir / "kfold_grid_search_detailed.csv"
-    if detailed_records:
-        keys = list(detailed_records[0].keys())
-        with open(detailed_csv, "w", newline="", encoding="utf-8") as fp:
-            writer = csv.DictWriter(fp, fieldnames=keys)
-            writer.writeheader()
-            writer.writerows(detailed_records)
-        print(f"\n📁 Detailed records saved to: {detailed_csv}")
+    print(f"\n📁 Detailed records saved to: {detailed_csv}", flush=True)
 
     # Discover Best Seed per (Model, Strategy)
     # Aggregation across all evaluated folds and scenes
@@ -395,26 +438,28 @@ def main():
             writer = csv.DictWriter(fp, fieldnames=list(best_rows[0].keys()))
             writer.writeheader()
             writer.writerows(best_rows)
-        print(f"🏆 Best seed rankings saved to: {best_csv}")
+        print(f"🏆 Best seed rankings saved to: {best_csv}", flush=True)
 
     # Print Formatted Markdown Table
-    print("\n" + "=" * 90)
-    print("🏆 BEST SEED & OPTIMAL HYPERPARAMETERS PER METHOD (Stratified K-Fold Cross-Validation)")
-    print("=" * 90)
+    print("\n" + "=" * 90, flush=True)
+    print("🏆 BEST SEED & OPTIMAL HYPERPARAMETERS PER METHOD (Stratified K-Fold Cross-Validation)", flush=True)
+    print("=" * 90, flush=True)
     print(
         f"{'Model':<12} | {'Strategy':<14} | {'Best Seed':<10} | {'Best LR':<10} | {'LoRA Rank':<10} | "
-        f"{'PSNR (dB)':<14} | {'SSIM':<8} | {'LPIPS':<8}"
+        f"{'PSNR (dB)':<14} | {'SSIM':<8} | {'LPIPS':<8}",
+        flush=True,
     )
-    print("-" * 90)
+    print("-" * 90, flush=True)
     for (m, strat), b in sorted(best_per_method.items()):
         lr_str = f"{b['lr']:.0e}" if b['lr'] > 0 else "N/A"
         rank_str = str(b['lora_rank']) if b['lora_rank'] > 0 else "N/A"
         psnr_str = f"{b['mean_psnr']:.2f} ± {b['std_psnr']:.2f}"
         print(
             f"{m:<12} | {strat:<14} | {b['seed']:<10} | {lr_str:<10} | {rank_str:<10} | "
-            f"{psnr_str:<14} | {b['mean_ssim']:.4f} | {b['mean_lpips']:.4f}"
+            f"{psnr_str:<14} | {b['mean_ssim']:.4f} | {b['mean_lpips']:.4f}",
+            flush=True,
         )
-    print("=" * 90)
+    print("=" * 90, flush=True)
 
 
 if __name__ == "__main__":
