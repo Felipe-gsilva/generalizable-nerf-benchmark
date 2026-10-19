@@ -56,29 +56,32 @@ def main():
     ]
     num_views_options = [3, 6, 10]
 
-    # Benchmark expandido com métodos base e novas estratégias de Test-Time Adaptation (TTA)
+    # Melhores estratégias e configurações para Pixel-NeRF identificadas no benchmark empírico:
+    # 1. PFT-Backbone (lr=1e-4) -> Top #1 absoluto (PSNR 10.10 dB)
+    # 2. BitFit (lr=1e-4)       -> Top #2 (PSNR 9.78 dB, extremamente leve)
+    # 3. PFT-Decoder (lr=1e-4)  -> Top #3 (PSNR 9.32 dB, melhor SSIM 0.184)
+    # 4. PEFT-LoRA (lr=1e-3, r=4) -> Top LoRA (PSNR 7.72 dB, melhor LPIPS 0.740)
+    # 5. Full-FT (lr=1e-3)      -> Top FFT (PSNR 7.61 dB)
+    # 6. Zero-Shot              -> Linha de base de generalização pura (PSNR 5.00 dB)
+    #
+    # Nota sobre iterações: Conforme documentado no protocolo do artigo (method.tex, L97),
+    # o fine-tuning final utiliza 2500 iterações para convergência plena.
     experiments_config = [
-        {"model": "splatfacto", "regime": "per-scene"},
-        {"model": "dn_splatter", "regime": "per-scene"},
-        # Modelos generalizáveis com a nova taxonomia formal de fine-tuning / TTA:
-        # 1. Zero-shot (inferência pura sem gradientes)
-        # {"model": "gnt", "regime": "zero-shot", "adaptation_strategy": FineTuningStrategy.ZERO_SHOT.value},
-        # {"model": "pixel-nerf", "regime": "zero-shot", "adaptation_strategy": FineTuningStrategy.ZERO_SHOT.value},
-        # 2. Full Fine-Tuning (FFT)
-        # {"model": "gnt", "regime": "tta", "adaptation_strategy": FineTuningStrategy.FULL_FT.value, "lr": 5e-4},
-        # {"model": "pixel-nerf", "regime": "tta", "adaptation_strategy": FineTuningStrategy.FULL_FT.value, "lr": 5e-4},
-        # 3. Partial Fine-Tuning Decoder-only (congelar feature extractor)
-        # {"model": "gnt", "regime": "tta", "adaptation_strategy": FineTuningStrategy.PFT_DECODER_ONLY.value, "lr": 5e-4},
-        # {"model": "pixel-nerf", "regime": "tta", "adaptation_strategy": FineTuningStrategy.PFT_DECODER_ONLY.value, "lr": 5e-4},
-        # 4. Partial Fine-Tuning Backbone-only (congelar neural renderer)
-        # {"model": "gnt", "regime": "tta", "adaptation_strategy": FineTuningStrategy.PFT_BACKBONE_ONLY.value, "lr": 5e-4},
-        # {"model": "pixel-nerf", "regime": "tta", "adaptation_strategy": FineTuningStrategy.PFT_BACKBONE_ONLY.value, "lr": 5e-4},
-        # 5. BitFit (apenas bias treináveis)
-        # {"model": "gnt", "regime": "tta", "adaptation_strategy": FineTuningStrategy.BITFIT.value, "lr": 1e-3},
-        # {"model": "pixel-nerf", "regime": "tta", "adaptation_strategy": FineTuningStrategy.BITFIT.value, "lr": 1e-3},
-        # 6. Parameter-Efficient Fine-Tuning via LoRA
-        # {"model": "gnt", "regime": "tta", "adaptation_strategy": FineTuningStrategy.PEFT_LORA.value, "lora_rank": 4, "lora_alpha": 8.0, "lr": 5e-4},
-        # {"model": "pixel-nerf", "regime": "tta", "adaptation_strategy": FineTuningStrategy.PEFT_LORA.value, "lora_rank": 4, "lora_alpha": 8.0, "lr": 5e-4},
+        # Linha de base
+        {"model": "pixel-nerf", "regime": "zero-shot", "adaptation_strategy": FineTuningStrategy.ZERO_SHOT.value},
+        # Top 1: PFT-Backbone (congelar renderer neural, otimizar extrator 2D)
+        {"model": "pixel-nerf", "regime": "tta", "adaptation_strategy": FineTuningStrategy.PFT_BACKBONE_ONLY.value, "lr": 1e-4, "tta_steps": 2500},
+        # Top 2: BitFit (apenas bias treináveis)
+        {"model": "pixel-nerf", "regime": "tta", "adaptation_strategy": FineTuningStrategy.BITFIT.value, "lr": 1e-4, "tta_steps": 2500},
+        # Top 3: PFT-Decoder (congelar extrator 2D, otimizar renderer neural)
+        {"model": "pixel-nerf", "regime": "tta", "adaptation_strategy": FineTuningStrategy.PFT_DECODER_ONLY.value, "lr": 1e-4, "tta_steps": 2500},
+        # Top PEFT: LoRA (rank=4, alpha=8.0, lr=1e-3)
+        {"model": "pixel-nerf", "regime": "tta", "adaptation_strategy": FineTuningStrategy.PEFT_LORA.value, "lora_rank": 4, "lora_alpha": 8.0, "lr": 1e-3, "tta_steps": 2500},
+        # Top FFT: Full Fine-Tuning (lr=1e-3)
+        {"model": "pixel-nerf", "regime": "tta", "adaptation_strategy": FineTuningStrategy.FULL_FT.value, "lr": 1e-3, "tta_steps": 2500},
+        # Métodos per-scene (descomente caso deseje executar comparativos com 3DGS):
+        # {"model": "splatfacto", "regime": "per-scene"},
+        # {"model": "dn_splatter", "regime": "per-scene"},
     ]
 
     # Pular experimentos já concluídos com sucesso (metrics.csv existente e não-vazio)
@@ -156,7 +159,7 @@ def main():
                             lora_rank=lora_rank,
                             lora_alpha=lora_alpha,
                             lora_target_modules=lora_target_modules,
-                            tta_steps=2500,
+                            tta_steps=exp.get("tta_steps", 2500),
                         )
                         current_downscale = 8
 
@@ -165,7 +168,7 @@ def main():
                             if model_name == "gnt":
                                 extra_args += [
                                     "--optimizers.network.optimizer.lr", str(lr_val),
-                                    "--optimizers.feature-net.optimizer.lr", str(lr_val),
+                                    "--optimizers.feature_net.optimizer.lr", str(lr_val),
                                 ]
                             elif model_name == "pixel-nerf":
                                 extra_args += [

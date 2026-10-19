@@ -146,7 +146,7 @@ def run_single_evaluation(
         if model_name == "gnt":
             extra_args += [
                 "--optimizers.network.optimizer.lr", str(lr),
-                "--optimizers.feature-net.optimizer.lr", str(lr),
+                "--optimizers.feature_net.optimizer.lr", str(lr),
             ]
         elif model_name == "pixel-nerf":
             extra_args += [

@@ -461,6 +461,10 @@ class NerfModel:
             # Patch the config to handle moved checkpoints or "dirty" names
             temp_config_path = self._patch_config_yaml(config_path, Path(c_path), downscale_factor=downscale_factor)
 
+            if downscale_factor and downscale_factor > 1:
+                if self.images and self.images.dataset_path:
+                    self._ensure_downscaled_images(self.images.dataset_path, downscale_factor)
+
             from nerfstudio.utils.eval_utils import eval_setup
 
             _, pipeline, _, _ = eval_setup(
@@ -575,7 +579,7 @@ class NerfModel:
         images_dir: Optional[Path] = None,
     ) -> bool:
         transforms_path = data_path / "transforms.json"
-        if transforms_path.exists() and num_imgs == 0:
+        if transforms_path.exists():
             transforms_data = self._load_transforms_json(transforms_path)
             if transforms_data is not None:
                 missing_files = self._get_missing_transform_files(
@@ -671,6 +675,86 @@ class NerfModel:
                 missing_files.append(candidate)
 
         return missing_files
+
+    def _ensure_downscaled_images(self, data_path: Path, downscale_factor: int):
+        """
+        Ensures that downscaled image directory (e.g. images_8) exists with all required frames.
+        NerfstudioDataParser automatically points to data_dir / f"images_{downscale_factor}"
+        when downscale_factor > 1.
+        """
+        if downscale_factor <= 1:
+            return
+
+        target_dir = data_path / f"images_{downscale_factor}"
+        if target_dir.is_symlink():
+            target_dir.unlink()
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        images_dir = data_path / "images"
+        if not images_dir.exists():
+            found_dir = self._find_images_dir(data_path)
+            if found_dir and found_dir.is_dir():
+                images_dir = found_dir
+            else:
+                config.logger.warning(
+                    f"⚠️ Could not locate source images directory in {data_path} to verify downscaled images."
+                )
+                return
+
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        # Collect expected frames from transforms.json if available
+        frames_to_check = []
+        transforms_path = data_path / "transforms.json"
+        if transforms_path.exists():
+            transforms_data = self._load_transforms_json(transforms_path)
+            if transforms_data and "frames" in transforms_data:
+                for frame in transforms_data["frames"]:
+                    fp = frame.get("file_path")
+                    if fp:
+                        frames_to_check.append(Path(fp).name)
+
+        if not frames_to_check:
+            frames_to_check = [
+                f.name for f in images_dir.iterdir()
+                if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS
+            ]
+
+        missing = [f for f in frames_to_check if not (target_dir / f).exists()]
+        if not missing:
+            return
+
+        config.logger.info(
+            f"🔄 Generating {len(missing)} downscaled image(s) (factor={downscale_factor}) in {target_dir}..."
+        )
+
+        for fname in missing:
+            src_file = images_dir / fname
+            if not src_file.exists():
+                candidates = list(data_path.rglob(fname))
+                if candidates:
+                    src_file = candidates[0]
+                else:
+                    config.logger.warning(f"⚠️ Source image {fname} not found for downscaling.")
+                    continue
+
+            dst_file = target_dir / fname
+            try:
+                with Image.open(src_file) as im:
+                    if dst_file.suffix.lower() in [".jpg", ".jpeg"] and im.mode in ["RGBA", "P"]:
+                        im = im.convert("RGB")
+                    new_w = max(1, im.width // downscale_factor)
+                    new_h = max(1, im.height // downscale_factor)
+                    resample_filter = getattr(Image, "Resampling", Image).BILINEAR
+                    resized = im.resize((new_w, new_h), resample=resample_filter)
+                    if dst_file.suffix.lower() in [".jpg", ".jpeg"]:
+                        resized.save(dst_file, quality=95)
+                    else:
+                        resized.save(dst_file)
+            except Exception as e:
+                config.logger.error(f"❌ Failed to downscale {src_file} -> {dst_file}: {e}")
+
+        config.logger.info(f"✅ Finished ensuring downscaled images in {target_dir}")
 
     def _run_colmap_transforms_generation(
         self, data_path: Path, images_dir: Path
@@ -915,6 +999,8 @@ class NerfModel:
             )
             return
 
+        self._ensure_downscaled_images(data_path, downscale_factor)
+
         split_json_path = self._apply_dataset_splits(data_path)
         output_path = self.get_output_path(data_path)
 
@@ -932,8 +1018,16 @@ class NerfModel:
         if self.model_name in ["dn-splatter", "dn_splatter"]:
             method_cli_name = "dn_splatter"
 
+        ns_train_bin = shutil.which("ns-train")
+        if not ns_train_bin:
+            venv_bin = Path(sys.executable).parent / "ns-train"
+            if venv_bin.exists():
+                ns_train_bin = str(venv_bin)
+            else:
+                ns_train_bin = "ns-train"
+
         cmd = [
-            "ns-train",
+            ns_train_bin,
             method_cli_name,
             "--output-dir",
             str(base_output_dir),
@@ -989,6 +1083,7 @@ class NerfModel:
                         f"Overriding requested {downscale_factor} to prevent IndexError."
                     )
                     downscale_factor = saved_downscale
+                    self._ensure_downscaled_images(data_path, downscale_factor)
         else:
             raise ValueError(
                 f"Unsupported regime '{self.regime}'. Expected one of: per-scene, zero-shot, tta, or formal adaptation strategies."
@@ -1012,7 +1107,7 @@ class NerfModel:
                 "--pipeline.model.N-importance",
                 "48",
                 "--mixed-precision",
-                "True",
+                "False",
                 "--pipeline.model.transdepth",
                 "8",
                 "--pipeline.model.netwidth",
@@ -1125,6 +1220,8 @@ class NerfModel:
         ]
 
         process_env = os.environ.copy()
+        venv_bin_dir = str(Path(sys.executable).parent)
+        process_env["PATH"] = f"{venv_bin_dir}:{process_env.get('PATH', '')}"
         process_env["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
         process_env["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
         process_env["PYTHONUNBUFFERED"] = "1"
@@ -1365,6 +1462,7 @@ class NerfModel:
         metrics: List[AvailableMetrics],
         already_rendered_images: Optional[List[np.ndarray]] = None,
         downscale_factor: Optional[int] = None,
+        max_eval_images: Optional[int] = None,
     ) -> Dict[str, float]:
         """
         Review rendered images from the perspective test set and compute quality metrics against ground truth.
@@ -1411,6 +1509,8 @@ class NerfModel:
                     config.logger.warning(f"Failed to fetch metadata in perspective eval for {self.model_name}: {e}")
 
             for idx, outputs in enumerate(eval_dataloader):
+                if max_eval_images is not None and idx >= max_eval_images:
+                    break
                 camera = outputs[0].to(self.pipeline.device)
                 batch = outputs[1]
                 
@@ -1495,6 +1595,7 @@ class NerfModel:
         already_rendered_images: Optional[List[np.ndarray]] = None,
         downscale_factor: Optional[int] = None,
         measure_fps: bool = False,
+        max_eval_images: Optional[int] = None,
     ) -> Dict[str, float]:
         """
         Returns a comprehensive dictionary of evaluation results, including:
@@ -1549,7 +1650,8 @@ class NerfModel:
             quality_metrics = self.get_perspective_test_metrics(
                 metrics,
                 already_rendered_images=already_rendered_images,
-                downscale_factor=downscale_factor
+                downscale_factor=downscale_factor,
+                max_eval_images=max_eval_images,
             )
 
         if quality_metrics:
@@ -1808,7 +1910,7 @@ class NerfModel:
                 output.append(rgb_uint8)
         return output
 
-    def render_perspective(self, save_path: Optional[Path], downscale_factor: Optional[int] = None) -> List[np.ndarray]:
+    def render_perspective(self, save_path: Optional[Path], downscale_factor: Optional[int] = None, max_views: Optional[int] = None) -> List[np.ndarray]:
         assert self.pipeline is not None, (
             "Pipeline must be loaded to render perspective views."
         )
@@ -1830,11 +1932,13 @@ class NerfModel:
                 except Exception as e:
                     config.logger.warning(f"Failed to fetch metadata in perspective render for {self.model_name}: {e}")
 
-            total_cams = len(eval_dataloader)
+            total_cams = min(len(eval_dataloader), max_views) if max_views else len(eval_dataloader)
             config.logger.info(
                 f"🎬 Rendering {total_cams} perspective test views (downscale={downscale_factor or 1})..."
             )
             for cam_idx, outputs in enumerate(eval_dataloader):
+                if max_views is not None and cam_idx >= max_views:
+                    break
                 t_cam0 = time.time()
                 camera = outputs[0].to(self.pipeline.device)
                 if model_metadata is not None:
@@ -1871,6 +1975,7 @@ class NerfModel:
         num_slices: int = 10,
         plan: Optional[Plans] = None,
         downscale_factor: Optional[int] = None,
+        max_views: Optional[int] = None,
     ) -> Optional[List[np.ndarray]]:
         """
         Renders either orthographic slices or perspective views from the NeRF model based on the specified mode.
@@ -1904,7 +2009,7 @@ class NerfModel:
                 plan, slice_axis=0, num_slices=num_slices, save_path=save_path
             )
         elif mode == RenderMode.PERSPECTIVE:
-            return self.render_perspective(save_path=save_path, downscale_factor=downscale_factor)
+            return self.render_perspective(save_path=save_path, downscale_factor=downscale_factor, max_views=max_views)
 
 
 def download_pretrained_pixelnerf_weights(path: Path) -> Path:
