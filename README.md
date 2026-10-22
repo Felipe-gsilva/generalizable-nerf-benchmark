@@ -1,7 +1,7 @@
 # Generalizable and Per-Scene NeRF Architectures under Sparse-View Conditions: A Systematic Benchmarking Methodology
 
-[![Paper](https://img.shields.io/badge/Paper-Camera--Ready-blue.svg)](docs/final-2027/build/main.pdf)
-[![SIBGRAPI 2026](https://img.shields.io/badge/SIBGRAPI-2026-6C5CE7.svg)](docs/sibgrapi-2026/build/main.pdf)
+[![Paper](https://img.shields.io/badge/Paper-Camera--Ready-blue.svg)](docs/final-2027/main.pdf)
+[![SIBGRAPI 2026](https://img.shields.io/badge/SIBGRAPI-2026-6C5CE7.svg)](docs/sibgrapi-2026/main.pdf)
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch 2.5+](https://img.shields.io/badge/PyTorch-2.5+-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![CUDA 12.6](https://img.shields.io/badge/CUDA-12.6-76B900.svg?logo=nvidia&logoColor=white)](https://developer.nvidia.com/cuda-toolkit)
@@ -16,7 +16,7 @@ This repository hosts the official benchmarking infrastructure, experiment pipel
 
 > [!IMPORTANT]
 > **Repository Evolution & SIBGRAPI WIP Track Disclaimer:**  
-> The original publication presented at **SIBGRAPI 2026** reflects the preliminary Work-In-Progress (WIP) state of this benchmark, corresponding directly to commit [`426d319`](https://github.com/Felipe-gsilva/generalizable-nerf-benchmark/commit/426d319e603fe84322e895041b5139dcdb68599a) (source and PDF available in [`docs/sibgrapi-2026/`](docs/sibgrapi-2026/build/main.pdf)).  
+> The original publication presented at **SIBGRAPI 2026** reflects the preliminary Work-In-Progress (WIP) state of this benchmark, corresponding directly to commit [`426d319`](https://github.com/Felipe-gsilva/generalizable-nerf-benchmark/commit/426d319e603fe84322e895041b5139dcdb68599a) (source and PDF available in [`docs/sibgrapi-2026/`](docs/sibgrapi-2026/main.pdf)).  
 > 
 > As an active WIP project, substantial methodological advancements, bug fixes, and quantitative breakthroughs were developed beyond that baseline:
 > 1. **5 Fine-Tuning Strategies:** Formulated a formal taxonomy (`Full-FT`, `PFT-Decoder`, `PFT-Backbone`, `BitFit`, and `PEFT-LoRA`) with strict gradient isolation;
@@ -25,7 +25,7 @@ This repository hosts the official benchmarking infrastructure, experiment pipel
 > 4. **Zero-Latency LoRA Deployment:** Implemented in-place weight fusion ($\Delta W = \frac{\alpha}{r}BA$) via `merge_lora_weights()`;
 > 5. **Statistical Rigor:** Instituted multi-seed ($42, 123, 999$) stratified 4-fold cross-validation with automated divergence pruning.
 > 
-> For an exhaustive side-by-side comparison between the preliminary SIBGRAPI WIP results and the current state-of-the-art benchmark, refer to the [Evolution Section](#-evolution-from-early-wip-to-current-benchmark). The updated, publication-grade manuscript is maintained under [`docs/final-2027/`](docs/final-2027/build/main.pdf).
+> For an exhaustive side-by-side comparison between the preliminary SIBGRAPI WIP results and the current state-of-the-art benchmark, refer to the [Evolution Section](#-evolution-from-early-wip-to-current-benchmark). The updated, publication-grade manuscript is maintained under [`docs/final-2027/`](docs/final-2027/main.pdf).
 
 ---
 
