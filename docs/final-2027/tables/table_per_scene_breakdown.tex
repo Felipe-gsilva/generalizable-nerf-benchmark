@@ -1,0 +1,27 @@
+\begin{table*}[t]
+\centering
+\caption{Detalhamento de PSNR (dB) por cena individual para as configurações ótimas (média das 3 seeds).}
+\label{tab:per_scene_breakdown}
+\small
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}llcccccc|c@{\extracolsep{0pt}}}
+\toprule
+Modelo & Estratégia & Fern & Fortress & Flower & Horns & Room & Trex & Média Geral \\
+\midrule
+\multirow{6}{*}{PixelNeRF}
+ & Zero-Shot (ZS)   &   5.73 &   3.03 &   8.92 &   6.90 &   7.19 &    --- &   6.35 \\
+ & Full-FT          &   6.79 &   9.69 &  11.63 &   6.96 &  10.09 &    --- &   9.03 \\
+ & PFT-Decoder      &   9.58 &  10.24 &  12.21 &   8.34 &  12.55 &    --- &  10.58 \\
+ & PFT-Backbone     &  10.59 &  12.42 &  10.28 &   9.69 &  11.62 &    --- &  10.92 \\
+ & BitFit           &  10.40 &  11.22 &  10.67 &  10.82 &  10.83 &    --- &  10.79 \\
+ & PEFT-LoRA        &   7.57 &   9.32 &   9.89 &   7.59 &    --- &    --- &   8.59 \\
+\midrule
+\multirow{6}{*}{GNT}
+ & Zero-Shot (ZS)   &  10.24 &   8.18 &  11.17 &  11.03 &  11.64 &  10.77 &  10.51 \\
+ & Full-FT          &  15.08 &  17.43 &  14.73 &  13.46 &  16.06 &  13.63 &  15.06 \\
+ & PFT-Decoder      &  15.08 &  17.46 &  14.73 &  13.46 &  16.06 &  13.63 &  15.07 \\
+ & PFT-Backbone     &  10.24 &   8.18 &  11.17 &  11.03 &  11.64 &  10.77 &  10.51 \\
+ & BitFit           &  13.20 &  12.84 &  13.29 &  12.48 &  14.20 &  12.72 &  13.12 \\
+ & PEFT-LoRA        &  14.39 &  16.80 &  13.91 &  13.24 &  15.87 &  13.22 &  14.57 \\
+\bottomrule
+\end{tabular*}
+\end{table*}

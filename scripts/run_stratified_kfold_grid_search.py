@@ -406,9 +406,14 @@ def main():
 
     config_summaries = []
     for (model, strat, seed, lr, lora_r), recs in grouped.items():
-        psnrs = [x["psnr"] for x in recs]
-        ssims = [x["ssim"] for x in recs]
-        lpipss = [x["lpips"] for x in recs]
+        # Filter out failed runs (where psnr <= 0.0 or failed convergence)
+        valid_recs = [x for x in recs if x.get("psnr", 0.0) > 0.0]
+        if not valid_recs:
+            continue
+
+        psnrs = [x["psnr"] for x in valid_recs]
+        ssims = [x["ssim"] for x in valid_recs]
+        lpipss = [x["lpips"] for x in valid_recs]
 
         config_summaries.append({
             "model": model,
@@ -420,7 +425,7 @@ def main():
             "std_psnr": np.std(psnrs),
             "mean_ssim": np.mean(ssims),
             "mean_lpips": np.mean(lpipss),
-            "num_evals": len(recs),
+            "num_evals": len(valid_recs),
         })
 
     # Find the optimal configuration and best seed per (model, strategy)

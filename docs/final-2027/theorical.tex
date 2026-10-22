@@ -1,0 +1,68 @@
+\section{Theoretical Background}
+\label{sec:fund}
+
+\subsection{Neural Radiance Fields and Volumetric Rendering}
+Neural Radiance Fields (NeRFs) model continuous three-dimensional scene geometry and view-dependent appearance by mapping spatial coordinates and viewing directions to volumetric density and emitted radiance using Multilayer Perceptrons (MLPs) \cite{mildenhall2020nerfrepresentingscenesneural}. Given a spatial position $\mathbf{x} = (x, y, z)$ and a unit viewing direction $\mathbf{d} = (\theta, \phi)$, the network outputs differential volume density $\sigma(\mathbf{x}) \in \mathbb{R}_{\geq 0}$ and directional color $\mathbf{c} \in [0, 1]^3$:
+\begin{equation}
+\gamma(\mathbf{x}, \mathbf{d}) \rightarrow \mathbf{v}, \quad F_\theta'(\mathbf{v}) \rightarrow (\sigma, \mathbf{c})
+\label{eq:nerf_formulation}
+\end{equation}
+where $\theta$ denotes the trainable network parameters, $F_\theta'$ represents the MLP, and $\gamma$ is a positional encoding mapping coordinates into a higher-dimensional space $\mathbf{v}$ through sinusoidal basis functions, enabling the network to represent high-frequency geometric and textural variations \cite{mildenhall2020nerfrepresentingscenesneural}.
+
+Synthesizing the color observed by a camera pixel involves casting a ray $\mathbf{r}(t) = \mathbf{o} + t\mathbf{d}$ between near and far bounds $(t_n, t_f)$ and evaluating the volumetric rendering integral \cite{mildenhall2020nerfrepresentingscenesneural}:
+\begin{equation}
+\hat{C}(\mathbf{r}) = \int_{t_n}^{t_f} T(t) \sigma(\mathbf{r}(t)) \mathbf{c}(\mathbf{r}(t), \mathbf{d}) \, dt
+\label{eq:vol_render}
+\end{equation}
+where $T(t) = \exp\left(-\int_{t_n}^t \sigma(\mathbf{r}(s)) \, ds\right)$ denotes the accumulated transmittance along the ray. Numerical approximation evaluates this continuous integral through stratified quadrature sampling, compositing discrete alpha-blended color samples along each sampled ray.
+
+\subsection{Architectural Optimizations and Generalization}
+Standard coordinate-based MLPs achieve remarkable visual fidelity, yet their dense parameter evaluations impose computational and convergence bottlenecks. Accelerating this optimization has motivated hybrid spatial representations that replace global positional encodings with explicit multiresolution data structures. Instant-NGP maps spatial coordinates to multiscale hash tables of trainable feature vectors, reducing convergence times from hours to seconds \cite{muller2022}. Nerfacto builds upon this paradigm by coupling multiresolution hash grids with proposal sampling, camera pose refinement, spherical harmonics, and appearance embeddings, achieving a balanced trade-off between rendering speed and perceptual quality \cite{Tancik2023}.
+
+These per-scene representations, however, rely on dense multi-view coverage with substantial angular overlap. Practical applications, ranging from mobile capture and robotic navigation to biomedical imaging, such as 3D histology and holotomography, routinely face data acquisition constraints where only a few sparse views are available \cite{ijms24076747}. Under such sparse regimes, per-scene optimization becomes heavily underconstrained, possibly resulting in geometric degradation, false surfaces, and floating artifacts \cite{niemeyer2022regnerf, jain2021dietnerf}.
+
+To overcome these data limitations, generalizable NeRFs learn inductive structural and multi-view priors across large scene collections, enabling feed-forward synthesis on novel target environments \cite{yu2021pixelnerfneuralradiancefields, chen2021mvsnerffastgeneralizableradiance, wang2021ibrnet, t2023attentionnerfneeds}. PixelNeRF projects query 3D points onto 2D image planes, extracting spatial feature vectors via a convolutional backbone (ResNet) to condition a coordinate-based radiance MLP \cite{yu2021pixelnerfneuralradiancefields}. Addressing the locality limits of convolutional operators, the Generalizable NeRF Transformer (GNT) replaces the CNN backbone with a Vision Transformer (ViT) and substitutes the terminal MLP with a cross-attention transformer, aggregating multi-view features directly along epipolar lines \cite{t2023attentionnerfneeds}.
+
+\subsection{Fine-Tuning Strategies and Parameter-Efficient Regimes in NeRFs}
+\label{sec:ft_theory}
+
+Pre-trained generalizable models capture rich geometric and cross-view priors during large-scale pre-training \cite{yu2021pixelnerfneuralradiancefields, t2023attentionnerfneeds}. Deploying these networks directly in a zero-shot (ZS) regime on novel real-world scenes exposes them to pronounced domain shifts caused by discrepancies in sensor intrinsics, illumination conditions, and complex out-of-distribution textures \cite{mildenhall2019locallightfieldfusion, niemeyer2022regnerf}. In sparse-view settings ($N \le 10$), feed-forward zero-shot predictions frequently suffer from spatial ambiguities and lack high-frequency details, exhibiting noticeable isotropic blurring \cite{yu2021pixelnerfneuralradiancefields, chen2021mvsnerffastgeneralizableradiance}.
+
+To bridge this domain gap, generalizable architectures employ fine-tuning (FT), optimizing network weights directly on the sparse target observations using the photometric reconstruction loss \cite{yu2021pixelnerfneuralradiancefields, chen2021mvsnerffastgeneralizableradiance}:
+\begin{equation}
+\mathcal{L}_{\text{photo}} = \frac{1}{|\mathcal{R}|} \sum_{\mathbf{r} \in \mathcal{R}} \|\hat{C}(\mathbf{r}) - C(\mathbf{r})\|_2^2
+\label{eq:photo_loss}
+\end{equation}
+where $\mathcal{R}$ denotes a batch of synthesized rays and $C(\mathbf{r})$ represents the observed ground-truth pixel color.
+
+Nevertheless, unconstrained gradient descent under view sparsity constitutes an ill-posed inverse problem \cite{jain2021dietnerf, niemeyer2022regnerf, roessle2022dense}. When high-capacity architectures are optimized against sparse camera rays without dense geometric constraints, the representation becomes susceptible to representational collapse \cite{jain2021dietnerf, niemeyer2022regnerf}. The network easily overfits to ray-specific photometric objectives by creating degenerate density floaters near camera centers, underperforming in global 3D consistency and degrading novel view synthesis quality \cite{niemeyer2022regnerf,roessle2022dense}.
+
+This tension between model adaptation capacity and optimization stability parallels the challenges encountered in fine-tuning deep learning models across language, vision, and multimodal domains under scarce downstream supervision~\cite{hu2021lora, zaken2022bitfit, gupta2024beyondlora}. In their comprehensive benchmarking study of foundation model adaptation, Gupta et al. demonstrate that updating all model weights under limited target data destabilizes pre-trained representations, increases optimizer memory overhead, and can lead to overfitting. To address these vulnerabilities, the same authors formalize a comparative taxonomy comprising full model tuning, modular parameter freezing, selective parameter updates, and low-rank reparameterization. Transposing this modular methodology to generalizable neural rendering yields five distinct FT strategies~\cite{gupta2024beyondlora}:
+
+\subsubsection{Full Fine-Tuning (Full-FT)}
+
+All network parameters $\Theta = \{W, b\}$ across the feature extraction backbone and the volumetric rendering network are simultaneously updated via backpropagation. Although offering unconstrained representational capacity, Full-FT requires maintaining full optimizer moment tensors for every weight, incurring substantial memory overhead and heightening vulnerability to representational collapse when supervised by sparse views \cite{niemeyer2022regnerf,gupta2024beyondlora}.
+
+\subsubsection{Partial Fine-Tuning: Decoder (PFT-Decoder)}
+Gradient updates are restricted exclusively to the downstream volumetric rendering head—the cross-attention transformer in GNT \cite{t2023attentionnerfneeds} or the radiance MLP in PixelNeRF \cite{yu2021pixelnerfneuralradiancefields}—while the spatial feature extraction backbone remains frozen. Freezing the 2D perceptual layers preserves the generalizable representations established during pre-training, directing gradient updates solely toward refining multi-view radiance aggregation and scene-specific illumination \cite{gupta2024beyondlora}.
+
+\subsubsection{Partial Fine-Tuning: Backbone (PFT-Backbone)}
+Inverting the modular restriction, PFT-Backbone freezes the volumetric rendering head and updates solely the 2D feature extractor (the ResNet in PixelNeRF or the shallow patch embedder in GNT). This configuration enables the model to align its low-level perceptual feature maps with out-of-distribution textures and sensor profiles, leaving the pre-trained volumetric ray-marching logic undisturbed.
+
+\subsubsection{Selective PEFT - BitFit}
+BitFit isolates and optimizes exclusively the additive bias vectors $b \in \mathbb{R}^{d_{\text{out}}}$ of linear and convolutional transformations, keeping all projection weight matrices $W \in \mathbb{R}^{d_{\text{out}} \times d_{\text{in}}}$ strictly frozen \cite{zaken2022bitfit}:
+\begin{equation}
+y = W x + (b + \Delta b)
+\label{eq:bitfit}
+\end{equation}
+As demonstrated in foundation model benchmarks by Ben Zaken et al. \cite{zaken2022bitfit} and Gupta et al. \cite{gupta2024beyondlora}, modifying solely the additive biases (typically representing less than $0.5\%$ of the total parameter count) acts as an effective structural regularizer. This parameter isolation stabilizes the optimization trajectory, preventing representational drift while providing sufficient flexibility to adjust activation thresholds for target scene alignment.
+
+\subsubsection{Additive PEFT: Low-Rank Adaptation (PEFT-LoRA)}
+LoRA freezes pre-trained weight matrices $W_0 \in \mathbb{R}^{d_{\text{out}} \times d_{\text{in}}}$ and parameterizes weight increments through a low-rank decomposition \cite{hu2021lora}:
+\begin{equation}
+W' = W_0 + \Delta W = W_0 + \frac{\alpha}{r} B A
+\label{eq:lora}
+\end{equation}
+where $B \in \mathbb{R}^{d_{\text{out}} \times r}$ and $A \in \mathbb{R}^{r \times d_{\text{in}}}$ are low-rank factor matrices with rank $r \ll \min(d_{\text{in}}, d_{\text{out}})$, and $\alpha$ is a constant scaling hyperparameter. Matrix $A$ is initialized from a Gaussian distribution and $B$ is initialized to zero, ensuring $\Delta W = 0$ at the onset of adaptation. Restricting updates to an intrinsic low-dimensional subspace drastically curtails trainable parameters and optimizer memory during fine-tuning. Furthermore, as observed by Gupta et al. \cite{gupta2024beyondlora}, low-rank constraints act as an implicit regularizer that prevents catastrophic collapse when adapting deep foundational architectures to scarce downstream data.
+
+Understanding the interaction between these modular fine-tuning strategies, generalizable priors, and per-scene representations requires a unified, reproducible benchmarking protocol, as formalized in the subsequent section.

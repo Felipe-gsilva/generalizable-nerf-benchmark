@@ -1,0 +1,92 @@
+\begin{figure}[!t]
+\centering
+\resizebox{0.9\linewidth}{!}{%
+\begin{tikzpicture}[
+  >=stealth,
+  % Estilo dos blocos do pipeline (Cores suaves, design clean)
+  block/.style={
+    rectangle, draw=black!30, thick, fill=white,
+    minimum width=4cm, minimum height=1cm,
+    text centered, rounded corners=3pt, font=\tiny,
+    align=center
+  },
+  % Estilo das setas de fluxo (Cinza médio para não pesar)
+  line/.style={draw, thick, black!40, ->, >=stealth, rounded corners=3pt}
+]
+
+% --- LEVEL 1 & 2: Dados Iniciais ---
+\node[block] (data) at (0, 0) {
+  \textbf{\faDatabase\ Dataset} \\[0.5mm] 
+  LLFF
+};
+
+\node[block] (split) at (0, -1.4) {
+  \textbf{\faProjectDiagram\ Split Generation} \\[0.5mm] 
+  Uniform \ \& \ Random (seed 42)
+};
+\draw[line] (data) -- (split);
+
+
+% --- LEVEL 3: Bifurcação dos Modelos ---
+\node[block] (gen_models) at (-2.3, -3.0) {
+  \textbf{\faBrain\ Generalizable Models} \\[0.5mm] 
+  PixelNeRF $\cdot$ GNT
+};
+
+\node[block] (ps_models) at (2.3, -3.0) {
+  \textbf{\faCogs\ Per-Scene Models} \\[0.5mm] 
+  Instant-NGP $\cdot$ Nerfacto $\cdot$ Splatfacto $\cdot$ dn-splatter
+};
+
+% Setas do Split para os Modelos
+\draw[line] (split.south) -- ++(0,-0.4) -| (gen_models.north);
+\draw[line] (split.south) -- ++(0,-0.4) -| (ps_models.north);
+
+
+% --- LEVEL 4: Regimes de Treino ---
+\node[block] (gen_reg) at (-2.3, -4.4) {
+  \textbf{\faTasks\ Regimes} \\[0.5mm] 
+  Zero-Shot, Fine-Tuning
+};
+
+\node[block] (ps_reg) at (2.3, -4.4) {
+  \textbf{\faTasks\ Regime} \\[0.5mm] 
+  Full Dataset
+};
+
+% Setas dos Modelos para os Regimes
+\draw[line] (gen_models) -- (gen_reg);
+\draw[line] (ps_models) -- (ps_reg);
+
+
+% --- LEVEL 5 & 6: Avaliação e Métricas ---
+\node[block] (eval) at (0, -5.8) {
+  \textbf{\faVial\ Evaluation} \\[0.5mm] 
+  Unified Protocol
+};
+
+% Setas dos Regimes convergindo para Avaliação
+\draw[line] (gen_reg.south) -- ++(0,-0.2) -| (eval.north);
+\draw[line] (ps_reg.south) -- ++(0,-0.2) -| (eval.north);
+
+\node[block] (metrics) at (0, -7.2) {
+  \textbf{\faChartBar\ Metrics} \\[0.5mm] 
+  \textbf{Qual:} PSNR, SSIM, LPIPS \ | \ \textbf{Perf:} FPS, VRAM
+};
+\draw[line] (eval) -- (metrics);
+
+
+% --- BACKGROUND (Ambiente Isolado) ---
+\begin{scope}[on background layer]
+  \node[draw=black!20, dashed, fill=black!2, rounded corners=5pt, 
+        inner xsep=12pt, inner ysep=15pt, 
+        fit=(data)(split)(gen_models)(ps_models)(gen_reg)(ps_reg)(eval)(metrics),
+        label={[anchor=south east, font=\scriptsize\color{black!60}]south east:
+        {\faDocker} Docker \ | \ NVIDIA GTX 1660S \ | \ CUDA 12.6}] (env) {};
+\end{scope}
+
+\end{tikzpicture}%
+}
+\caption{Overview of the proposed methodology. The pipeline comprises dataset preparation, sparse-view sampling, model configuration and training under distinct learning paradigms, followed by a unified evaluation protocol that systematically characterizes the trade-offs between computational performance and reconstruction fidelity.}
+\label{fig:pipeline}
+\end{figure}

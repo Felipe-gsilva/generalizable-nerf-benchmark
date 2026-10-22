@@ -1,0 +1,36 @@
+\begin{table}[H]
+\centering
+\caption{Ablação completa de hiperparâmetros para o modelo GNT (média em 6 cenas e 3 seeds).}
+\label{tab:gnt_full_grid_search}
+\scriptsize
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}lccccc@{\extracolsep{0pt}}}
+\toprule
+Estratégia & $\eta$ & Rank $r$ & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ \\
+\midrule
+Zero-Shot (ZS)     & N/A        & N/A    & 10.51 $\pm$ 0.11         & 0.314    & 0.742    \\
+\midrule
+Full-FT            & $10^{-4}$  & N/A    & 14.28 $\pm$ 0.09         & 0.366    & 0.708    \\
+                   & $5\times10^{-4}$ & N/A    & 15.04 $\pm$ 0.03         & 0.375    & 0.682    \\
+                   & $10^{-3}$  & N/A    & 15.06 $\pm$ 0.03         & 0.369    & 0.681    \\
+\midrule
+PFT-Decoder        & $10^{-4}$  & N/A    & 14.26 $\pm$ 0.06         & 0.366    & 0.708    \\
+                   & $5\times10^{-4}$ & N/A    & 14.91 $\pm$ 0.04         & 0.374    & 0.685    \\
+                   & $10^{-3}$  & N/A    & 15.07 $\pm$ 0.03         & 0.368    & 0.679    \\
+\midrule
+PFT-Backbone       & $10^{-4}$  & N/A    & 10.51 $\pm$ 0.11         & 0.314    & 0.742    \\
+                   & $5\times10^{-4}$ & N/A    & 10.51 $\pm$ 0.11         & 0.314    & 0.742    \\
+                   & $10^{-3}$  & N/A    & 10.51 $\pm$ 0.11         & 0.314    & 0.742    \\
+\midrule
+BitFit             & $10^{-4}$  & N/A    & 12.50 $\pm$ 0.06         & 0.353    & 0.746    \\
+                   & $5\times10^{-4}$ & N/A    & 13.04 $\pm$ 0.03         & 0.358    & 0.744    \\
+                   & $10^{-3}$  & N/A    & 13.12 $\pm$ 0.05         & 0.358    & 0.742    \\
+\midrule
+PEFT-LoRA          & $10^{-4}$  & 4      & 13.09 $\pm$ 0.04         & 0.357    & 0.742    \\
+                   & $10^{-4}$  & 8      & 13.36 $\pm$ 0.08         & 0.358    & 0.729    \\
+                   & $5\times10^{-4}$ & 4      & 13.93 $\pm$ 0.05         & 0.357    & 0.711    \\
+                   & $5\times10^{-4}$ & 8      & 14.44 $\pm$ 0.04         & 0.363    & 0.699    \\
+                   & $10^{-3}$  & 4      & 14.57 $\pm$ 0.07         & 0.369    & 0.706    \\
+                   & $10^{-3}$  & 8      & 14.46 $\pm$ 0.04         & 0.365    & 0.705    \\
+\bottomrule
+\end{tabular*}
+\end{table}

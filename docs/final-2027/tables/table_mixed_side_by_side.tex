@@ -1,0 +1,20 @@
+\begin{table*}[t]
+\centering
+\caption{Tabela Comparativa Mista: Desempenho de Adaptação por Estratégia em PixelNeRF e GNT (Média das 3 seeds e cenas válidas).}
+\label{tab:mixed_side_by_side}
+\small
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}l|cccc|cccc@{\extracolsep{0pt}}}
+\toprule
+ & \multicolumn{4}{c|}{\textbf{PixelNeRF}} & \multicolumn{4}{c}{\textbf{GNT}} \\
+\cmidrule{2-5} \cmidrule{6-9}
+Estratégia & Config. Ótima & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ & Config. Ótima & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ \\
+\midrule
+Zero-Shot (ZS)   & ZS                 & 6.35 $\pm$ 0.05        & 0.085  & 0.800  & ZS                 & 10.51 $\pm$ 0.11       & 0.314  & 0.742  \\
+Full-FT          & $\eta=10^{-4}$     & 9.03 $\pm$ 0.11        & 0.136  & 0.752  & $\eta=10^{-3}$     & 15.06 $\pm$ 0.03       & 0.369  & 0.681  \\
+PFT-Decoder      & $\eta=10^{-4}$     & 10.58 $\pm$ 0.08       & 0.205  & 0.773  & $\eta=10^{-3}$     & 15.07 $\pm$ 0.03       & 0.368  & 0.679  \\
+PFT-Backbone     & $\eta=10^{-4}$     & 10.92 $\pm$ 0.26       & 0.162  & 0.772  & $\eta=10^{-4}$     & 10.51 $\pm$ 0.11       & 0.314  & 0.742  \\
+BitFit           & $\eta=10^{-4}$     & 10.79 $\pm$ 0.19       & 0.119  & 0.775  & $\eta=10^{-3}$     & 13.12 $\pm$ 0.05       & 0.358  & 0.742  \\
+PEFT-LoRA        & $\eta=10^{-3}, r=4$ & 8.59 $\pm$ 0.10        & 0.175  & 0.725  & $\eta=10^{-3}, r=4$ & 14.57 $\pm$ 0.07       & 0.369  & 0.706  \\
+\bottomrule
+\end{tabular*}
+\end{table*}

@@ -219,8 +219,10 @@ def plot_results(
             except Exception:
                 pass
 
-    if not records:
-        print("⚠️ Nenhum registro válido encontrado no CSV para plotar.")
+    # Filtra registros com falhas (PSNR <= 0)
+    valid_records = [r for r in records if r["psnr"] > 0.0]
+    if not valid_records:
+        print("⚠️ Nenhum registro válido (PSNR > 0) encontrado no CSV para plotar.")
         return
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -235,16 +237,44 @@ def plot_results(
         "figure.titlesize": 16,
     })
 
-    # 1. Gráficos Individuais (PSNR, SSIM, LPIPS)
     metric_configs = [
-        ("psnr", "PSNR (dB) $\\uparrow$", "Peak Signal-to-Noise Ratio vs TTA Steps", "tta_steps_psnr.png", True),
-        ("ssim", "SSIM $\\uparrow$", "Structural Similarity Index vs TTA Steps", "tta_steps_ssim.png", True),
-        ("lpips", "LPIPS $\\downarrow$", "Perceptual Loss (LPIPS) vs TTA Steps", "tta_steps_lpips.png", False),
+        ("psnr", "PSNR (dB) $\\uparrow$", "Peak Signal-to-Noise Ratio vs Fine-Tuning Steps", "tta_steps_psnr.png", True),
+        ("ssim", "SSIM $\\uparrow$", "Structural Similarity Index vs Fine-Tuning Steps", "tta_steps_ssim.png", True),
+        ("lpips", "LPIPS $\\downarrow$", "Perceptual Loss (LPIPS) vs Fine-Tuning Steps", "tta_steps_lpips.png", False),
     ]
 
+    def get_aggregated_series(model_name: str, strategy_name: str, metric: str):
+        """Retorna tuplas (x_steps, y_means) agregadas para a curva, unindo o zero-shot."""
+        # 1. Pega zero-shot desse modelo
+        zs_vals = [r[metric] for r in valid_records if r["model"] == model_name and r["tta_steps"] == 0]
+        zs_mean = float(np.mean(zs_vals)) if zs_vals else None
+
+        # 2. Pega os passos de fine-tuning (> 0) da estratégia
+        strat_recs = [
+            r for r in valid_records
+            if r["model"] == model_name and r["strategy"] == strategy_name and r["tta_steps"] > 0
+        ]
+        from collections import defaultdict
+        grouped = defaultdict(list)
+        for r in strat_recs:
+            grouped[r["tta_steps"]].append(r[metric])
+
+        x_out = []
+        y_out = []
+        if zs_mean is not None:
+            x_out.append(0)
+            y_out.append(zs_mean)
+
+        for step in sorted(grouped.keys()):
+            x_out.append(step)
+            y_out.append(float(np.mean(grouped[step])))
+
+        return x_out, y_out
+
+    # 1. Gráficos Individuais
     for metric_key, y_label, title, filename, higher_better in metric_configs:
         fig, ax = plt.subplots(figsize=(8.5, 5.5), dpi=300)
-        
+
         for cfg_item in top_configs:
             m = cfg_item["model"]
             s = cfg_item["strategy"]
@@ -253,24 +283,9 @@ def plot_results(
             marker = cfg_item["marker"]
             linestyle = cfg_item["linestyle"]
 
-            # Filtra registros correspondentes
-            series = [
-                r for r in records
-                if r["model"] == m and (r["strategy"] == s or (r["tta_steps"] == 0 and r["strategy"] == "zero-shot"))
-            ]
-            if not series:
-                # Tenta casar zero-shot para o ponto 0
-                zs_rec = [r for r in records if r["model"] == m and r["tta_steps"] == 0]
-                other_recs = [r for r in records if r["model"] == m and r["strategy"] == s]
-                series = zs_rec + other_recs
-
-            # Ordena por steps
-            series = sorted(series, key=lambda x: x["tta_steps"])
-            if not series:
+            x_vals, y_vals = get_aggregated_series(m, s, metric_key)
+            if not x_vals:
                 continue
-
-            x_vals = [r["tta_steps"] for r in series]
-            y_vals = [r[metric_key] for r in series]
 
             ax.plot(
                 x_vals,
@@ -286,12 +301,12 @@ def plot_results(
 
             # Destaca o ponto ótimo (máximo ou mínimo)
             if len(y_vals) > 0:
-                best_idx = np.argmax(y_vals) if higher_better else np.argmin(y_vals)
+                best_idx = int(np.argmax(y_vals) if higher_better else np.argmin(y_vals))
                 best_x = x_vals[best_idx]
                 best_y = y_vals[best_idx]
                 ax.scatter([best_x], [best_y], s=100, facecolors="none", edgecolors=color, linewidths=2.0, zorder=5)
 
-        ax.set_xlabel("Number of TTA Steps (Iterations)", fontweight="bold")
+        ax.set_xlabel("Number of Fine-Tuning Steps (Iterations)", fontweight="bold")
         ax.set_ylabel(y_label, fontweight="bold")
         ax.set_title(title, fontweight="bold", pad=12)
         ax.grid(True, linestyle="--", alpha=0.5)
@@ -316,21 +331,9 @@ def plot_results(
             marker = cfg_item["marker"]
             linestyle = cfg_item["linestyle"]
 
-            series = [
-                r for r in records
-                if r["model"] == m and (r["strategy"] == s or (r["tta_steps"] == 0 and r["strategy"] == "zero-shot"))
-            ]
-            if not series:
-                zs_rec = [r for r in records if r["model"] == m and r["tta_steps"] == 0]
-                other_recs = [r for r in records if r["model"] == m and r["strategy"] == s]
-                series = zs_rec + other_recs
-
-            series = sorted(series, key=lambda x: x["tta_steps"])
-            if not series:
+            x_vals, y_vals = get_aggregated_series(m, s, metric_key)
+            if not x_vals:
                 continue
-
-            x_vals = [r["tta_steps"] for r in series]
-            y_vals = [r[metric_key] for r in series]
 
             ax.plot(
                 x_vals,
@@ -345,12 +348,17 @@ def plot_results(
             )
 
             if len(y_vals) > 0:
-                best_idx = np.argmax(y_vals) if higher_better else np.argmin(y_vals)
+                best_idx = int(np.argmax(y_vals) if higher_better else np.argmin(y_vals))
                 ax.scatter([x_vals[best_idx]], [y_vals[best_idx]], s=80, facecolors="none", edgecolors=color, linewidths=1.8, zorder=5)
 
-        ax.set_xlabel("TTA Steps", fontweight="bold")
+        ax.set_xlabel("Fine-Tuning Steps", fontweight="bold")
         ax.set_ylabel(y_label, fontweight="bold")
-        ax.set_title(f"({chr(97+i)}) {title.split(' vs ')[0]}", fontweight="bold")
+        sub_titles = [
+            "(a) Peak Signal-to-Noise Ratio (PSNR)",
+            "(b) Structural Similarity Index (SSIM)",
+            "(c) Perceptual Loss (LPIPS)",
+        ]
+        ax.set_title(sub_titles[i], fontweight="bold")
         ax.grid(True, linestyle="--", alpha=0.5)
 
     # Legenda única compartilhada no topo

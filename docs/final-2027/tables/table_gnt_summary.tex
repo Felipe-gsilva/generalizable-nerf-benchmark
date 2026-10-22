@@ -1,0 +1,18 @@
+\begin{table}[H]
+\centering
+\caption{Desempenho das estratégias de adaptação no modelo GNT (média de 6 cenas válidas e 3 seeds: 42, 123, 999). As falhas de convergência (PSNR zero em \textit{leaves} e \textit{orchids}) foram excluídas.}
+\label{tab:gnt_strategies_summary}
+\scriptsize
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}llccccc@{\extracolsep{0pt}}}
+\toprule
+Estratégia & Hiperparâmetro & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ & Tempo (s) $\downarrow$ & $\Delta$PSNR (dB) \\
+\midrule
+Zero-Shot (ZS)     & ---                    & 10.51 $\pm$ 0.11           & 0.314          & 0.742          & 239.0    & --- \\
+Full-FT            & $\eta=10^{-3}$         & 15.06 $\pm$ 0.03           & \textbf{0.369} & 0.681          & 357.1    & +4.56 \\
+PFT-Decoder        & $\eta=10^{-3}$         & \textbf{15.07} $\pm$ 0.03  & 0.368          & \textbf{0.679} & 298.8    & +4.56 \\
+PFT-Backbone       & $\eta=10^{-4}$         & 10.51 $\pm$ 0.11           & 0.314          & 0.742          & 360.8    & --- \\
+BitFit             & $\eta=10^{-3}$         & 13.12 $\pm$ 0.05           & 0.358          & 0.742          & 319.0    & +2.61 \\
+PEFT-LoRA          & $\eta=10^{-3}, r=4$    & 14.57 $\pm$ 0.07           & 0.369          & 0.706          & 488.0    & +4.06 \\
+\bottomrule
+\end{tabular*}
+\end{table}

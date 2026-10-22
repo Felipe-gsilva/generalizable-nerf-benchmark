@@ -1016,7 +1016,7 @@ class NerfModel:
 
         method_cli_name = self.model_name
         if self.model_name in ["dn-splatter", "dn_splatter"]:
-            method_cli_name = "dn_splatter"
+            method_cli_name = "dn-splatter"
 
         ns_train_bin = shutil.which("ns-train")
         if not ns_train_bin:
@@ -1048,8 +1048,12 @@ class NerfModel:
                 str(self.tta_steps),
                 "--steps-per-save",
                 str(self.tta_steps),
+                "--steps-per-eval-batch",
+                "0",
+                "--steps-per-eval-image",
+                "0",
                 "--steps-per-eval-all-images",
-                str(self.tta_steps),
+                "0",
             ]
             config.logger.info(
                 "ℹ️ Delegating pretrained weight resolution to Nerfstudio/model implementation."
@@ -1062,6 +1066,10 @@ class NerfModel:
                 "--max-num-iterations",
                 "0",
                 "--steps-per-save",
+                "0",
+                "--steps-per-eval-batch",
+                "0",
+                "--steps-per-eval-image",
                 "0",
                 "--steps-per-eval-all-images",
                 "0",
@@ -1208,8 +1216,19 @@ class NerfModel:
                 ]
 
         if extra_cmd_args:
-            cmd += extra_cmd_args
             config.logger.info(f"➕ Appending extra CLI args: {extra_cmd_args}")
+            i = 0
+            while i < len(extra_cmd_args):
+                arg = extra_cmd_args[i]
+                if arg.startswith("--") and arg in cmd:
+                    idx = cmd.index(arg)
+                    if i + 1 < len(extra_cmd_args) and not extra_cmd_args[i + 1].startswith("--"):
+                        if idx + 1 < len(cmd) and not cmd[idx + 1].startswith("--"):
+                            cmd[idx + 1] = extra_cmd_args[i + 1]
+                        i += 2
+                        continue
+                cmd.append(arg)
+                i += 1
 
         cmd += [
             "nerfstudio-data",
