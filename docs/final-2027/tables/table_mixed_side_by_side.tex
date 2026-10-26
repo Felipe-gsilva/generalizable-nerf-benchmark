@@ -1,13 +1,13 @@
 \begin{table*}[t]
 \centering
-\caption{Tabela Comparativa Mista: Desempenho de Adaptação por Estratégia em PixelNeRF e GNT (Média das 3 seeds e cenas válidas).}
+\caption{Side-by-side comparative analysis of adaptation strategies: PixelNeRF vs. GNT (multi-seed mean across 3 seeds and valid scenes).}
 \label{tab:mixed_side_by_side}
 \small
 \begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}l|cccc|cccc@{\extracolsep{0pt}}}
 \toprule
  & \multicolumn{4}{c|}{\textbf{PixelNeRF}} & \multicolumn{4}{c}{\textbf{GNT}} \\
 \cmidrule{2-5} \cmidrule{6-9}
-Estratégia & Config. Ótima & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ & Config. Ótima & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ \\
+Strategy & Optimal Cfg. & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ & Optimal Cfg. & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ \\
 \midrule
 Zero-Shot (ZS)   & ZS                 & 6.35 $\pm$ 0.05        & 0.085  & 0.800  & ZS                 & 10.51 $\pm$ 0.11       & 0.314  & 0.742  \\
 Full-FT          & $\eta=10^{-4}$     & 9.03 $\pm$ 0.11        & 0.136  & 0.752  & $\eta=10^{-3}$     & 15.06 $\pm$ 0.03       & 0.369  & 0.681  \\

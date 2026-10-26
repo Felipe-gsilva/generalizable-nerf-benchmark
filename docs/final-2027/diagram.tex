@@ -3,77 +3,75 @@
 \resizebox{0.9\linewidth}{!}{%
 \begin{tikzpicture}[
   >=stealth,
-  % Estilo dos blocos do pipeline (Cores suaves, design clean)
   block/.style={
     rectangle, draw=black!30, thick, fill=white,
-    minimum width=4cm, minimum height=1cm,
+    minimum width=4.1cm, minimum height=0.95cm,
     text centered, rounded corners=3pt, font=\tiny,
     align=center
   },
-  % Estilo das setas de fluxo (Cinza médio para não pesar)
-  line/.style={draw, thick, black!40, ->, >=stealth, rounded corners=3pt}
+  line/.style={draw, thick, black!45, ->, >=stealth, rounded corners=2pt}
 ]
 
 % --- LEVEL 1 & 2: Dados Iniciais ---
 \node[block] (data) at (0, 0) {
   \textbf{\faDatabase\ Dataset} \\[0.5mm] 
-  LLFF
+  LLFF ($8$ scenes, $504 \times 378$)
 };
 
-\node[block] (split) at (0, -1.4) {
+\node[block] (split) at (0, -1.45) {
   \textbf{\faProjectDiagram\ Split Generation} \\[0.5mm] 
-  Uniform \ \& \ Random (seed 42)
+  Uniform \& Random (seed 42, $N \in \{3, 6, 10\}$)
 };
-\draw[line] (data) -- (split);
+\draw[line] (data.south) -- (split.north);
 
 
 % --- LEVEL 3: Bifurcação dos Modelos ---
-\node[block] (gen_models) at (-2.3, -3.0) {
+\node[block] (gen_models) at (-2.3, -3.1) {
   \textbf{\faBrain\ Generalizable Models} \\[0.5mm] 
   PixelNeRF $\cdot$ GNT
 };
 
-\node[block] (ps_models) at (2.3, -3.0) {
+\node[block] (ps_models) at (2.3, -3.1) {
   \textbf{\faCogs\ Per-Scene Models} \\[0.5mm] 
-  Instant-NGP $\cdot$ Nerfacto $\cdot$ Splatfacto $\cdot$ dn-splatter
+  Instant-NGP $\cdot$ Nerfacto $\cdot$ Splatfacto
 };
 
 % Setas do Split para os Modelos
-\draw[line] (split.south) -- ++(0,-0.4) -| (gen_models.north);
-\draw[line] (split.south) -- ++(0,-0.4) -| (ps_models.north);
+\draw[line] (split.south) -- ++(0,-0.32) -| (gen_models.north);
+\draw[line] (split.south) -- ++(0,-0.32) -| (ps_models.north);
 
 
 % --- LEVEL 4: Regimes de Treino ---
-\node[block] (gen_reg) at (-2.3, -4.4) {
+\node[block] (gen_reg) at (-2.3, -4.55) {
   \textbf{\faTasks\ Regimes} \\[0.5mm] 
-  Zero-Shot, Fine-Tuning
+  Zero-Shot, Fine-Tuning ($500$ steps)
 };
 
-\node[block] (ps_reg) at (2.3, -4.4) {
+\node[block] (ps_reg) at (2.3, -4.55) {
   \textbf{\faTasks\ Regime} \\[0.5mm] 
-  Full Dataset
+  Per-Scene ($N=10$, $30\text{k}$ steps)
 };
 
 % Setas dos Modelos para os Regimes
-\draw[line] (gen_models) -- (gen_reg);
-\draw[line] (ps_models) -- (ps_reg);
+\draw[line] (gen_models.south) -- (gen_reg.north);
+\draw[line] (ps_models.south) -- (ps_reg.north);
 
 
 % --- LEVEL 5 & 6: Avaliação e Métricas ---
-\node[block] (eval) at (0, -5.8) {
+\node[block] (eval) at (0, -6.2) {
   \textbf{\faVial\ Evaluation} \\[0.5mm] 
-  Unified Protocol
+  Unified Protocol (\texttt{llffhold=8})
 };
 
 % Setas dos Regimes convergindo para Avaliação
-\draw[line] (gen_reg.south) -- ++(0,-0.2) -| (eval.north);
-\draw[line] (ps_reg.south) -- ++(0,-0.2) -| (eval.north);
+\draw[line] (gen_reg.south) -- ++(0,-0.32) -| ([xshift=-2.5mm]eval.north);
+\draw[line] (ps_reg.south) -- ++(0,-0.32) -| ([xshift=2.5mm]eval.north);
 
-\node[block] (metrics) at (0, -7.2) {
+\node[block] (metrics) at (0, -7.65) {
   \textbf{\faChartBar\ Metrics} \\[0.5mm] 
-  \textbf{Qual:} PSNR, SSIM, LPIPS \ | \ \textbf{Perf:} FPS, VRAM
+  \textbf{Qual:} PSNR, SSIM, LPIPS \ $|$ \ \textbf{Perf:} Time, FPS, VRAM
 };
-\draw[line] (eval) -- (metrics);
+\draw[line] (eval.south) -- (metrics.north);
 
 
 % --- BACKGROUND (Ambiente Isolado) ---
@@ -82,11 +80,11 @@
         inner xsep=12pt, inner ysep=15pt, 
         fit=(data)(split)(gen_models)(ps_models)(gen_reg)(ps_reg)(eval)(metrics),
         label={[anchor=south east, font=\scriptsize\color{black!60}]south east:
-        {\faDocker} Docker \ | \ NVIDIA GTX 1660S \ | \ CUDA 12.6}] (env) {};
+        {\faDocker} Docker \ $|$ \ NVIDIA GTX 1660S \ $|$ \ CUDA 12.6}] (env) {};
 \end{scope}
 
 \end{tikzpicture}%
 }
-\caption{Overview of the proposed methodology. The pipeline comprises dataset preparation, sparse-view sampling, model configuration and training under distinct learning paradigms, followed by a unified evaluation protocol that systematically characterizes the trade-offs between computational performance and reconstruction fidelity.}
+\caption{Proposed benchmarking pipeline. COLMAP-calibrated sparse splits ($N \in \{3, 6, 10\}$) were evaluated across two architectural branches inside an isolated Docker environment: generalizable models under Zero-Shot and five fine-tuning strategies, and per-scene baselines trained to convergence, assessed via visual fidelity (PSNR, SSIM, LPIPS) and computational metrics (Time, FPS, VRAM).}
 \label{fig:pipeline}
 \end{figure}

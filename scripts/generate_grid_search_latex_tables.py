@@ -211,12 +211,12 @@ def generate_gnt_summary_latex(df_gnt_best: pd.DataFrame, num_scenes: int) -> st
     latex_lines = [
         r"\begin{table}[H]",
         r"\centering",
-        rf"\caption{{Desempenho das estratégias de adaptação no modelo GNT (média de {num_scenes} cenas válidas e 3 seeds: 42, 123, 999). As falhas de convergência (PSNR zero em \textit{{leaves}} e \textit{{orchids}}) foram excluídas.}}",
+        rf"\caption{{Performance of adaptation strategies on the GNT model (mean across {num_scenes} valid scenes and 3 random seeds: 42, 123, 999). Numerical failures (zero PSNR on \textit{{leaves}} and \textit{{orchids}}) were excluded.}}",
         r"\label{tab:gnt_strategies_summary}",
         r"\scriptsize",
         r"\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}llccccc@{\extracolsep{0pt}}}",
         r"\toprule",
-        r"Estratégia & Hiperparâmetro & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ & Tempo (s) $\downarrow$ & $\Delta$PSNR (dB) \\",
+        r"Strategy & Hyperparameter & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ & Time (s) $\downarrow$ & $\Delta$PSNR (dB) \\",
         r"\midrule",
     ]
 
@@ -267,12 +267,12 @@ def generate_gnt_full_grid_latex(df_gnt_all: pd.DataFrame, num_scenes: int) -> s
     latex_lines = [
         r"\begin{table}[H]",
         r"\centering",
-        rf"\caption{{Ablação completa de hiperparâmetros para o modelo GNT (média em {num_scenes} cenas e 3 seeds).}}",
+        rf"\caption{{Complete hyperparameter ablation grid for the GNT model (mean across {num_scenes} valid scenes and 3 seeds).}}",
         r"\label{tab:gnt_full_grid_search}",
         r"\scriptsize",
         r"\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}lccccc@{\extracolsep{0pt}}}",
         r"\toprule",
-        r"Estratégia & $\eta$ & Rank $r$ & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ \\",
+        r"Strategy & $\eta$ & Rank $r$ & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ \\",
         r"\midrule",
     ]
 
@@ -372,19 +372,24 @@ def generate_mixed_hierarchical_latex(
 def generate_mixed_side_by_side_latex(
     df_pn_best: pd.DataFrame,
     df_gnt_best: pd.DataFrame,
+    caption: Optional[str] = None,
+    label: str = "tab:mixed_side_by_side",
 ) -> str:
     """Generates Table 4: Side-by-side strategy comparison between PixelNeRF and GNT."""
+    if caption is None:
+        caption = r"Side-by-side comparative analysis of adaptation strategies: PixelNeRF vs. GNT (multi-seed mean across 3 seeds and valid scenes)."
+
     latex_lines = [
         r"\begin{table*}[t]",
         r"\centering",
-        r"\caption{Tabela Comparativa Mista: Desempenho de Adaptação por Estratégia em PixelNeRF e GNT (Média das 3 seeds e cenas válidas).}",
-        r"\label{tab:mixed_side_by_side}",
+        rf"\caption{{{caption}}}",
+        rf"\label{{{label}}}",
         r"\small",
         r"\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}l|cccc|cccc@{\extracolsep{0pt}}}",
         r"\toprule",
         r" & \multicolumn{4}{c|}{\textbf{PixelNeRF}} & \multicolumn{4}{c}{\textbf{GNT}} \\",
         r"\cmidrule{2-5} \cmidrule{6-9}",
-        r"Estratégia & Config. Ótima & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ & Config. Ótima & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ \\",
+        r"Strategy & Optimal Cfg. & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ & Optimal Cfg. & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ \\",
         r"\midrule",
     ]
 
@@ -447,12 +452,12 @@ def generate_per_scene_latex(
     latex_lines = [
         r"\begin{table*}[t]",
         r"\centering",
-        r"\caption{Detalhamento de PSNR (dB) por cena individual para as configurações ótimas (média das 3 seeds).}",
+        r"\caption{Per-scene PSNR (dB) breakdown for optimal configurations (multi-seed mean across 3 seeds).}",
         r"\label{tab:per_scene_breakdown}",
         r"\small",
         r"\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}llcccccc|c@{\extracolsep{0pt}}}",
         r"\toprule",
-        r"Modelo & Estratégia & Fern & Fortress & Flower & Horns & Room & Trex & Média Geral \\",
+        r"Model & Strategy & Fern & Fortress & Flower & Horns & Room & Trex & Overall Mean \\",
         r"\midrule",
     ]
 
@@ -598,7 +603,12 @@ def main():
         df_pn_best, df_gnt_best, len(pn_stats["valid_scenes"]), len(gnt_stats["valid_scenes"])
     )
     table_mixed_side_by_side = generate_mixed_side_by_side_latex(df_pn_best, df_gnt_best)
-    table_mixed_shared = generate_mixed_side_by_side_latex(df_pn_shared_best, df_gnt_shared_best)
+    table_mixed_shared = generate_mixed_side_by_side_latex(
+        df_pn_shared_best,
+        df_gnt_shared_best,
+        caption=rf"Strict shared-scene comparative analysis: PixelNeRF vs. GNT on the {len(shared_scenes)} common valid scenes ({', '.join([s.capitalize() for s in shared_scenes])}).",
+        label="tab:mixed_shared_scenes",
+    )
     table_per_scene = generate_per_scene_latex(df_gnt, df_pn, df_gnt_best, df_pn_best)
 
     # 6. Save LaTeX files

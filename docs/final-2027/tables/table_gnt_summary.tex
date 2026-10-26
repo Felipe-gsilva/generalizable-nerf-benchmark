@@ -1,11 +1,11 @@
 \begin{table}[H]
 \centering
-\caption{Desempenho das estratégias de adaptação no modelo GNT (média de 6 cenas válidas e 3 seeds: 42, 123, 999). As falhas de convergência (PSNR zero em \textit{leaves} e \textit{orchids}) foram excluídas.}
+\caption{Performance of adaptation strategies on the GNT model (mean across 6 valid scenes and 3 random seeds: 42, 123, 999). Numerical failures (zero PSNR on \textit{leaves} and \textit{orchids}) were excluded.}
 \label{tab:gnt_strategies_summary}
 \scriptsize
 \begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}llccccc@{\extracolsep{0pt}}}
 \toprule
-Estratégia & Hiperparâmetro & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ & Tempo (s) $\downarrow$ & $\Delta$PSNR (dB) \\
+Strategy & Hyperparameter & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ & Time (s) $\downarrow$ & $\Delta$PSNR (dB) \\
 \midrule
 Zero-Shot (ZS)     & ---                    & 10.51 $\pm$ 0.11           & 0.314          & 0.742          & 239.0    & --- \\
 Full-FT            & $\eta=10^{-3}$         & 15.06 $\pm$ 0.03           & \textbf{0.369} & 0.681          & 357.1    & +4.56 \\
