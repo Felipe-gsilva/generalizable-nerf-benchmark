@@ -36,7 +36,7 @@ When pre-trained generalizable models are applied directly in a zero-shot (ZS) r
 However, unconstrained optimization over few rays can overfit to the training views, degrading the pre-trained priors and introducing density floaters near the camera planes \cite{niemeyer2022regnerf, roessle2022dense}. Following the adaptation taxonomy proposed by Gupta et al.\ \cite{gupta2024beyondlora}, five fine-tuning strategies were defined for generalizable neural rendering:
 
 \subsubsection{Full Fine-Tuning (Full-FT)}
-All network parameters $\Theta = \{W, b\}$ across the 2D feature backbone and the 3D rendering network are updated simultaneously. Despite allowing full weight adjustment, Full-FT requires storing optimizer states for all layers and increases the risk of overfitting when few views are available \cite{niemeyer2022regnerf, gupta2024beyondlora}.
+All network parameters $\theta = \{W, b\}$ across the 2D feature backbone and the 3D rendering network are updated simultaneously. Despite allowing full weight adjustment, Full-FT requires storing optimizer states for all layers and increases the risk of overfitting when few views are available \cite{niemeyer2022regnerf, gupta2024beyondlora}.
 
 \subsubsection{Partial Fine-Tuning: Decoder (PFT-Decoder)}
 Gradient updates are restricted to the volumetric rendering head (the epipolar cross-attention transformer in GNT or the radiance MLP in PixelNeRF), while the 2D spatial encoder remains frozen. Keeping the visual encoder fixed preserves the pre-trained 2D representations and directs adaptation toward multi-view radiance aggregation \cite{gupta2024beyondlora}.

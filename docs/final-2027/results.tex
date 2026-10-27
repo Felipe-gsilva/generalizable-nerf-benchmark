@@ -1,7 +1,34 @@
 \section{Results and Discussion}
 \label{sec:results}
 
-This section presents the quantitative, computational, and qualitative results obtained across the LLFF benchmark. Table~\ref{tab:super_results} reports the global averages for reconstruction fidelity, training time, rendering throughput, and dynamic memory allocation across all evaluated regimes.
+This section presents the quantitative, computational, and qualitative results obtained across the LLFF benchmark, covering view-selection and step-count ablations, multi-seed fine-tuning evaluations, and cross-paradigm comparisons.
+
+\subsection{View Selection and Visual Fidelity Across Paradigms}
+When comparing the \textit{Uniform} and \textit{Random} view selection criteria on the \textit{fern} scene ($N=10$), uniform sampling along the camera trajectory yielded higher PSNR across all evaluated models (up to $+0.54$ dB on PixelNeRF and $+0.15$ dB on GNT), as shown in Table~\ref{tab:split}. By providing more consistent baseline coverage across source cameras, uniform sampling was adopted as the standard strategy for all subsequent benchmark evaluations.
+
+\begin{table}[!t]
+\centering
+\caption{Comparison between uniform and random training view selection under $N=10$ views on the \textit{fern} scene. Uniform sampling along the camera trajectory improved reconstruction metrics across both generalizable and per-scene models.}
+\label{tab:split}
+\scriptsize
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}llcccc}
+\toprule
+Model & Split & PSNR $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ & $\Delta$PSNR \\
+\midrule
+\multirow{2}{*}{PixelNeRF}
+  & Uniform   & 6.98   & 0.047    & 0.846    & \multirow{2}{*}{\textbf{+0.54}} \\
+  & Random    & 6.44   & 0.042    & 0.840    &                        \\
+\midrule
+\multirow{2}{*}{GNT}
+  & Uniform   & 10.34  & 0.179    & 0.738    & \multirow{2}{*}{+0.15} \\
+  & Random    & 10.19  & 0.184    & 0.742    &                        \\
+\midrule
+\multirow{2}{*}{Instant-NGP}
+  & Uniform   & \textbf{13.57} & \textbf{0.231} & \textbf{0.627} & \multirow{2}{*}{+0.06} \\
+  & Random    & 13.51  & 0.229    & 0.630    &                        \\
+\bottomrule
+\end{tabular*}
+\end{table}
 
 \begin{table}[!t]
 \centering
@@ -39,15 +66,24 @@ Splatfacto
 \end{tabular*}
 \end{table}
 
-\subsection{Visual Fidelity Across Paradigms}
-Under $N=10$ input views, per-scene methods that incorporate spatial proposal sampling or explicit 3D primitives achieved the highest visual quality. Nerfacto obtained the best overall metrics at $27.11$ dB PSNR, $0.875$ SSIM, and $0.171$ LPIPS (Table~\ref{tab:super_results}), followed by Splatfacto (3DGS) with $24.80$ dB PSNR, $0.830$ SSIM, and $0.210$ LPIPS. Initializing anisotropic 3D Gaussians from sparse COLMAP point clouds preserved structural boundaries and high-frequency textures across test views. By comparison, Instant-NGP lacked sparse-view depth regularization and overfitted to the training rays, reaching $14.06$ dB PSNR.
+Global averages for reconstruction fidelity, training time, rendering throughput, and dynamic memory allocation were evaluated across all operational regimes, as reported in Table~\ref{tab:super_results}. Under $N=10$ input views, per-scene methods that incorporate spatial proposal sampling or explicit 3D primitives achieved the highest visual quality. Nerfacto obtained the best overall metrics at $27.11$ dB PSNR, $0.875$ SSIM, and $0.171$ LPIPS, followed by Splatfacto (3DGS) with $24.80$ dB PSNR, $0.830$ SSIM, and $0.210$ LPIPS. Initializing anisotropic 3D Gaussians from sparse COLMAP point clouds preserved structural boundaries and high-frequency textures across test views. By comparison, Instant-NGP lacked sparse-view depth regularization and overfitted to the training rays, reaching $14.06$ dB PSNR.
 
-For the generalizable architectures, direct Zero-Shot (ZS) inference was affected by domain shift and wide baselines between cameras. PixelNeRF obtained $6.35$ dB PSNR and $0.800$ LPIPS in zero-shot mode, whereas GNT reached $10.51$ dB PSNR and $0.314$ SSIM through its epipolar cross-attention mechanism. After fine-tuning on the target views, GNT improved to $15.07$ dB PSNR (and up to $17.46$ dB on \textit{fortress}), outperforming per-scene Instant-NGP ($14.06$ dB) in less training time ($4\text{ min }59\text{ s}$ vs.\ $31\text{ min }51\text{ s}$). Fine-tuning also raised PixelNeRF by $+4.57$ dB to $10.92$ dB PSNR under backbone adaptation, although its rendered views remained spatially blurred.
+For the generalizable architectures, direct Zero-Shot (ZS) inference was affected by domain shift and wide baselines between cameras. PixelNeRF obtained $6.35$ dB PSNR and $0.800$ LPIPS in zero-shot mode, whereas GNT reached $10.51$ dB PSNR and $0.314$ SSIM through its epipolar cross-attention mechanism. After fine-tuning on the target views, GNT improved to $15.07$ dB PSNR (and up to $17.46$ dB on \textit{fortress}), outperforming per-scene Instant-NGP ($14.06$ dB) in less training time ($4\text{ min }59\text{ s}$ vs.\ $31\text{ min }51\text{ s}$). Fine-tuning also raised PixelNeRF by $+4.57$ dB to $10.92$ dB PSNR under backbone adaptation, although its rendered views remained spatially blurred (as shown in Figure~\ref{fig:comparacao_qualitativa}).
 
-\subsection{Comparative Analysis of Fine-Tuning Strategies}
+\subsection{Convergence Dynamics and Fine-Tuning Strategies}
 \label{sec:ft_results}
 
-Table~\ref{tab:mixed_model_comparison} and Figure~\ref{fig:ft_efficiency_bars} summarize the multi-seed reconstruction metrics and execution times across the five fine-tuning strategies for PixelNeRF (5 valid scenes) and GNT (6 valid scenes). The results show opposite adaptation requirements between the convolutional and transformer-based architectures.
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.88\textwidth]{img/ft_steps_ablation.png}
+\vspace{-3pt}
+\caption{Ablation of fine-tuning iterations from $0$ (Zero-Shot) to $30,000$ steps on the \textit{fern} scene ($N=3$) for (a) PSNR, (b) SSIM, and (c) LPIPS; circled points mark global optima. PixelNeRF reached its peak between $500$ and $1,000$ steps before degrading due to overfitting ($4.70$ dB under LoRA at $20\text{k}$ steps), whereas GNT with PEFT-LoRA ($r=4$) obtained $>91\%$ of its maximum PSNR gain by $500$ steps ($14.29$ vs.\ $15.59$ dB at $10\text{k}$) and remained stable up to $30\text{k}$ steps.}
+\label{fig:ft_steps_ablation}
+\end{figure*}
+
+In the fine-tuning iteration ablation from $0$ to $30,000$ steps on the \textit{fern} scene ($N=3$), four distinct convergence trajectories were observed, as illustrated in Figure~\ref{fig:ft_steps_ablation}: (i) \textit{PixelNeRF (PFT-Backbone, $\eta=10^{-4}$)} increased from $5.72$ dB (ZS) to its peak between $500$ and $1,000$ steps ($11.03\text{--}11.53$ dB PSNR), after which continued training caused overfitting and reduced PSNR to $7.85$ dB at $10\text{k}$ and $7.63$ dB at $20\text{k}$ steps; (ii) \textit{PixelNeRF (PEFT-LoRA, $r=4, \eta=10^{-3}$)} reached its highest PSNR at $100$ steps ($9.89$ dB) and its lowest LPIPS at $5,000$ steps ($0.714$), followed by representation degradation beyond $10,000$ steps ($4.70$ dB PSNR and $0.0004$ SSIM at $20\text{k}$); (iii) \textit{GNT (PFT-Backbone, $\eta=10^{-4}$)} remained nearly constant ($\approx 10.19\text{--}10.33$ dB) across all $30,000$ steps, indicating that updating the 2D patch embedder alone did not alter epipolar ray aggregation; and (iv) \textit{GNT (PEFT-LoRA, $r=4, \eta=10^{-3}$)} reached $14.29$ dB by $500$ steps ($\sim 92\%$ of its $15.59$ dB PSNR peak at $10,000$ steps) and continued improving structural similarity and LPIPS up to $20\text{k}\text{--}30\text{k}$ steps ($0.359$ SSIM and $0.675$ LPIPS), with a slight PSNR drop at $30\text{k}$ ($14.51$ dB). These trajectories confirm that $500$ steps prevents overfitting in PixelNeRF while retaining over $90\%$ of GNT's peak gain within $\sim 50\text{ s}$.
+
+At the calibrated $500$-step budget, multi-seed reconstruction metrics and execution times across the five fine-tuning strategies for PixelNeRF (5 valid scenes) and GNT (6 valid scenes) revealed opposite adaptation requirements between the convolutional and transformer-based architectures, as summarized in Table~\ref{tab:mixed_model_comparison} and Figure~\ref{fig:ft_efficiency_bars}.
 
 \begin{table}[!t]
 \centering
@@ -86,12 +122,12 @@ Model & Strategy & $\eta$ & $r$ & PSNR (dB) $\uparrow$ & SSIM $\uparrow$ & LPIPS
 \label{fig:ft_efficiency_bars}
 \end{figure}
 
-In PixelNeRF, the highest PSNR was obtained when restricting gradient updates to the ResNet encoder (\textit{PFT-Backbone}, $10.92 \pm 0.26$ dB in $275.7\text{ s}$) or to additive biases (\textit{BitFit}, $10.79 \pm 0.19$ dB in $277.7\text{ s}$), both of which outperformed \textit{Full-FT} ($9.03 \pm 0.11$ dB in $284.8\text{ s}$). Because PixelNeRF projects 2D feature maps onto 3D rays, adjusting the convolutional filters to the target scene illumination improved color consistency, whereas updating all weights simultaneously destabilized the downstream MLP. Table~\ref{tab:mixed_model_comparison} also indicates a difference between pixel-level and perceptual metrics: \textit{PFT-Backbone} maximized PSNR through smooth color averaging, while \textit{PFT-Decoder} reached the highest structural similarity ($0.205$ SSIM in $252.0\text{ s}$) and \textit{PEFT-LoRA} ($r=4$) obtained the lowest perceptual error ($0.725$ LPIPS vs.\ $0.772$ for \textit{PFT-Backbone}) despite a lower PSNR ($8.59$ dB).
+In PixelNeRF, the highest PSNR was obtained when restricting gradient updates to the ResNet encoder (\textit{PFT-Backbone}, $10.92 \pm 0.26$ dB in $275.7\text{ s}$) or to additive biases (\textit{BitFit}, $10.79 \pm 0.19$ dB in $277.7\text{ s}$), both of which outperformed \textit{Full-FT} ($9.03 \pm 0.11$ dB in $284.8\text{ s}$). Because PixelNeRF projects 2D feature maps onto 3D rays, adjusting the convolutional filters to the target scene illumination improved color consistency, whereas updating all weights simultaneously destabilized the downstream MLP. A divergence between pixel-level and perceptual metrics was also observed, as shown in Table~\ref{tab:mixed_model_comparison}: \textit{PFT-Backbone} maximized PSNR through smooth color averaging, while \textit{PFT-Decoder} reached the highest structural similarity ($0.205$ SSIM in $252.0\text{ s}$) and \textit{PEFT-LoRA} ($r=4$) obtained the lowest perceptual error ($0.725$ LPIPS vs.\ $0.772$ for \textit{PFT-Backbone}) despite a lower PSNR ($8.59$ dB).
 
-In GNT, the best reconstruction quality was achieved under \textit{PFT-Decoder} ($15.07 \pm 0.03$ dB PSNR and $0.679$ LPIPS), matching \textit{Full-FT} ($15.06 \pm 0.03$ dB) while avoiding backpropagation through the ViT encoder and reducing adaptation time from $357.1\text{ s}$ to $298.8\text{ s}$ (a $16.3\%$ reduction, Figure~\ref{fig:ft_efficiency_bars}). Freezing the pre-trained ViT encoder preserved its visual representations and concentrated weight updates within the epipolar cross-attention layers. In contrast, \textit{PFT-Backbone} produced no improvement over Zero-Shot ($10.51 \pm 0.11$ dB in $360.8\text{ s}$), showing that GNT adaptation depends on epipolar ray aggregation rather than shallow 2D patch projections. Parameter-efficient strategies also regularized GNT training: \textit{BitFit} reached $13.12 \pm 0.05$ dB ($+2.61$ dB over ZS in $319.0\text{ s}$) by updating $<0.15\%$ of the weights, and \textit{PEFT-LoRA} ($r=4$) reached $14.57 \pm 0.07$ dB and $0.369$ SSIM. Although evaluating the auxiliary \texttt{LoRALinear} branches during training increased execution time ($488.0\text{ s}$ in GNT and $426.4\text{ s}$ in PixelNeRF), merging $\Delta W = \frac{\alpha}{r}BA$ into $W_0$ before evaluation preserved the baseline rendering speed ($0.015$ and $0.006$ FPS).
+In GNT, the best reconstruction quality was achieved under \textit{PFT-Decoder} ($15.07 \pm 0.03$ dB PSNR and $0.679$ LPIPS), matching \textit{Full-FT} ($15.06 \pm 0.03$ dB) while avoiding backpropagation through the ViT encoder and reducing adaptation time from $357.1\text{ s}$ to $298.8\text{ s}$ (a $16.3\%$ reduction, as illustrated in Figure~\ref{fig:ft_efficiency_bars}). Freezing the pre-trained ViT encoder preserved its visual representations and concentrated weight updates within the epipolar cross-attention layers. In contrast, \textit{PFT-Backbone} produced no improvement over Zero-Shot ($10.51 \pm 0.11$ dB in $360.8\text{ s}$), showing that GNT adaptation depends on epipolar ray aggregation rather than shallow 2D patch projections. Parameter-efficient strategies also regularized GNT training: \textit{BitFit} reached $13.12 \pm 0.05$ dB ($+2.61$ dB over ZS in $319.0\text{ s}$) by updating $<0.15\%$ of the weights, and \textit{PEFT-LoRA} ($r=4$) reached $14.57 \pm 0.07$ dB and $0.369$ SSIM. Although evaluating the auxiliary \texttt{LoRALinear} branches during training increased execution time ($488.0\text{ s}$ in GNT and $426.4\text{ s}$ in PixelNeRF), merging $\Delta W = \frac{\alpha}{r}BA$ into $W_0$ before evaluation preserved the baseline rendering speed ($0.015$ and $0.006$ FPS).
 
 \subsection{Computational Efficiency and Pareto Trade-offs}
-Figures~\ref{fig:boxplot} and~\ref{fig:radar_chart} present the PSNR distribution across scenes and the five-axis trade-off profile across fidelity and hardware metrics. Generalizable models exhibited low inter-scene variance in Zero-Shot mode, which expanded after fine-tuning as the networks adapted to scene-specific geometry, whereas per-scene models showed wider variance driven by scene texture complexity.
+The PSNR distribution across scenes and the five-axis trade-off profile across fidelity and hardware metrics are illustrated in Figures~\ref{fig:boxplot} and~\ref{fig:radar_chart}. Generalizable models exhibited low inter-scene variance in Zero-Shot mode, which expanded after fine-tuning as the networks adapted to scene-specific geometry, whereas per-scene models showed wider variance driven by scene texture complexity.
 
 \begin{figure}[!t]
 \centering
@@ -112,11 +148,11 @@ Figures~\ref{fig:boxplot} and~\ref{fig:radar_chart} present the PSNR distributio
 Comparing training time against inference throughput highlights the operational trade-off between both families of methods. Generalizable models required only $\sim 9\text{--}22\text{ s}$ for Zero-Shot evaluation or $\sim 4.6\text{--}5.0\text{ min}$ for 500-step fine-tuning, but projecting multi-view features and evaluating epipolar attention along each ray limited rendering throughput to $0.006$ FPS in PixelNeRF and $0.015$ FPS in GNT, with $\sim 1.94$ GB of dynamic VRAM. Per-scene hash-grid models increased inference speed to $0.199$ FPS in Instant-NGP and $0.388$ FPS in Nerfacto. Using explicit tile-based rasterization, Splatfacto (3DGS) reached $200.7$ FPS ($\approx 517\times$ faster than Nerfacto) while consuming $0.10$ GB of dynamic VRAM ($14.3\times$ less than Nerfacto's $1.43$ GB), requiring $16\text{ min }23\text{ s}$ of per-scene optimization. Consequently, PFT- and PEFT-adapted GNT was advantageous under extreme view scarcity ($N=3$) and short adaptation budgets, whereas Splatfacto and Nerfacto were superior when $N \ge 10$ views and longer training times were available.
 
 \subsection{Qualitative Analysis}
-Figure~\ref{fig:comparacao_qualitativa} shows novel views rendered across five LLFF scenes (\textit{Fern}, \textit{Flower}, \textit{Fortress}, \textit{Horns}, and \textit{Room}) under $N=10$ input views.
+Novel views rendered across five LLFF scenes (\textit{Fern}, \textit{Flower}, \textit{Fortress}, \textit{Horns}, and \textit{Room}) under $N=10$ input views are shown in Figure~\ref{fig:comparacao_qualitativa}.
 
 In Column 1, PixelNeRF adapted with \textit{PFT-Backbone} recovered the global color palette and coarse object contours in structured scenes such as \textit{Fortress} and \textit{Room}. However, because its coordinate MLP averages projected features without explicit depth reasoning, scenes with multi-layer occlusions (\textit{Fern} and \textit{Horns}) exhibited heavy spatial smoothing, consistent with its $0.772$ LPIPS score.
 
-Columns 2 to 4 show the visual progression across the GNT fine-tuning strategies as the number of adapted parameters in the decoder increased. In Column 2, \textit{BitFit} ($<0.15\%$ trainable weights) corrected zero-shot color shifts and reduced near-camera floaters, but left fine surface textures blurred. In Column 3, adding rank-$4$ adapters via \textit{PEFT-LoRA} sharpened object boundaries, recovering petal edges in \textit{Flower} and bone contours in \textit{Horns}. In Column 4, updating the full rendering head under \textit{PFT-Decoder} produced the sharpest reconstructions among the generalizable models ($15.07$ dB PSNR and $0.679$ LPIPS), separating overlapping leaves in \textit{Fern} and stone reliefs in \textit{Fortress}.
+A progressive sharpening of scene geometry was observed across the GNT fine-tuning strategies as the number of adapted parameters in the decoder increased, as illustrated in Columns 2 to 4. In Column 2, \textit{BitFit} ($<0.15\%$ trainable weights) corrected zero-shot color shifts and reduced near-camera floaters, but left fine surface textures blurred. In Column 3, adding rank-$4$ adapters via \textit{PEFT-LoRA} sharpened object boundaries, recovering petal edges in \textit{Flower} and bone contours in \textit{Horns}. In Column 4, updating the full rendering head under \textit{PFT-Decoder} produced the sharpest reconstructions among the generalizable models ($15.07$ dB PSNR and $0.679$ LPIPS), separating overlapping leaves in \textit{Fern} and stone reliefs in \textit{Fortress}.
 
 In Column 5, \textit{Splatfacto} (3DGS) produced the sharpest textures and depth boundaries across all five scenes. The explicit 3D Gaussian primitives reconstructed fine foliage details in \textit{Fern} and \textit{Flower} as well as background structures in \textit{Horns} and \textit{Room} at $200.7$ FPS, showing only localized elongated Gaussian artifacts near image borders where camera overlap was lower.
 

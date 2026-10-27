@@ -1,43 +1,15 @@
 \section{Materials and Methods}
 \label{sec:methods}
 
-This section describes the experimental methodology used to evaluate computational efficiency and reconstruction fidelity across neural rendering architectures under sparse-view conditions. Figure~\ref{fig:pipeline} illustrates the three stages of the pipeline: (i) dataset preparation and sparse-view sampling; (ii) model configuration across generalizable adaptation and per-scene training regimes; and (iii) quantitative and qualitative evaluation on held-out views.
+This section describes the experimental methodology used for the evaluation of computational efficiency and reconstruction fidelity across neural rendering architectures under sparse-view conditions, establishing a standardized framework for subsequent research. The proposed pipeline comprises three stages: (i) dataset preparation and sparse-view sampling; (ii) model configuration across generalizable adaptation and per-scene training regimes; and (iii) quantitative and qualitative evaluation on held-out views, as illustrated in Figure~\ref{fig:pipeline}.
 
 \input{diagram.tex}
 
 \subsection{Dataset \& Splits}
 \label{sec:data}
-All experiments were conducted on the Local Light Field Fusion (LLFF) dataset \cite{mildenhall2019locallightfieldfusion}, which contains 8 forward-facing real-world scenes with COLMAP-calibrated camera poses and depth bounds, downscaled by a factor of 8 ($504 \times 378$ pixels). Following the few-shot evaluation protocol of Niemeyer et al.\ \cite{niemeyer2022regnerf}, every 8th image (\texttt{llffhold=8}) was reserved for testing, while the training subsets were restricted to $N \in \{3, 6, 10\}$ views. Two view selection criteria were compared on the \textit{fern} scene ($N=10$, Table~\ref{tab:split}): (i) \textit{Uniform}, where training views were sampled by linear interpolation over the dataset indices along the camera trajectory; and (ii) \textit{Random}, where views were drawn using a fixed seed (\texttt{seed=42}). Uniform sampling yielded higher PSNR across all tested models (up to $+0.54$ dB on PixelNeRF and $+0.15$ dB on GNT) and was therefore adopted for all remaining experiments.
+All experiments were conducted on the Local Light Field Fusion (LLFF) dataset \cite{mildenhall2019locallightfieldfusion}, which contains 8 forward-facing real-world scenes with COLMAP-calibrated camera poses and depth bounds, downscaled by a factor of 8 ($504 \times 378$ pixels). Following the few-shot evaluation protocol of Niemeyer et al.\ \cite{niemeyer2022regnerf}, every 8th image (\texttt{llffhold=8}) was reserved for testing, while the training subsets were restricted to $N \in \{3, 6, 10\}$ views. To establish the view sampling protocol, two selection criteria were evaluated on the \textit{fern} scene ($N=10$): (i) \textit{Uniform}, where training views were sampled by linear interpolation over the dataset indices along the camera trajectory; and (ii) \textit{Random}, where views were drawn using a fixed seed (\texttt{seed=42}).
 
-\begin{table}[!t]
-\centering
-\caption{Comparison between uniform and random training view selection under $N=10$ views on the \textit{fern} scene. Uniform sampling along the camera trajectory improved reconstruction metrics across both generalizable and per-scene models.}
-\label{tab:split}
-\scriptsize
-\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}llcccc}
-\toprule
-Model & Split & PSNR $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ & $\Delta$PSNR \\
-\midrule
-\multirow{2}{*}{PixelNeRF}
-  & Uniform   & 6.98   & 0.047    & 0.846    & \multirow{2}{*}{\textbf{+0.54}} \\
-  & Random    & 6.44   & 0.042    & 0.840    &                        \\
-\midrule
-\multirow{2}{*}{GNT}
-  & Uniform   & 10.34  & 0.179    & 0.738    & \multirow{2}{*}{+0.15} \\
-  & Random    & 10.19  & 0.184    & 0.742    &                        \\
-\midrule
-\multirow{2}{*}{Instant-NGP}
-  & Uniform   & \textbf{13.57} & \textbf{0.231} & \textbf{0.627} & \multirow{2}{*}{+0.06} \\
-  & Random    & 13.51  & 0.229    & 0.630    &                        \\
-\midrule
-\multirow{2}{*}{Nerfacto}
-  & Uniform   & 12.04  & 0.227    & 0.809    & \multirow{2}{*}{+0.11} \\
-  & Random    & 11.93  & 0.226    & 0.865    &                        \\
-\bottomrule
-\end{tabular*}
-\end{table}
-
-Standardized execution parameters were applied across the benchmark. Camera pose refinement was disabled in Nerfacto because equivalent pose optimization is not natively supported by the other evaluated architectures. Mixed-precision training was enabled for all models, and the hash table capacity in Instant-NGP and Nerfacto was set to $2^{16}$ with white background compositing. For GNT, structural hyperparameters were kept at 48 coarse and fine samples per ray, a transformer depth of 8, and a feature width of 64 \cite{t2023attentionnerfneeds}.
+Camera pose refinement was disabled in Nerfacto because equivalent pose optimization is not natively supported by the other evaluated architectures. Mixed-precision training was enabled for all models, and the hash table capacity in Instant-NGP and Nerfacto was set to $2^{16}$ with white background compositing. For GNT, structural hyperparameters were kept at 48 coarse and fine samples per ray, a transformer depth of 8, and a feature width of 64 \cite{t2023attentionnerfneeds}.
 
 \subsection{Models \& Training Regimes}
 \label{sec:regimes}
@@ -53,16 +25,8 @@ Because Nerfstudio registers separate optimizer parameter groups for the 2D enco
 \subsubsection{Stratified K-Fold Grid Search and Convergence Calibration}
 Hyperparameter sensitivity and variance across seeds were evaluated using a Stratified $K$-Fold protocol ($K=4$) over all eight LLFF scenes. Each fold paired a foliage scene with a structured indoor or architectural scene: Fold 0 (\textit{fern}, \textit{fortress}), Fold 1 (\textit{flower}, \textit{horns}), Fold 2 (\textit{leaves}, \textit{room}), and Fold 3 (\textit{orchids}, \textit{trex}). The search grid covered learning rates $\eta \in \{10^{-4}, 5\times 10^{-4}, 10^{-3}\}$ and LoRA ranks $r \in \{4, 8\}$ ($\alpha = 2r$) across three random seeds $\{42, 123, 999\}$ under $N=3$ input views, optimized with Adam (512 training rays and 128 evaluation rays per batch). Optimization runs that diverged on dense foliage scenes (producing $0.0$ dB PSNR on \textit{leaves} and \textit{orchids}) were excluded from the aggregated averages.
 
-The number of fine-tuning iterations for the grid search was selected through an ablation experiment from $0$ to $30,000$ steps ($\{0, 100, 250, 500, 1\text{k}, 1.5\text{k}, 2\text{k}, 2.5\text{k}, 5\text{k}, 10\text{k}, 20\text{k}, 30\text{k}\}$) on the \textit{fern} scene ($N=3$), shown in Figure~\ref{fig:ft_steps_ablation}. Four distinct convergence trajectories were observed: (i) \textit{PixelNeRF (PFT-Backbone, $\eta=10^{-4}$)} increased from $5.72$ dB (ZS) to its peak between $500$ and $1,000$ steps ($11.03\text{--}11.53$ dB PSNR), after which continued training caused overfitting and reduced PSNR to $7.85$ dB at $10\text{k}$ and $7.63$ dB at $20\text{k}$ steps; (ii) \textit{PixelNeRF (PEFT-LoRA, $r=4, \eta=10^{-3}$)} reached its highest PSNR at $100$ steps ($9.89$ dB) and its lowest LPIPS at $5,000$ steps ($0.714$), followed by representation degradation beyond $10,000$ steps ($4.70$ dB PSNR and $0.0004$ SSIM at $20\text{k}$); (iii) \textit{GNT (PFT-Backbone, $\eta=10^{-4}$)} remained nearly constant ($\approx 10.19\text{--}10.33$ dB) across all $30,000$ steps, indicating that updating the 2D patch embedder alone did not alter epipolar ray aggregation; and (iv) \textit{GNT (PEFT-LoRA, $r=4, \eta=10^{-3}$)} reached $14.29$ dB by $500$ steps ($\sim 92\%$ of its $15.59$ dB PSNR peak at $10,000$ steps) and continued improving structural similarity and LPIPS up to $20\text{k}\text{--}30\text{k}$ steps ($0.359$ SSIM and $0.675$ LPIPS), with a slight PSNR drop at $30\text{k}$ ($14.51$ dB). Based on these curves, $500$ steps was adopted as the standard iteration budget for the $K$-Fold grid search, avoiding overfitting in PixelNeRF while retaining over $90\%$ of GNT's peak gain within $\sim 50\text{ s}$.
-
-\begin{figure*}[!t]
-\centering
-\includegraphics[width=0.88\textwidth]{img/ft_steps_ablation.png}
-\vspace{-3pt}
-\caption{Ablation of fine-tuning iterations from $0$ (Zero-Shot) to $30,000$ steps on the \textit{fern} scene ($N=3$) for (a) PSNR, (b) SSIM, and (c) LPIPS; circled points mark global optima. PixelNeRF reached its peak between $500$ and $1,000$ steps before degrading due to overfitting ($4.70$ dB under LoRA at $20\text{k}$ steps), whereas GNT with PEFT-LoRA ($r=4$) obtained $>91\%$ of its maximum PSNR gain by $500$ steps ($14.29$ vs.\ $15.59$ dB at $10\text{k}$) and remained stable up to $30\text{k}$ steps.}
-\label{fig:ft_steps_ablation}
-\end{figure*}
+To calibrate the iteration budget for the $K$-Fold grid search, a step-count ablation was conducted from $0$ (Zero-Shot) to $30,000$ iterations ($\{0, 100, 250, 500, 1\text{k}, 1.5\text{k}, 2\text{k}, 2.5\text{k}, 5\text{k}, 10\text{k}, 20\text{k}, 30\text{k}\}$) on the \textit{fern} scene ($N=3$) across representative partial and low-rank configurations (\textit{PFT-Backbone} at $\eta=10^{-4}$ and \textit{PEFT-LoRA} at $r=4, \eta=10^{-3}$ for both PixelNeRF and GNT). Based on this calibration, $500$ iterations was established as the standard training budget across the multi-seed grid search.
 
 \subsection{Evaluation \& Metrics}
 \label{sec:metrics}
-All evaluations were executed on the held-out test views (\texttt{llffhold=8}) inside isolated NVIDIA Docker containers using an NVIDIA GeForce GTX 1660 Super GPU (6GB VRAM, CUDA 12.6). Reconstruction quality was measured using PSNR, SSIM \cite{wang2004image}, and VGG-based LPIPS \cite{zhang2018unreasonable, niemeyer2022regnerf}. Computational performance was recorded through total training/adaptation time, rendering throughput in frames per second (FPS) \cite{kulhanek2025nerfbaselinesconsistentreproducibleevaluation}, and peak dynamic VRAM usage allocated by PyTorch during test-view rendering.
+All evaluations were executed on the held-out test views (\texttt{llffhold=8}) inside isolated NVIDIA Docker containers using an NVIDIA GeForce GTX 1660 Super GPU (6GB VRAM, CUDA 12.6). Reconstruction quality was measured using PSNR, SSIM \cite{wang2004image}, and VGG-based LPIPS \cite{zhang2018unreasonable, niemeyer2022regnerf}. Computational performance was recorded through total training/adaptation time, rendering throughput in frames per second (FPS) \cite{kulhanek2025nerfbaselinesconsistentreproducibleevaluation}, and peak dynamic VRAM usage allocated by PyTorch during test-view rendering (no other process was running while tests were being conducted).
